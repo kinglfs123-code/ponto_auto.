@@ -61,7 +61,7 @@ export default function FolhaDetalhe() {
 
   const finalizar = async () => {
     if (!folhaId) return;
-    const { error } = await supabase.from("folhas_ponto").update({ status: "finalizada" as unknown as string }).eq("id", folhaId);
+    const { error } = await supabase.from("folhas_ponto").update({ status: "finalizada" } as any).eq("id", folhaId);
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
