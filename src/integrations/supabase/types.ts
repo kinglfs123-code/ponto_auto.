@@ -14,16 +14,176 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      empresas: {
+        Row: {
+          cnpj: string
+          created_at: string
+          id: string
+          jornada_padrao: string
+          nome: string
+          owner_id: string
+        }
+        Insert: {
+          cnpj: string
+          created_at?: string
+          id?: string
+          jornada_padrao?: string
+          nome: string
+          owner_id: string
+        }
+        Update: {
+          cnpj?: string
+          created_at?: string
+          id?: string
+          jornada_padrao?: string
+          nome?: string
+          owner_id?: string
+        }
+        Relationships: []
+      }
+      folhas_ponto: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          funcionario: string
+          id: string
+          mes_referencia: string
+          status: Database["public"]["Enums"]["folha_status"]
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          funcionario: string
+          id?: string
+          mes_referencia: string
+          status?: Database["public"]["Enums"]["folha_status"]
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          funcionario?: string
+          id?: string
+          mes_referencia?: string
+          status?: Database["public"]["Enums"]["folha_status"]
+        }
+        Relationships: [
+          {
+            foreignKeyName: "folhas_ponto_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      registros_ponto: {
+        Row: {
+          corrigido_manualmente: boolean
+          created_at: string
+          dia: number
+          folha_id: string
+          hora_entrada: string | null
+          hora_entrada_extra: string | null
+          hora_entrada_tarde: string | null
+          hora_saida: string | null
+          hora_saida_extra: string | null
+          hora_saida_tarde: string | null
+          horas_extras: number | null
+          horas_normais: number | null
+          horas_noturnas: number | null
+          id: string
+          obs: string | null
+          tipo_excecao: string | null
+        }
+        Insert: {
+          corrigido_manualmente?: boolean
+          created_at?: string
+          dia: number
+          folha_id: string
+          hora_entrada?: string | null
+          hora_entrada_extra?: string | null
+          hora_entrada_tarde?: string | null
+          hora_saida?: string | null
+          hora_saida_extra?: string | null
+          hora_saida_tarde?: string | null
+          horas_extras?: number | null
+          horas_normais?: number | null
+          horas_noturnas?: number | null
+          id?: string
+          obs?: string | null
+          tipo_excecao?: string | null
+        }
+        Update: {
+          corrigido_manualmente?: boolean
+          created_at?: string
+          dia?: number
+          folha_id?: string
+          hora_entrada?: string | null
+          hora_entrada_extra?: string | null
+          hora_entrada_tarde?: string | null
+          hora_saida?: string | null
+          hora_saida_extra?: string | null
+          hora_saida_tarde?: string | null
+          horas_extras?: number | null
+          horas_normais?: number | null
+          horas_noturnas?: number | null
+          id?: string
+          obs?: string | null
+          tipo_excecao?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "registros_ponto_folha_id_fkey"
+            columns: ["folha_id"]
+            isOneToOne: false
+            referencedRelation: "folhas_ponto"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      relatorios: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          id: string
+          mes_referencia: string
+          pdf_path: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          id?: string
+          mes_referencia: string
+          pdf_path: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          mes_referencia?: string
+          pdf_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "relatorios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      user_owns_empresa: { Args: { _empresa_id: string }; Returns: boolean }
+      user_owns_folha: { Args: { _folha_id: string }; Returns: boolean }
+      user_owns_relatorio: { Args: { _relatorio_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      folha_status: "rascunho" | "finalizada"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +310,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      folha_status: ["rascunho", "finalizada"],
+    },
   },
 } as const
