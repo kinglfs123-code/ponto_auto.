@@ -1,89 +1,39 @@
 
 
-## Plano: Melhoria da Leitura por IA com Aprendizado Progressivo
+## Plano: Corrigir "Ler Folha" que não funciona
 
-### Problemas atuais
+### Diagnóstico
 
-1. **Prompt genérico** — O prompt atual é fixo e não se adapta a formatos diferentes de folha de ponto
-2. **Imagem comprimida demais** — Compressão para 600px com qualidade 0.5 perde detalhes importantes
-3. **Modelo básico** — Usa `gemini-2.5-flash`; modelos mais potentes existem para visão
-4. **Sem pré-processamento inteligente** — Apenas resize, sem melhoria de contraste/nitidez
-5. **Sem aprendizado** — Correções manuais do usuário são descartadas, a IA nunca melhora
-6. **Uma única tentativa** — Se falha, o usuário precisa reenviar manualmente
+A edge function `read-timesheet` está ativa (teste OK retorna "OK"), mas ao enviar uma imagem real para o Gemini 2.5 Pro, o processamento provavelmente **excede o timeout** da edge function (~60s). O modelo Pro com imagens grandes pode levar mais tempo que o permitido.
 
-### O que vamos construir
+Além disso, há problemas menores:
+- Warnings de ref no `EmpresaSelector` e `FileImporter` (componentes sem `forwardRef`)
+- O pré-processamento de imagem (binarização) pode gerar arquivos muito pesados
+- Falta feedback claro de erro para o usuário quando algo falha silenciosamente
 
-#### 1. Pipeline de pré-processamento melhorado (client-side)
-- Aumentar resolução máxima para 1200px (ao invés de 600px)
-- Qualidade JPEG 0.75 (ao invés de 0.5)
-- Aplicar automaticamente: contraste, nitidez e binarização adaptativa (preto/branco) para fotos de documentos
-- Permitir enviar múltiplas fotos (frente e verso, ou partes da folha)
+### Correções
 
-#### 2. Prompt engenheirado + modelo superior (edge function)
-- Trocar para `google/gemini-2.5-pro` (melhor OCR e raciocínio visual)
-- Prompt muito mais detalhado com:
-  - Exemplos de formatos comuns de folha de ponto brasileira
-  - Instruções para lidar com fotos tortas, borradas, parciais
-  - Tratamento de abreviações comuns (F=Folga, FJ=Falta Justificada, AT=Atestado)
-  - Validação interna (ex: horário de saída > entrada)
-- Usar tool calling (structured output) ao invés de pedir JSON no texto — elimina erros de parsing
+#### 1. Reduzir tamanho da imagem e simplificar pré-processamento
+- Baixar resolução de 1200px para 900px (bom equilíbrio qualidade/velocidade)
+- Remover binarização agressiva (a IA consegue ler sem isso e o base64 fica menor)
+- Manter apenas boost de contraste leve
 
-#### 3. Sistema de aprendizado progressivo (nova tabela + lógica)
-- **Nova tabela `correcoes_ia`** — Armazena o que a IA leu vs o que o usuário corrigiu:
-  - `empresa_id`, `campo_original`, `campo_corrigido`, `contexto` (dia, formato da folha)
-- Quando o usuário corrige um registro e salva, as diferenças são gravadas automaticamente
-- Na próxima leitura da mesma empresa, as correções anteriores são injetadas no prompt como exemplos: "Nesta empresa, quando você lê X normalmente é Y"
-- Isso cria um **few-shot learning** personalizado por empresa
+#### 2. Trocar para modelo mais rápido na edge function
+- Usar `google/gemini-2.5-flash` ao invés de `google/gemini-2.5-pro` — é 3-5x mais rápido e ainda tem boa capacidade de visão
+- Manter o prompt engenheirado e tool calling (structured output)
+- Reduzir `max_tokens` de 8000 para 4000
 
-#### 4. Retry inteligente com fallback
-- Se a primeira leitura falhar ou retornar poucos registros, tentar novamente com:
-  - Imagem com pré-processamento diferente (mais contraste, ou sem binarização)
-  - Prompt alternativo mais permissivo
-- Indicador de confiança por registro (a IA marca campos que não tem certeza)
+#### 3. Adicionar timeout no client
+- Timeout de 55 segundos no `fetch` com `AbortController`
+- Mensagem clara se der timeout: "A leitura demorou demais. Tente com uma foto menor ou mais nítida."
 
-### Fluxo melhorado
+#### 4. Corrigir warnings de ref
+- `EmpresaSelector`: não precisa de ref, o warning vem do Radix Select — inofensivo mas vamos limpar
+- `FileImporter`: mesmo caso
 
-```text
-Upload foto → Pré-processamento (contraste + nitidez + binarização)
-  ↓
-Busca correções anteriores da empresa no banco
-  ↓
-Monta prompt dinâmico (base + exemplos da empresa + formato detectado)
-  ↓
-Envia para Gemini 2.5 Pro com tool calling (structured output)
-  ↓
-Se confiança baixa → retry com processamento alternativo
-  ↓
-Exibe resultados com indicador de confiança por campo
-  ↓
-Usuário corrige → diferenças salvas como aprendizado
-```
-
-### Detalhes técnicos
-
-**Nova tabela:**
-```
-correcoes_ia — id, empresa_id, folha_id, dia, campo, valor_ia, valor_corrigido, created_at
-```
-Com RLS via `user_owns_empresa`.
-
-**Alterações na edge function `read-timesheet`:**
-- Recebe `empresa_id` + `correcoes` (últimas 20 correções da empresa)
-- Prompt dinâmico montado no backend com few-shot examples
-- Usa tool calling para structured output (schema JSON tipado)
-- Modelo trocado para `google/gemini-2.5-pro`
-- Retry automático com parâmetros diferentes
-
-**Alterações no client (`Ponto.tsx`):**
-- Pré-processamento melhorado (canvas com filtros)
-- Resolução e qualidade maiores
-- Busca correções anteriores antes de chamar a IA
-- Ao salvar, compara resultado original da IA com edições e grava em `correcoes_ia`
-- Indicador visual de confiança (campos com `?` ou cor diferente)
-
-**Arquivos modificados:**
-- `supabase/functions/read-timesheet/index.ts` — prompt dinâmico, tool calling, retry, modelo pro
-- `src/pages/Ponto.tsx` — pré-processamento, busca correções, salva aprendizado
-- `src/lib/ponto-rules.ts` — sem mudanças
-- Nova migration SQL — tabela `correcoes_ia`
+### Arquivos modificados
+- `supabase/functions/read-timesheet/index.ts` — modelo flash, max_tokens menor
+- `src/pages/Ponto.tsx` — pré-processamento simplificado, timeout no fetch, melhor feedback
+- `src/components/EmpresaSelector.tsx` — fix ref warning
+- `src/components/FileImporter.tsx` — fix ref warning
 
