@@ -1,105 +1,89 @@
 
 
-## Plano: Módulo de Ponto com Múltiplos CNPJs
+## Plano: Melhoria da Leitura por IA com Aprendizado Progressivo
 
-### Visão geral
+### Problemas atuais
 
-Sistema completo de fechamento de ponto: cadastro de empresas (CNPJ), importação de arquivos (CSV/JSON/Excel + leitura por IA), regras trabalhistas (tolerância, exceções), cálculos automáticos, geração de PDF por CNPJ, e histórico de relatórios. Tudo protegido por autenticação.
+1. **Prompt genérico** — O prompt atual é fixo e não se adapta a formatos diferentes de folha de ponto
+2. **Imagem comprimida demais** — Compressão para 600px com qualidade 0.5 perde detalhes importantes
+3. **Modelo básico** — Usa `gemini-2.5-flash`; modelos mais potentes existem para visão
+4. **Sem pré-processamento inteligente** — Apenas resize, sem melhoria de contraste/nitidez
+5. **Sem aprendizado** — Correções manuais do usuário são descartadas, a IA nunca melhora
+6. **Uma única tentativa** — Se falha, o usuário precisa reenviar manualmente
 
-### Fluxo do usuário
+### O que vamos construir
+
+#### 1. Pipeline de pré-processamento melhorado (client-side)
+- Aumentar resolução máxima para 1200px (ao invés de 600px)
+- Qualidade JPEG 0.75 (ao invés de 0.5)
+- Aplicar automaticamente: contraste, nitidez e binarização adaptativa (preto/branco) para fotos de documentos
+- Permitir enviar múltiplas fotos (frente e verso, ou partes da folha)
+
+#### 2. Prompt engenheirado + modelo superior (edge function)
+- Trocar para `google/gemini-2.5-pro` (melhor OCR e raciocínio visual)
+- Prompt muito mais detalhado com:
+  - Exemplos de formatos comuns de folha de ponto brasileira
+  - Instruções para lidar com fotos tortas, borradas, parciais
+  - Tratamento de abreviações comuns (F=Folga, FJ=Falta Justificada, AT=Atestado)
+  - Validação interna (ex: horário de saída > entrada)
+- Usar tool calling (structured output) ao invés de pedir JSON no texto — elimina erros de parsing
+
+#### 3. Sistema de aprendizado progressivo (nova tabela + lógica)
+- **Nova tabela `correcoes_ia`** — Armazena o que a IA leu vs o que o usuário corrigiu:
+  - `empresa_id`, `campo_original`, `campo_corrigido`, `contexto` (dia, formato da folha)
+- Quando o usuário corrige um registro e salva, as diferenças são gravadas automaticamente
+- Na próxima leitura da mesma empresa, as correções anteriores são injetadas no prompt como exemplos: "Nesta empresa, quando você lê X normalmente é Y"
+- Isso cria um **few-shot learning** personalizado por empresa
+
+#### 4. Retry inteligente com fallback
+- Se a primeira leitura falhar ou retornar poucos registros, tentar novamente com:
+  - Imagem com pré-processamento diferente (mais contraste, ou sem binarização)
+  - Prompt alternativo mais permissivo
+- Indicador de confiança por registro (a IA marca campos que não tem certeza)
+
+### Fluxo melhorado
 
 ```text
-Login → Cadastra empresas (CNPJ/nome/jornada)
+Upload foto → Pré-processamento (contraste + nitidez + binarização)
   ↓
-Importar Ponto → Seleciona empresa → Upload arquivo OU foto
+Busca correções anteriores da empresa no banco
   ↓
-Sistema aplica tolerância 10min → Detecta exceções
+Monta prompt dinâmico (base + exemplos da empresa + formato detectado)
   ↓
-Usuário revisa/corrige manualmente → Salva no banco
+Envia para Gemini 2.5 Pro com tool calling (structured output)
   ↓
-Finaliza ciclo → Gera PDF de fechamento por CNPJ
+Se confiança baixa → retry com processamento alternativo
   ↓
-Histórico → Consulta relatórios anteriores por empresa
+Exibe resultados com indicador de confiança por campo
+  ↓
+Usuário corrige → diferenças salvas como aprendizado
 ```
 
-### Banco de dados (4 tabelas + storage)
+### Detalhes técnicos
 
-1. **empresas** — id, owner_id (auth.uid), cnpj, nome, jornada_padrao (default "07:20"), created_at
-2. **folhas_ponto** — id, empresa_id (FK), funcionario, mes_referencia (text "2026-04"), status (enum: rascunho/finalizada), created_at
-3. **registros_ponto** — id, folha_id (FK), dia (int), hora_entrada, hora_saida, hora_entrada_tarde, hora_saida_tarde, hora_entrada_extra, hora_saida_extra, horas_normais (numeric), horas_extras (numeric), horas_noturnas (numeric), tipo_excecao (text: atraso/saida_antecipada/falta/null), corrigido_manualmente (bool), obs (text)
-4. **relatorios** — id, empresa_id (FK), mes_referencia, pdf_path (text), created_at
+**Nova tabela:**
+```
+correcoes_ia — id, empresa_id, folha_id, dia, campo, valor_ia, valor_corrigido, created_at
+```
+Com RLS via `user_owns_empresa`.
 
-**Storage bucket**: `relatorios` (privado) para os PDFs gerados.
+**Alterações na edge function `read-timesheet`:**
+- Recebe `empresa_id` + `correcoes` (últimas 20 correções da empresa)
+- Prompt dinâmico montado no backend com few-shot examples
+- Usa tool calling para structured output (schema JSON tipado)
+- Modelo trocado para `google/gemini-2.5-pro`
+- Retry automático com parâmetros diferentes
 
-**RLS**: Todas as tabelas com owner_id = auth.uid() via helper functions (security definer) para evitar recursão.
+**Alterações no client (`Ponto.tsx`):**
+- Pré-processamento melhorado (canvas com filtros)
+- Resolução e qualidade maiores
+- Busca correções anteriores antes de chamar a IA
+- Ao salvar, compara resultado original da IA com edições e grava em `correcoes_ia`
+- Indicador visual de confiança (campos com `?` ou cor diferente)
 
-### Autenticação
-
-- Página de login/cadastro com email e senha
-- Verificação de email habilitada (padrão)
-- Rotas protegidas via componente AuthGuard
-
-### Rotas da aplicação
-
-| Rota | Página |
-|------|--------|
-| `/login` | Login/Cadastro |
-| `/` | Dashboard — lista empresas cadastradas |
-| `/empresas` | CRUD de empresas (CNPJ com máscara, nome, jornada) |
-| `/ponto` | Importação de ponto (seletor de empresa + upload) |
-| `/ponto/:folhaId` | Visualização/edição de uma folha |
-| `/relatorios` | Histórico de relatórios por empresa |
-
-### Importação de dados (página /ponto)
-
-1. **Seletor de empresa** no topo (dropdown com CNPJs cadastrados)
-2. **Dois modos de importação**:
-   - **Arquivo** (CSV/JSON/Excel): parse client-side com Papa Parse (CSV), xlsx (Excel), ou JSON nativo. Campos esperados: funcionario, data, hora_entrada, hora_saida
-   - **Foto** (modo atual): IA lê a imagem via edge function existente
-3. Após parse, dados são normalizados e exibidos na tabela para revisão
-
-### Regras de negócio
-
-- **Tolerância 10 min**: entrada até +10min do horário padrão é considerada "no horário" (sem atraso)
-- **Detecção de exceções automática**:
-  - Atraso: entrada > horário + 10min
-  - Saída antecipada: saída antes do horário previsto
-  - Falta: sem registros no dia útil
-- **Horas noturnas**: horários entre 22:00 e 05:00
-- **Correção manual**: campo editável com flag `corrigido_manualmente`
-- **Cálculo diário e mensal**: horas normais, extras, noturnas, saldo
-
-### Geração de PDF (edge function)
-
-- Nova edge function `generate-report` que:
-  - Recebe empresa_id + mes_referencia
-  - Busca dados do banco (folhas + registros daquela empresa/mês)
-  - Gera PDF com: cabeçalho (nome empresa, CNPJ, mês), tabela por funcionário (dias, entradas, saídas, horas, exceções), sumário (totais de horas normais/extras/noturnas)
-  - Salva no storage bucket `relatorios`
-  - Insere registro na tabela `relatorios`
-- O PDF é baixável via URL assinada
-
-### Histórico de relatórios
-
-- Página `/relatorios` com filtro por empresa e período
-- Lista de PDFs gerados com data, empresa, mês de referência
-- Botão de download para cada relatório
-
-### Detalhes técnicos de implementação
-
-**Arquivos novos**:
-- `src/pages/Login.tsx` — auth
-- `src/pages/Empresas.tsx` — CRUD empresas
-- `src/pages/Ponto.tsx` — importação com seletor de empresa
-- `src/pages/FolhaDetalhe.tsx` — visualização/edição de folha
-- `src/pages/Relatorios.tsx` — histórico
-- `src/components/AuthGuard.tsx` — proteção de rotas
-- `src/components/EmpresaSelector.tsx` — dropdown reutilizável
-- `src/components/FileImporter.tsx` — parse CSV/JSON/XLSX
-- `src/lib/ponto-rules.ts` — tolerância, exceções, cálculos
-- `supabase/functions/generate-report/index.ts` — geração de PDF
-
-**Bibliotecas adicionais**: papaparse (CSV), xlsx (Excel)
-
-**Migration SQL**: criação das 4 tabelas, helper functions RLS, policies, storage bucket
+**Arquivos modificados:**
+- `supabase/functions/read-timesheet/index.ts` — prompt dinâmico, tool calling, retry, modelo pro
+- `src/pages/Ponto.tsx` — pré-processamento, busca correções, salva aprendizado
+- `src/lib/ponto-rules.ts` — sem mudanças
+- Nova migration SQL — tabela `correcoes_ia`
 
