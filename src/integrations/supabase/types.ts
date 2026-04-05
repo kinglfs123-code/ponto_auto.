@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      correcoes_ia: {
+        Row: {
+          campo: string
+          created_at: string
+          dia: number | null
+          empresa_id: string
+          folha_id: string | null
+          id: string
+          valor_corrigido: string | null
+          valor_ia: string | null
+        }
+        Insert: {
+          campo: string
+          created_at?: string
+          dia?: number | null
+          empresa_id: string
+          folha_id?: string | null
+          id?: string
+          valor_corrigido?: string | null
+          valor_ia?: string | null
+        }
+        Update: {
+          campo?: string
+          created_at?: string
+          dia?: number | null
+          empresa_id?: string
+          folha_id?: string | null
+          id?: string
+          valor_corrigido?: string | null
+          valor_ia?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "correcoes_ia_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "correcoes_ia_folha_id_fkey"
+            columns: ["folha_id"]
+            isOneToOne: false
+            referencedRelation: "folhas_ponto"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       empresas: {
         Row: {
           cnpj: string
