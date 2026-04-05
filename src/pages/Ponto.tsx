@@ -299,8 +299,8 @@ export default function Ponto() {
       if (!orig) continue;
 
       for (const [regField, aiField] of Object.entries(fieldMap)) {
-        const aiVal = (orig as Record<string, unknown>)[aiField] as string | null;
-        const userVal = (reg as Record<string, unknown>)[regField] as string | null;
+        const aiVal = (orig as unknown as Record<string, unknown>)[aiField] as string | null;
+        const userVal = (reg as unknown as Record<string, unknown>)[regField] as string | null;
         if ((aiVal || "") !== (userVal || "")) {
           corrections.push({
             empresa_id: empresa.id,
