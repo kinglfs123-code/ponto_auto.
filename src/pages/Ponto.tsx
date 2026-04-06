@@ -429,7 +429,7 @@ export default function Ponto() {
           </div>
           {image && (
             <Button onClick={runOCR} disabled={loading || !empresa} className="gap-2">
-              {loading ? step || "..." : "Ler Folha (Gemini Pro)"}
+              {loading ? step || "..." : "Ler Folha de Ponto"}
             </Button>
           )}
         </div>
