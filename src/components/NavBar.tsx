@@ -1,11 +1,12 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, ClipboardList, FileText, LogOut, Home } from "lucide-react";
+import { Building2, ClipboardList, FileText, LogOut, Home, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 const links = [
   { to: "/", label: "Início", icon: Home },
   { to: "/empresas", label: "Empresas", icon: Building2 },
+  { to: "/funcionarios", label: "Funcionários", icon: Users },
   { to: "/ponto", label: "Ponto", icon: ClipboardList },
   { to: "/relatorios", label: "Relatórios", icon: FileText },
 ];

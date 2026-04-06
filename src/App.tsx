@@ -10,6 +10,7 @@ import Empresas from "@/pages/Empresas";
 import Ponto from "@/pages/Ponto";
 import FolhaDetalhe from "@/pages/FolhaDetalhe";
 import Relatorios from "@/pages/Relatorios";
+import Funcionarios from "@/pages/Funcionarios";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
           <Route path="/empresas" element={<AuthGuard><Empresas /></AuthGuard>} />
           <Route path="/ponto" element={<AuthGuard><Ponto /></AuthGuard>} />
           <Route path="/ponto/:folhaId" element={<AuthGuard><FolhaDetalhe /></AuthGuard>} />
+          <Route path="/funcionarios" element={<AuthGuard><Funcionarios /></AuthGuard>} />
           <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
