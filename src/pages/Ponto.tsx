@@ -45,21 +45,33 @@ interface Correcao {
 }
 
 async function callAI(body: Record<string, unknown>): Promise<AIResult> {
-  const resp = await fetch(FUNC_URL, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
-    },
-    body: JSON.stringify(body),
-  });
-  const data = await resp.json();
-  if (!resp.ok || data.error) throw new Error(data.error || `Erro ${resp.status}`);
-  return data.result;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 55000);
+  try {
+    const resp = await fetch(FUNC_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    const data = await resp.json();
+    if (!resp.ok || data.error) throw new Error(data.error || `Erro ${resp.status}`);
+    return data.result;
+  } catch (err) {
+    if (err instanceof DOMException && err.name === "AbortError") {
+      throw new Error("A leitura demorou demais. Tente com uma foto menor ou mais nítida.");
+    }
+    throw err;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
-/** Enhanced image preprocessing: higher res, contrast boost, sharpening */
-function preprocessImage(dataUrl: string, maxW = 1200): Promise<string> {
+/** Image preprocessing: resize + light contrast boost (no binarization) */
+function preprocessImage(dataUrl: string, maxW = 900): Promise<string> {
   return new Promise((res, rej) => {
     const img = new Image();
     img.onerror = () => rej(new Error("Imagem inválida"));
@@ -71,32 +83,18 @@ function preprocessImage(dataUrl: string, maxW = 1200): Promise<string> {
       c.width = w;
       c.height = h;
       const ctx = c.getContext("2d")!;
-
-      // Draw original
       ctx.drawImage(img, 0, 0, w, h);
 
-      // Apply contrast + brightness boost for document readability
+      // Light contrast boost only
       const imageData = ctx.getImageData(0, 0, w, h);
       const d = imageData.data;
-      const contrast = 1.4;
-      const brightness = 10;
+      const contrast = 1.2;
+      const brightness = 5;
       for (let i = 0; i < d.length; i += 4) {
         d[i] = Math.min(255, Math.max(0, (d[i] - 128) * contrast + 128 + brightness));
         d[i + 1] = Math.min(255, Math.max(0, (d[i + 1] - 128) * contrast + 128 + brightness));
         d[i + 2] = Math.min(255, Math.max(0, (d[i + 2] - 128) * contrast + 128 + brightness));
       }
-
-      // Simple adaptive binarization for document text
-      // Convert to grayscale and threshold
-      for (let i = 0; i < d.length; i += 4) {
-        const gray = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
-        // Adaptive threshold: if gray > 180, make white; else darken
-        const val = gray > 180 ? 255 : Math.max(0, gray * 0.7);
-        d[i] = val;
-        d[i + 1] = val;
-        d[i + 2] = val;
-      }
-
       ctx.putImageData(imageData, 0, 0);
       res(c.toDataURL("image/jpeg", 0.75));
     };
@@ -195,13 +193,13 @@ export default function Ponto() {
     setLoading(true);
     try {
       setStep("Pré-processando imagem...");
-      const processed = await preprocessImage(image, 1200);
+      const processed = await preprocessImage(image, 900);
       const b64 = processed.split(",")[1];
 
       setStep("Buscando correções anteriores...");
       const correcoes = await fetchCorrections(empresa.id);
 
-      setStep("Enviando para IA (Gemini Pro)...");
+      setStep("Enviando para IA...");
       const result = await callAI({ image: b64, correcoes });
 
       setStep("Processando resultados...");
