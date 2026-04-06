@@ -51,6 +51,19 @@ export function validateCNPJ(cnpj: string): boolean {
   return d.length === 14;
 }
 
+export function maskCPF(v: string): string {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.length <= 3) return d;
+  if (d.length <= 6) return d.slice(0, 3) + "." + d.slice(3);
+  if (d.length <= 9) return d.slice(0, 3) + "." + d.slice(3, 6) + "." + d.slice(6);
+  return d.slice(0, 3) + "." + d.slice(3, 6) + "." + d.slice(6, 9) + "-" + d.slice(9);
+}
+
+export function validateCPF(cpf: string): boolean {
+  const d = cpf.replace(/\D/g, "");
+  return d.length === 11;
+}
+
 const TOLERANCE_MINUTES = 10;
 
 export interface RegistroPonto {
