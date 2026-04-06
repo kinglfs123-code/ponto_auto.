@@ -1,39 +1,47 @@
 
 
-## Plano: Corrigir "Ler Folha" que não funciona
+## Plano: Cadastro de Funcionários vinculados a Empresas
 
-### Diagnóstico
+### O que será feito
 
-A edge function `read-timesheet` está ativa (teste OK retorna "OK"), mas ao enviar uma imagem real para o Gemini 2.5 Pro, o processamento provavelmente **excede o timeout** da edge function (~60s). O modelo Pro com imagens grandes pode levar mais tempo que o permitido.
+Criar um módulo completo de cadastro de funcionários, onde cada funcionário é vinculado a uma empresa (CNPJ). Campos: nome completo, CPF, e-mail, data de nascimento, cargo, horário de entrada e horário de saída.
 
-Além disso, há problemas menores:
-- Warnings de ref no `EmpresaSelector` e `FileImporter` (componentes sem `forwardRef`)
-- O pré-processamento de imagem (binarização) pode gerar arquivos muito pesados
-- Falta feedback claro de erro para o usuário quando algo falha silenciosamente
+### Banco de dados
 
-### Correções
+Nova tabela `funcionarios`:
 
-#### 1. Reduzir tamanho da imagem e simplificar pré-processamento
-- Baixar resolução de 1200px para 900px (bom equilíbrio qualidade/velocidade)
-- Remover binarização agressiva (a IA consegue ler sem isso e o base64 fica menor)
-- Manter apenas boost de contraste leve
+| Coluna | Tipo | Notas |
+|--------|------|-------|
+| id | uuid | PK, default gen_random_uuid() |
+| empresa_id | uuid | FK → empresas.id, NOT NULL |
+| nome_completo | text | NOT NULL |
+| cpf | text | NOT NULL |
+| email | text | nullable |
+| data_nascimento | date | nullable |
+| cargo | text | nullable |
+| horario_entrada | text | NOT NULL, default '08:00' |
+| horario_saida | text | NOT NULL, default '17:00' |
+| created_at | timestamptz | default now() |
 
-#### 2. Trocar para modelo mais rápido na edge function
-- Usar `google/gemini-2.5-flash` ao invés de `google/gemini-2.5-pro` — é 3-5x mais rápido e ainda tem boa capacidade de visão
-- Manter o prompt engenheirado e tool calling (structured output)
-- Reduzir `max_tokens` de 8000 para 4000
+**RLS**: SELECT, INSERT, UPDATE, DELETE via `user_owns_empresa(empresa_id)`.
 
-#### 3. Adicionar timeout no client
-- Timeout de 55 segundos no `fetch` com `AbortController`
-- Mensagem clara se der timeout: "A leitura demorou demais. Tente com uma foto menor ou mais nítida."
+### Frontend
 
-#### 4. Corrigir warnings de ref
-- `EmpresaSelector`: não precisa de ref, o warning vem do Radix Select — inofensivo mas vamos limpar
-- `FileImporter`: mesmo caso
+**Nova página `src/pages/Funcionarios.tsx`**:
+- Seletor de empresa no topo (reutiliza `EmpresaSelector`)
+- Formulário de cadastro com máscara de CPF (XXX.XXX.XXX-XX), campos de horário com máscara HH:MM
+- Lista de funcionários da empresa selecionada em cards/tabela
+- Botões de editar e excluir por funcionário
 
-### Arquivos modificados
-- `supabase/functions/read-timesheet/index.ts` — modelo flash, max_tokens menor
-- `src/pages/Ponto.tsx` — pré-processamento simplificado, timeout no fetch, melhor feedback
-- `src/components/EmpresaSelector.tsx` — fix ref warning
-- `src/components/FileImporter.tsx` — fix ref warning
+**Nova rota**: `/funcionarios` em `App.tsx` (protegida por AuthGuard)
+
+**NavBar**: Adicionar link "Funcionários" com ícone `Users`
+
+### Arquivos alterados/criados
+
+1. **Nova migration SQL** — tabela `funcionarios` com RLS
+2. **`src/pages/Funcionarios.tsx`** — CRUD completo
+3. **`src/App.tsx`** — nova rota `/funcionarios`
+4. **`src/components/NavBar.tsx`** — novo link
+5. **`src/lib/ponto-rules.ts`** — adicionar `maskCPF` e `validateCPF`
 
