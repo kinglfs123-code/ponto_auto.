@@ -97,7 +97,7 @@ async function callAIWithRetry(
       "Content-Type": "application/json",
     },
     body: JSON.stringify({
-      model: "google/gemini-2.5-pro",
+      model: "google/gemini-2.5-flash",
       messages: [
         {
           role: "user",
@@ -109,7 +109,7 @@ async function callAIWithRetry(
       ],
       tools: [TOOL_SCHEMA],
       tool_choice: { type: "function", function: { name: "registrar_ponto" } },
-      max_tokens: 8000,
+      max_tokens: 4000,
     }),
   });
 
