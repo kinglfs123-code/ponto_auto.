@@ -124,6 +124,53 @@ export type Database = {
           },
         ]
       }
+      funcionarios: {
+        Row: {
+          cargo: string | null
+          cpf: string
+          created_at: string
+          data_nascimento: string | null
+          email: string | null
+          empresa_id: string
+          horario_entrada: string
+          horario_saida: string
+          id: string
+          nome_completo: string
+        }
+        Insert: {
+          cargo?: string | null
+          cpf: string
+          created_at?: string
+          data_nascimento?: string | null
+          email?: string | null
+          empresa_id: string
+          horario_entrada?: string
+          horario_saida?: string
+          id?: string
+          nome_completo: string
+        }
+        Update: {
+          cargo?: string | null
+          cpf?: string
+          created_at?: string
+          data_nascimento?: string | null
+          email?: string | null
+          empresa_id?: string
+          horario_entrada?: string
+          horario_saida?: string
+          id?: string
+          nome_completo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funcionarios_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       registros_ponto: {
         Row: {
           corrigido_manualmente: boolean
