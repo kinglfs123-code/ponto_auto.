@@ -430,12 +430,21 @@ export default function Ponto() {
                 <label className="text-xs text-muted-foreground mb-1 block">Empresa</label>
                 <EmpresaSelector
                   value={empresa?.id || searchParams.get("empresa")}
-                  onChange={(e) => setEmpresa(e)}
+                  onChange={handleEmpresaChange}
                 />
               </div>
-              <div className="w-40">
+              <div className="flex-1 min-w-[200px]">
                 <label className="text-xs text-muted-foreground mb-1 block">Funcionário</label>
-                <Input value={funcionario} onChange={(e) => setFuncionario(e.target.value)} placeholder="Nome" />
+                <FuncionarioSelector
+                  empresaId={empresa?.id || null}
+                  value={funcionarioSel}
+                  manualName={funcionario}
+                  onSelect={(f) => {
+                    setFuncionarioSel(f);
+                    if (f) setFuncionario(f.nome_completo);
+                  }}
+                  onManualName={setFuncionario}
+                />
               </div>
               <div className="w-28">
                 <label className="text-xs text-muted-foreground mb-1 block">Mês ref.</label>
