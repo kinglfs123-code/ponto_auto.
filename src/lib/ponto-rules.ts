@@ -64,6 +64,35 @@ export function validateCPF(cpf: string): boolean {
   return d.length === 11;
 }
 
+/** Normalize a name for fuzzy comparison: remove accents, lowercase, trim */
+export function normalizeName(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+}
+
+/** Match a name against a list of employees using fuzzy comparison */
+export function matchFuncionario<T extends { nome_completo: string }>(
+  nome: string,
+  lista: T[]
+): T | null {
+  if (!nome || lista.length === 0) return null;
+  const n = normalizeName(nome);
+  // Exact
+  let match = lista.find((f) => normalizeName(f.nome_completo) === n);
+  if (match) return match;
+  // Starts with (either direction)
+  match = lista.find((f) => {
+    const fn = normalizeName(f.nome_completo);
+    return fn.startsWith(n) || n.startsWith(fn);
+  });
+  if (match) return match;
+  // Includes (either direction)
+  match = lista.find((f) => {
+    const fn = normalizeName(f.nome_completo);
+    return fn.includes(n) || n.includes(fn);
+  });
+  return match || null;
+}
+
 const TOLERANCE_MINUTES = 10;
 
 export interface RegistroPonto {

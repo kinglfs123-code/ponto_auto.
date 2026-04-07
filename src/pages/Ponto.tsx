@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import NavBar from "@/components/NavBar";
 import EmpresaSelector from "@/components/EmpresaSelector";
+import FuncionarioSelector, { type FuncionarioOption } from "@/components/FuncionarioSelector";
 import FileImporter, { type ImportedRecord } from "@/components/FileImporter";
 import {
   parseTimeToHours,
@@ -14,6 +15,7 @@ import {
   maskHM,
   applyToleranceAndDetect,
   calcularResumo,
+  matchFuncionario,
   type RegistroPonto,
   type ResumoCalculo,
 } from "@/lib/ponto-rules";
@@ -126,7 +128,9 @@ export default function Ponto() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [empresa, setEmpresa] = useState<EmpresaSel | null>(null);
+  const [funcionarioSel, setFuncionarioSel] = useState<FuncionarioOption | null>(null);
   const [funcionario, setFuncionario] = useState("");
+  const [funcionarios, setFuncionarios] = useState<FuncionarioOption[]>([]);
   const [mesRef, setMesRef] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -141,7 +145,25 @@ export default function Ponto() {
   const [confidenceMap, setConfidenceMap] = useState<Record<number, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const horarioEntrada = funcionarioSel?.horario_entrada || "08:00";
   const jornada = empresa?.jornada_padrao || "07:20";
+
+  // Load funcionarios when empresa changes
+  const handleEmpresaChange = (e: EmpresaSel | null) => {
+    setEmpresa(e);
+    setFuncionarioSel(null);
+    setFuncionario("");
+    if (e) {
+      supabase
+        .from("funcionarios")
+        .select("id, nome_completo, horario_entrada, horario_saida")
+        .eq("empresa_id", e.id)
+        .order("nome_completo")
+        .then(({ data }) => setFuncionarios(data || []));
+    } else {
+      setFuncionarios([]);
+    }
+  };
 
   // Fetch previous corrections for this company
   const fetchCorrections = async (empresaId: string): Promise<Correcao[]> => {
@@ -170,7 +192,8 @@ export default function Ponto() {
           hora_entrada: r.hora_entrada || null,
           hora_saida: r.hora_saida || null,
         },
-        jornada
+        jornada,
+        horarioEntrada
       )
     );
     setRegistros(processed);
@@ -203,7 +226,16 @@ export default function Ponto() {
       const result = await callAI({ image: b64, correcoes });
 
       setStep("Processando resultados...");
-      if (result.nome) setFuncionario(result.nome);
+      if (result.nome) {
+        setFuncionario(result.nome);
+        // Try to match with registered employees
+        const matched = matchFuncionario(result.nome, funcionarios);
+        if (matched) {
+          setFuncionarioSel(matched);
+          setFuncionario(matched.nome_completo);
+          toast({ title: `Funcionário identificado: ${matched.nome_completo}` });
+        }
+      }
       if (result.mes) setMesRef(result.mes);
 
       if (result.registros?.length > 0) {
@@ -229,7 +261,8 @@ export default function Ponto() {
               hora_saida_extra: r.es || null,
               obs: r.obs || null,
             },
-            jornada
+            jornada,
+            funcionarioSel?.horario_entrada || horarioEntrada
           )
         );
         setRegistros(regs);
@@ -257,7 +290,7 @@ export default function Ponto() {
   };
 
   const recalc = () => {
-    const processed = registros.map((r) => applyToleranceAndDetect(r, jornada));
+    const processed = registros.map((r) => applyToleranceAndDetect(r, jornada, horarioEntrada));
     setRegistros(processed);
     setResumo(calcularResumo(processed));
   };
@@ -324,14 +357,18 @@ export default function Ponto() {
     }
     setLoading(true);
     try {
+      const insertData: Record<string, unknown> = {
+        empresa_id: empresa.id,
+        funcionario: funcionario.trim(),
+        mes_referencia: mesRef,
+        status: "rascunho" as const,
+      };
+      if (funcionarioSel?.id) {
+        insertData.funcionario_id = funcionarioSel.id;
+      }
       const { data: folha, error: fErr } = await supabase
         .from("folhas_ponto")
-        .insert({
-          empresa_id: empresa.id,
-          funcionario: funcionario.trim(),
-          mes_referencia: mesRef,
-          status: "rascunho" as const,
-        })
+        .insert(insertData as any)
         .select("id")
         .single();
       if (fErr || !folha) throw fErr || new Error("Erro ao criar folha");
@@ -393,12 +430,21 @@ export default function Ponto() {
                 <label className="text-xs text-muted-foreground mb-1 block">Empresa</label>
                 <EmpresaSelector
                   value={empresa?.id || searchParams.get("empresa")}
-                  onChange={(e) => setEmpresa(e)}
+                  onChange={handleEmpresaChange}
                 />
               </div>
-              <div className="w-40">
+              <div className="flex-1 min-w-[200px]">
                 <label className="text-xs text-muted-foreground mb-1 block">Funcionário</label>
-                <Input value={funcionario} onChange={(e) => setFuncionario(e.target.value)} placeholder="Nome" />
+                <FuncionarioSelector
+                  empresaId={empresa?.id || null}
+                  value={funcionarioSel}
+                  manualName={funcionario}
+                  onSelect={(f) => {
+                    setFuncionarioSel(f);
+                    if (f) setFuncionario(f.nome_completo);
+                  }}
+                  onManualName={setFuncionario}
+                />
               </div>
               <div className="w-28">
                 <label className="text-xs text-muted-foreground mb-1 block">Mês ref.</label>
