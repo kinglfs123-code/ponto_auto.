@@ -192,7 +192,8 @@ export default function Ponto() {
           hora_entrada: r.hora_entrada || null,
           hora_saida: r.hora_saida || null,
         },
-        jornada
+        jornada,
+        horarioEntrada
       )
     );
     setRegistros(processed);
@@ -225,7 +226,16 @@ export default function Ponto() {
       const result = await callAI({ image: b64, correcoes });
 
       setStep("Processando resultados...");
-      if (result.nome) setFuncionario(result.nome);
+      if (result.nome) {
+        setFuncionario(result.nome);
+        // Try to match with registered employees
+        const matched = matchFuncionario(result.nome, funcionarios);
+        if (matched) {
+          setFuncionarioSel(matched);
+          setFuncionario(matched.nome_completo);
+          toast({ title: `Funcionário identificado: ${matched.nome_completo}` });
+        }
+      }
       if (result.mes) setMesRef(result.mes);
 
       if (result.registros?.length > 0) {
