@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import NavBar from "@/components/NavBar";
 import EmpresaSelector from "@/components/EmpresaSelector";
+import FuncionarioSelector, { type FuncionarioOption } from "@/components/FuncionarioSelector";
 import FileImporter, { type ImportedRecord } from "@/components/FileImporter";
 import {
   parseTimeToHours,
@@ -14,6 +15,7 @@ import {
   maskHM,
   applyToleranceAndDetect,
   calcularResumo,
+  matchFuncionario,
   type RegistroPonto,
   type ResumoCalculo,
 } from "@/lib/ponto-rules";
