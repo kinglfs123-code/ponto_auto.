@@ -261,7 +261,8 @@ export default function Ponto() {
               hora_saida_extra: r.es || null,
               obs: r.obs || null,
             },
-            jornada
+            jornada,
+            funcionarioSel?.horario_entrada || horarioEntrada
           )
         );
         setRegistros(regs);
@@ -289,7 +290,7 @@ export default function Ponto() {
   };
 
   const recalc = () => {
-    const processed = registros.map((r) => applyToleranceAndDetect(r, jornada));
+    const processed = registros.map((r) => applyToleranceAndDetect(r, jornada, horarioEntrada));
     setRegistros(processed);
     setResumo(calcularResumo(processed));
   };
