@@ -357,14 +357,18 @@ export default function Ponto() {
     }
     setLoading(true);
     try {
+      const insertData: Record<string, unknown> = {
+        empresa_id: empresa.id,
+        funcionario: funcionario.trim(),
+        mes_referencia: mesRef,
+        status: "rascunho" as const,
+      };
+      if (funcionarioSel?.id) {
+        insertData.funcionario_id = funcionarioSel.id;
+      }
       const { data: folha, error: fErr } = await supabase
         .from("folhas_ponto")
-        .insert({
-          empresa_id: empresa.id,
-          funcionario: funcionario.trim(),
-          mes_referencia: mesRef,
-          status: "rascunho" as const,
-        })
+        .insert(insertData as any)
         .select("id")
         .single();
       if (fErr || !folha) throw fErr || new Error("Erro ao criar folha");
