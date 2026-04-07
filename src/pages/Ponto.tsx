@@ -128,7 +128,9 @@ export default function Ponto() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const [empresa, setEmpresa] = useState<EmpresaSel | null>(null);
+  const [funcionarioSel, setFuncionarioSel] = useState<FuncionarioOption | null>(null);
   const [funcionario, setFuncionario] = useState("");
+  const [funcionarios, setFuncionarios] = useState<FuncionarioOption[]>([]);
   const [mesRef, setMesRef] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
@@ -143,7 +145,25 @@ export default function Ponto() {
   const [confidenceMap, setConfidenceMap] = useState<Record<number, string>>({});
   const fileRef = useRef<HTMLInputElement>(null);
 
+  const horarioEntrada = funcionarioSel?.horario_entrada || "08:00";
   const jornada = empresa?.jornada_padrao || "07:20";
+
+  // Load funcionarios when empresa changes
+  const handleEmpresaChange = (e: EmpresaSel | null) => {
+    setEmpresa(e);
+    setFuncionarioSel(null);
+    setFuncionario("");
+    if (e) {
+      supabase
+        .from("funcionarios")
+        .select("id, nome_completo, horario_entrada, horario_saida")
+        .eq("empresa_id", e.id)
+        .order("nome_completo")
+        .then(({ data }) => setFuncionarios(data || []));
+    } else {
+      setFuncionarios([]);
+    }
+  };
 
   // Fetch previous corrections for this company
   const fetchCorrections = async (empresaId: string): Promise<Correcao[]> => {
