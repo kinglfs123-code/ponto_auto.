@@ -94,6 +94,7 @@ export type Database = {
           created_at: string
           empresa_id: string
           funcionario: string
+          funcionario_id: string | null
           id: string
           mes_referencia: string
           status: Database["public"]["Enums"]["folha_status"]
@@ -102,6 +103,7 @@ export type Database = {
           created_at?: string
           empresa_id: string
           funcionario: string
+          funcionario_id?: string | null
           id?: string
           mes_referencia: string
           status?: Database["public"]["Enums"]["folha_status"]
@@ -110,6 +112,7 @@ export type Database = {
           created_at?: string
           empresa_id?: string
           funcionario?: string
+          funcionario_id?: string | null
           id?: string
           mes_referencia?: string
           status?: Database["public"]["Enums"]["folha_status"]
@@ -120,6 +123,13 @@ export type Database = {
             columns: ["empresa_id"]
             isOneToOne: false
             referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "folhas_ponto_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
             referencedColumns: ["id"]
           },
         ]
