@@ -39,27 +39,6 @@ export default function FuncionarioSelector({ empresaId, value, manualName, onSe
       });
   }, [empresaId]);
 
-  // Auto-match by name (used externally)
-  const findByName = (name: string): FuncionarioOption | null => {
-    if (!name || funcionarios.length === 0) return null;
-    const normalize = (s: string) =>
-      s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-    const n = normalize(name);
-    // Exact match
-    let match = funcionarios.find((f) => normalize(f.nome_completo) === n);
-    if (match) return match;
-    // Starts with
-    match = funcionarios.find((f) => normalize(f.nome_completo).startsWith(n) || n.startsWith(normalize(f.nome_completo)));
-    if (match) return match;
-    // Includes
-    match = funcionarios.find((f) => normalize(f.nome_completo).includes(n) || n.includes(normalize(f.nome_completo)));
-    return match || null;
-  };
-
-  // Expose findByName via a ref-like pattern: attach to the component instance
-  // Instead, we export it as a standalone function
-  FuncionarioSelector.findMatch = findByName;
-
   if (manual || funcionarios.length === 0) {
     return (
       <div className="flex gap-1 items-center">
@@ -108,6 +87,3 @@ export default function FuncionarioSelector({ empresaId, value, manualName, onSe
     </div>
   );
 }
-
-// Static method for external matching
-FuncionarioSelector.findMatch = (_name: string): FuncionarioOption | null => null;
