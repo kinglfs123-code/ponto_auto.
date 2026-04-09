@@ -417,10 +417,10 @@ export default function Ponto() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20 md:pb-4">
       <NavBar />
       <div className="max-w-5xl mx-auto p-4 space-y-4">
-        <h1 className="text-xl font-bold text-primary">Importar Ponto</h1>
+        <h1 className="text-xl font-bold text-primary animate-fade-in">Importar Ponto</h1>
 
         {/* Company selector + info */}
         <Card>
