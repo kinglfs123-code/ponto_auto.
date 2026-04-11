@@ -106,12 +106,6 @@ function preprocessImage(dataUrl: string, maxW = 900): Promise<string> {
   });
 }
 
-interface EmpresaSel {
-  id: string;
-  cnpj: string;
-  nome: string;
-  jornada_padrao: string;
-}
 
 interface AIOriginal {
   dia: number;
