@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, ClipboardList, FileText, LogOut, Home, Users, Receipt } from "lucide-react";
+import { Building2, ClipboardList, FileText, LogOut, Home, Users, Receipt, Sun, Moon } from "lucide-react";
+import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 
@@ -17,6 +18,7 @@ export default function NavBar() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const { theme, toggleTheme } = useTheme();
 
   const logout = async () => {
     await supabase.auth.signOut();
@@ -31,9 +33,14 @@ export default function NavBar() {
           <span className="text-sm font-bold tracking-tight text-primary font-mono">
             FOLHA DE PONTO
           </span>
-          <Button variant="ghost" size="icon" onClick={logout} className="h-8 w-8 text-muted-foreground hover:text-destructive">
-            <LogOut className="h-4 w-4" />
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-8 w-8 text-muted-foreground">
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
+            <Button variant="ghost" size="icon" onClick={logout} className="h-8 w-8 text-muted-foreground hover:text-destructive">
+              <LogOut className="h-4 w-4" />
+            </Button>
+          </div>
         </header>
 
         {/* Mobile bottom navigation */}
@@ -94,10 +101,15 @@ export default function NavBar() {
             })}
           </div>
         </div>
-        <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-destructive gap-1.5">
-          <LogOut className="h-4 w-4" />
-          <span>Sair</span>
-        </Button>
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" onClick={toggleTheme} className="h-9 w-9 text-muted-foreground">
+            {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          </Button>
+          <Button variant="ghost" size="sm" onClick={logout} className="text-muted-foreground hover:text-destructive gap-1.5">
+            <LogOut className="h-4 w-4" />
+            <span>Sair</span>
+          </Button>
+        </div>
       </div>
     </nav>
   );
