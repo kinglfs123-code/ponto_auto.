@@ -18,9 +18,10 @@ interface Props {
   manualName: string;
   onSelect: (func: FuncionarioOption | null) => void;
   onManualName: (name: string) => void;
+  onLoadedFuncionarios?: (list: FuncionarioOption[]) => void;
 }
 
-export default function FuncionarioSelector({ empresaId, value, manualName, onSelect, onManualName }: Props) {
+export default function FuncionarioSelector({ empresaId, value, manualName, onSelect, onManualName, onLoadedFuncionarios }: Props) {
   const [funcionarios, setFuncionarios] = useState<FuncionarioOption[]>([]);
   const [manual, setManual] = useState(false);
 
@@ -35,7 +36,9 @@ export default function FuncionarioSelector({ empresaId, value, manualName, onSe
       .eq("empresa_id", empresaId)
       .order("nome_completo")
       .then(({ data }) => {
-        setFuncionarios(data || []);
+        const list = data || [];
+        setFuncionarios(list);
+        onLoadedFuncionarios?.(list);
       });
   }, [empresaId]);
 
