@@ -3,46 +3,20 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { maskCNPJ, formatHours } from "@/lib/ponto-rules";
 import NavBar from "@/components/NavBar";
+import EmpresaSelector from "@/components/EmpresaSelector";
+import { useEmpresa } from "@/contexts/EmpresaContext";
+import type { Folha, Relatorio } from "@/types";
 import { FileText, Download, ClipboardList } from "lucide-react";
 
-interface Empresa {
-  id: string;
-  cnpj: string;
-  nome: string;
-}
-
-interface Folha {
-  id: string;
-  funcionario: string;
-  mes_referencia: string;
-  status: string;
-  empresa_id: string;
-}
-
-interface Relatorio {
-  id: string;
-  empresa_id: string;
-  mes_referencia: string;
-  pdf_path: string;
-  created_at: string;
-}
-
 export default function Relatorios() {
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [empresaId, setEmpresaId] = useState<string>("");
+  const { empresa } = useEmpresa();
+  const empresaId = empresa?.id || "";
   const [folhas, setFolhas] = useState<Folha[]>([]);
   const [relatorios, setRelatorios] = useState<Relatorio[]>([]);
   const [generating, setGenerating] = useState(false);
-
-  useEffect(() => {
-    supabase.from("empresas").select("id, cnpj, nome").then(({ data }) => {
-      if (data) setEmpresas(data);
-    });
-  }, []);
 
   useEffect(() => {
     if (!empresaId) return;
@@ -63,7 +37,6 @@ export default function Relatorios() {
       });
       if (error) throw error;
       toast({ title: "Relatório gerado!" });
-      // Refresh
       const { data: rels } = await supabase.from("relatorios").select("*").eq("empresa_id", empresaId).order("created_at", { ascending: false });
       if (rels) setRelatorios(rels);
     } catch (err: unknown) {
@@ -82,7 +55,6 @@ export default function Relatorios() {
     if (data?.signedUrl) window.open(data.signedUrl, "_blank");
   };
 
-  // Get unique months from folhas
   const meses = [...new Set(folhas.map((f) => f.mes_referencia))].sort().reverse();
 
   return (
@@ -92,23 +64,11 @@ export default function Relatorios() {
         <h1 className="text-xl font-bold text-primary">Relatórios</h1>
 
         <div className="flex gap-3 items-center">
-          <Select value={empresaId} onValueChange={setEmpresaId}>
-            <SelectTrigger className="w-72">
-              <SelectValue placeholder="Selecione empresa" />
-            </SelectTrigger>
-            <SelectContent>
-              {empresas.map((e) => (
-                <SelectItem key={e.id} value={e.id}>
-                  {e.nome} — {maskCNPJ(e.cnpj)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <EmpresaSelector />
         </div>
 
         {empresaId && (
           <>
-            {/* Folhas by month */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">
@@ -154,7 +114,6 @@ export default function Relatorios() {
               </CardContent>
             </Card>
 
-            {/* Relatórios gerados */}
             <Card>
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">

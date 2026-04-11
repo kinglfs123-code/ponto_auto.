@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { EmpresaProvider } from "@/contexts/EmpresaContext";
 import AuthGuard from "@/components/AuthGuard";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
@@ -22,17 +23,19 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          <Route path="/" element={<AuthGuard><Dashboard /></AuthGuard>} />
-          <Route path="/empresas" element={<AuthGuard><Empresas /></AuthGuard>} />
-          <Route path="/ponto" element={<AuthGuard><Ponto /></AuthGuard>} />
-          <Route path="/ponto/:folhaId" element={<AuthGuard><FolhaDetalhe /></AuthGuard>} />
-          <Route path="/funcionarios" element={<AuthGuard><Funcionarios /></AuthGuard>} />
-          <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
-          <Route path="/holerites" element={<AuthGuard><Holerites /></AuthGuard>} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <EmpresaProvider>
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/" element={<AuthGuard><Dashboard /></AuthGuard>} />
+            <Route path="/empresas" element={<AuthGuard><Empresas /></AuthGuard>} />
+            <Route path="/ponto" element={<AuthGuard><Ponto /></AuthGuard>} />
+            <Route path="/ponto/:folhaId" element={<AuthGuard><FolhaDetalhe /></AuthGuard>} />
+            <Route path="/funcionarios" element={<AuthGuard><Funcionarios /></AuthGuard>} />
+            <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
+            <Route path="/holerites" element={<AuthGuard><Holerites /></AuthGuard>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </EmpresaProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

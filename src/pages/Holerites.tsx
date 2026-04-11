@@ -9,37 +9,23 @@ import { Skeleton } from "@/components/ui/skeleton";
 import NavBar from "@/components/NavBar";
 import EmpresaSelector from "@/components/EmpresaSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useEmpresa } from "@/contexts/EmpresaContext";
+import { currentMonth } from "@/lib/utils";
+import type { FuncionarioBasic, Holerite } from "@/types";
 import { Upload, Send, CheckCircle2, Clock, FileText, Mail, RefreshCw } from "lucide-react";
-
-interface Funcionario {
-  id: string;
-  nome_completo: string;
-  email: string | null;
-  cargo: string | null;
-}
-
-interface Holerite {
-  id: string;
-  funcionario_id: string;
-  mes_referencia: string;
-  pdf_path: string;
-  enviado: boolean;
-  enviado_em: string | null;
-}
 
 export default function Holerites() {
   const isMobile = useIsMobile();
-  const [empresaId, setEmpresaId] = useState("");
-  const [mesRef, setMesRef] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  });
-  const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
+  const { empresa, setEmpresa } = useEmpresa();
+  const [mesRef, setMesRef] = useState(currentMonth);
+  const [funcionarios, setFuncionarios] = useState<FuncionarioBasic[]>([]);
   const [holerites, setHolerites] = useState<Holerite[]>([]);
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [sending, setSending] = useState<Record<string, boolean>>({});
   const [sendingAll, setSendingAll] = useState(false);
+
+  const empresaId = empresa?.id || "";
 
   const loadData = useCallback(async () => {
     if (!empresaId || !mesRef) return;
@@ -56,8 +42,8 @@ export default function Holerites() {
     }
   }, [empresaId, mesRef]);
 
-  const handleEmpresaChange = (empresa: { id: string; cnpj: string; nome: string; jornada_padrao: string } | null) => {
-    setEmpresaId(empresa?.id || "");
+  const handleEmpresaChange = (emp: { id: string; cnpj: string; nome: string; jornada_padrao: string } | null) => {
+    setEmpresa(emp);
   };
 
   // Load data when empresa or month changes
