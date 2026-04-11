@@ -14,6 +14,7 @@ import { currentMonth } from "@/lib/utils";
 import {
   parseTimeToHours,
   formatHours,
+  formatMinutes,
   maskHM,
   applyToleranceAndDetect,
   calcularResumo,
@@ -22,6 +23,8 @@ import {
   type ResumoCalculo,
 } from "@/lib/ponto-rules";
 import { Camera, Save, Calculator, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const FUNC_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/read-timesheet`;
 
@@ -396,11 +399,30 @@ export default function Ponto() {
     }
   };
 
-  const excecaoColor = (t: string | null) => {
-    if (t === "atraso") return "text-destructive";
-    if (t === "saida_antecipada") return "text-[hsl(var(--warning))]";
-    if (t === "falta") return "text-destructive font-bold";
-    return "";
+  const excecaoBadge = (t: string | null) => {
+    if (!t) return null;
+    const map: Record<string, { label: string; className: string }> = {
+      atraso: { label: "Atraso", className: "bg-destructive/15 text-destructive border-destructive/30" },
+      saida_antecipada: { label: "Saída Ant.", className: "bg-[hsl(var(--warning)/0.15)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.3)]" },
+      falta: { label: "Falta", className: "bg-destructive/20 text-destructive font-bold border-destructive/40" },
+      folga: { label: "Folga", className: "bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)]" },
+      atestado: { label: "Atestado", className: "bg-primary/15 text-primary border-primary/30" },
+    };
+    const info = map[t] || { label: t, className: "" };
+    return <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${info.className}`}>{info.label}</Badge>;
+  };
+
+  const setExcecao = (i: number, tipo: string | null) => {
+    const u = [...registros];
+    u[i] = { ...u[i], tipo_excecao: tipo, corrigido_manualmente: true };
+    // Re-apply calculations to zero out hours for falta/atestado
+    const processed = applyToleranceAndDetect(u[i], jornada, horarioEntrada);
+    // Keep the manually set exception
+    processed.tipo_excecao = tipo;
+    processed.corrigido_manualmente = true;
+    u[i] = processed;
+    setRegistros(u);
+    setResumo(calcularResumo(u));
   };
 
   return (
@@ -482,11 +504,12 @@ export default function Ponto() {
 
         {/* Summary */}
         {resumo && (
-          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
             {[
               { l: "Dias", v: resumo.dias_trabalhados, c: "" },
               { l: "Total", v: formatHours(resumo.total_horas), c: "text-primary" },
               { l: "Extras", v: formatHours(resumo.total_extras), c: "text-[hsl(var(--success))]" },
+              { l: "Atraso", v: formatMinutes(resumo.total_atraso), c: resumo.total_atraso > 0 ? "text-destructive" : "" },
               { l: "Noturnas", v: formatHours(resumo.total_noturnas), c: "text-[hsl(var(--warning))]" },
               { l: "Saldo", v: formatHours(resumo.saldo), c: resumo.saldo >= 0 ? "text-[hsl(var(--success))]" : "text-destructive" },
             ].map((x) => (
@@ -554,8 +577,43 @@ export default function Ponto() {
                           <td className="px-2 py-1 text-center text-[hsl(var(--warning))]">
                             {r.horas_noturnas > 0 ? formatHours(r.horas_noturnas) : "—"}
                           </td>
-                          <td className={`px-2 py-1 text-center text-[10px] ${excecaoColor(r.tipo_excecao)}`}>
-                            {r.tipo_excecao || "—"}
+                          <td className="px-1 py-1 text-center">
+                            {editMode ? (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="min-w-[3rem] cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5">
+                                    {excecaoBadge(r.tipo_excecao) || <span className="text-[10px] text-muted-foreground">—</span>}
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-36 p-1.5" align="center">
+                                  <div className="flex flex-col gap-0.5">
+                                    {[
+                                      { tipo: "folga", label: "Folga" },
+                                      { tipo: "falta", label: "Falta" },
+                                      { tipo: "atestado", label: "Atestado" },
+                                    ].map((opt) => (
+                                      <button
+                                        key={opt.tipo}
+                                        className={`text-xs text-left px-2 py-1.5 rounded hover:bg-muted transition-colors ${r.tipo_excecao === opt.tipo ? "bg-muted font-semibold" : ""}`}
+                                        onClick={() => setExcecao(i, r.tipo_excecao === opt.tipo ? null : opt.tipo)}
+                                      >
+                                        {opt.label}
+                                      </button>
+                                    ))}
+                                    {r.tipo_excecao && (
+                                      <button
+                                        className="text-xs text-left px-2 py-1.5 rounded hover:bg-muted text-muted-foreground transition-colors border-t border-border mt-0.5 pt-1.5"
+                                        onClick={() => setExcecao(i, null)}
+                                      >
+                                        Limpar
+                                      </button>
+                                    )}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            ) : (
+                              excecaoBadge(r.tipo_excecao) || <span className="text-[10px] text-muted-foreground">—</span>
+                            )}
                           </td>
                           <td className="px-1 py-1 text-center">
                             {editMode ? (

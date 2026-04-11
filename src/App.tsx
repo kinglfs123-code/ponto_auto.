@@ -4,6 +4,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { EmpresaProvider } from "@/contexts/EmpresaContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 import AuthGuard from "@/components/AuthGuard";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
@@ -19,25 +20,27 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <BrowserRouter>
-        <EmpresaProvider>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route path="/" element={<AuthGuard><Dashboard /></AuthGuard>} />
-            <Route path="/empresas" element={<AuthGuard><Empresas /></AuthGuard>} />
-            <Route path="/ponto" element={<AuthGuard><Ponto /></AuthGuard>} />
-            <Route path="/ponto/:folhaId" element={<AuthGuard><FolhaDetalhe /></AuthGuard>} />
-            <Route path="/funcionarios" element={<AuthGuard><Funcionarios /></AuthGuard>} />
-            <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
-            <Route path="/holerites" element={<AuthGuard><Holerites /></AuthGuard>} />
-            <Route path="*" element={<NotFound />} />
-          </Routes>
-        </EmpresaProvider>
-      </BrowserRouter>
-    </TooltipProvider>
+    <ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <BrowserRouter>
+          <EmpresaProvider>
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route path="/" element={<AuthGuard><Dashboard /></AuthGuard>} />
+              <Route path="/empresas" element={<AuthGuard><Empresas /></AuthGuard>} />
+              <Route path="/ponto" element={<AuthGuard><Ponto /></AuthGuard>} />
+              <Route path="/ponto/:folhaId" element={<AuthGuard><FolhaDetalhe /></AuthGuard>} />
+              <Route path="/funcionarios" element={<AuthGuard><Funcionarios /></AuthGuard>} />
+              <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
+              <Route path="/holerites" element={<AuthGuard><Holerites /></AuthGuard>} />
+              <Route path="*" element={<NotFound />} />
+            </Routes>
+          </EmpresaProvider>
+        </BrowserRouter>
+      </TooltipProvider>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 
