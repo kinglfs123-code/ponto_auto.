@@ -32,6 +32,14 @@ export function formatHours(d: number | null | undefined): string {
   return `${s}${Math.floor(a)}h${Math.round((a % 1) * 60).toString().padStart(2, "0")}min`;
 }
 
+export function formatMinutes(mins: number | null | undefined): string {
+  if (mins == null || isNaN(mins) || mins === 0) return "—";
+  const h = Math.floor(mins / 60);
+  const m = Math.round(mins % 60);
+  if (h > 0) return `${h}h${m.toString().padStart(2, "0")}min`;
+  return `${m}min`;
+}
+
 export function maskHM(v: string): string {
   let d = v.replace(/\D/g, "").slice(0, 4);
   return d.length >= 3 ? d.slice(0, 2) + ":" + d.slice(2) : d;
@@ -93,7 +101,7 @@ export function matchFuncionario<T extends { nome_completo: string }>(
   return match || null;
 }
 
-const TOLERANCE_MINUTES = 10;
+const TOLERANCE_MINUTES = 5;
 
 export interface RegistroPonto {
   dia: number | string;
@@ -106,6 +114,7 @@ export interface RegistroPonto {
   horas_normais: number;
   horas_extras: number;
   horas_noturnas: number;
+  atraso_minutos: number;
   tipo_excecao: string | null;
   corrigido_manualmente: boolean;
   obs: string | null;
@@ -141,10 +150,12 @@ function calcNightHours(entrada: number | null, saida: number | null): number {
 export function applyToleranceAndDetect(
   registro: Partial<RegistroPonto>,
   jornadaPadraoStr: string,
-  horarioEntradaPadrao: string = "08:00"
+  horarioEntradaPadrao: string = "08:00",
+  horarioSaidaPadrao: string = "17:20"
 ): RegistroPonto {
   const jornadaMinutos = parseTimeToMinutes(jornadaPadraoStr) || 440; // 7:20 default
   const entradaPadraoMin = parseTimeToMinutes(horarioEntradaPadrao) || 480;
+  const saidaPadraoMin = parseTimeToMinutes(horarioSaidaPadrao) || (entradaPadraoMin + jornadaMinutos);
 
   const me = parseTimeToMinutes(registro.hora_entrada);
   const ms = parseTimeToMinutes(registro.hora_saida);
@@ -163,25 +174,45 @@ export function applyToleranceAndDetect(
   nightHours += calcNightHours(te, ts);
   nightHours += calcNightHours(ee, es);
 
-  // Detect exceptions
-  let tipo_excecao: string | null = null;
-  const obs = (registro.obs || "").toUpperCase();
-  const isFalta = obs.includes("FALTA") || obs.includes("AUSENT");
-  const isFolga = obs.includes("FOLGA") || obs.includes("FERIADO");
+  // Calculate delay (atraso) with 5min tolerance
+  let atrasoMinutos = 0;
+  if (me !== null) {
+    const diff = me - entradaPadraoMin;
+    if (diff > TOLERANCE_MINUTES) {
+      atrasoMinutos = diff;
+    }
+  }
 
-  if (isFalta) {
-    tipo_excecao = "falta";
-  } else if (!isFolga && me === null && ms === null && te === null && ts === null) {
-    tipo_excecao = "falta";
-  } else if (me !== null) {
-    // Apply tolerance
-    const atraso = me - entradaPadraoMin;
-    if (atraso > TOLERANCE_MINUTES) {
+  // Detect exceptions
+  let tipo_excecao: string | null = registro.tipo_excecao || null;
+  
+  // If manually set to folga/falta/atestado, respect it
+  const manualExceptions = ["folga", "falta", "atestado"];
+  const isManualException = tipo_excecao && manualExceptions.includes(tipo_excecao);
+  
+  if (!isManualException) {
+    tipo_excecao = null;
+    const obs = (registro.obs || "").toUpperCase();
+    const isFalta = obs.includes("FALTA") || obs.includes("AUSENT");
+    const isFolga = obs.includes("FOLGA") || obs.includes("FERIADO");
+    const isAtestado = obs.includes("ATESTADO");
+
+    if (isAtestado) {
+      tipo_excecao = "atestado";
+    } else if (isFalta) {
+      tipo_excecao = "falta";
+    } else if (isFolga) {
+      tipo_excecao = "folga";
+    } else if (!isFolga && me === null && ms === null && te === null && ts === null) {
+      tipo_excecao = "falta";
+    } else if (atrasoMinutos > 0) {
       tipo_excecao = "atraso";
     }
   }
 
-  const totalWorkedHours = totalWorked > 0 ? totalWorked / 60 : 0;
+  // Zero out hours for falta/atestado
+  const isAbsence = tipo_excecao === "falta" || tipo_excecao === "atestado";
+  const totalWorkedHours = isAbsence ? 0 : (totalWorked > 0 ? totalWorked / 60 : 0);
   const jornadaHours = jornadaMinutos / 60;
   const extras = totalWorkedHours > jornadaHours ? totalWorkedHours - jornadaHours : 0;
   const normais = totalWorkedHours > 0 ? Math.min(totalWorkedHours, jornadaHours) : 0;
@@ -202,6 +233,7 @@ export function applyToleranceAndDetect(
     horas_normais: Math.round(normais * 100) / 100,
     horas_extras: Math.round(extras * 100) / 100,
     horas_noturnas: Math.round(nightHours * 100) / 100,
+    atraso_minutos: atrasoMinutos,
     tipo_excecao,
     corrigido_manualmente: registro.corrigido_manualmente || false,
     obs: registro.obs || null,
@@ -219,16 +251,14 @@ export function calcularResumo(registros: RegistroPonto[]): ResumoCalculo {
       extras += r.horas_extras;
       noturnas += r.horas_noturnas;
     }
-    if (r.tipo_excecao === "atraso" || r.tipo_excecao === "saida_antecipada") {
-      // rough atraso calc
-    }
+    atraso += r.atraso_minutos || 0;
   }
 
   return {
     dias_trabalhados: dias,
     total_horas: Math.round(totalH * 100) / 100,
     total_extras: Math.round(extras * 100) / 100,
-    total_atraso: Math.round(atraso * 100) / 100,
+    total_atraso: atraso,
     total_noturnas: Math.round(noturnas * 100) / 100,
     saldo: Math.round(extras * 100) / 100,
   };
