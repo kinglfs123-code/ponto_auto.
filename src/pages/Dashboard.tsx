@@ -7,14 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { maskCNPJ } from "@/lib/ponto-rules";
 import NavBar from "@/components/NavBar";
-
-interface Empresa {
-  id: string;
-  cnpj: string;
-  nome: string;
-  jornada_padrao: string;
-}
-
+import type { Empresa } from "@/types";
 export default function Dashboard() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [folhasCount, setFolhasCount] = useState(0);

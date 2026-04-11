@@ -10,20 +10,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { maskCPF, validateCPF, maskHM } from "@/lib/ponto-rules";
 import { Pencil, Trash2, Plus, X, Users, Clock } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
-
-interface Empresa { id: string; cnpj: string; nome: string; jornada_padrao: string }
-
-interface Funcionario {
-  id: string;
-  empresa_id: string;
-  nome_completo: string;
-  cpf: string;
-  email: string | null;
-  data_nascimento: string | null;
-  cargo: string | null;
-  horario_entrada: string;
-  horario_saida: string;
-}
+import { useEmpresa } from "@/contexts/EmpresaContext";
+import type { Funcionario } from "@/types";
 
 const empty: Omit<Funcionario, "id" | "empresa_id"> = {
   nome_completo: "",
@@ -36,7 +24,7 @@ const empty: Omit<Funcionario, "id" | "empresa_id"> = {
 };
 
 export default function Funcionarios() {
-  const [empresa, setEmpresa] = useState<Empresa | null>(null);
+  const { empresa, setEmpresa } = useEmpresa();
   const [funcionarios, setFuncionarios] = useState<Funcionario[]>([]);
   const [form, setForm] = useState(empty);
   const [editId, setEditId] = useState<string | null>(null);

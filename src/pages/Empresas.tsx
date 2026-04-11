@@ -7,14 +7,7 @@ import { toast } from "@/hooks/use-toast";
 import { maskCNPJ, validateCNPJ, maskHM } from "@/lib/ponto-rules";
 import { Plus, Trash2, Building2 } from "lucide-react";
 import NavBar from "@/components/NavBar";
-
-interface Empresa {
-  id: string;
-  cnpj: string;
-  nome: string;
-  jornada_padrao: string;
-}
-
+import type { Empresa } from "@/types";
 export default function Empresas() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [nome, setNome] = useState("");

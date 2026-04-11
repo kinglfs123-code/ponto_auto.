@@ -9,6 +9,9 @@ import NavBar from "@/components/NavBar";
 import EmpresaSelector from "@/components/EmpresaSelector";
 import FuncionarioSelector, { type FuncionarioOption } from "@/components/FuncionarioSelector";
 import FileImporter, { type ImportedRecord } from "@/components/FileImporter";
+import { useEmpresa } from "@/contexts/EmpresaContext";
+import { currentMonth } from "@/lib/utils";
+import FileImporter, { type ImportedRecord } from "@/components/FileImporter";
 import {
   parseTimeToHours,
   formatHours,
@@ -111,7 +114,6 @@ interface EmpresaSel {
   jornada_padrao: string;
 }
 
-// Store original AI values for correction tracking
 interface AIOriginal {
   dia: number;
   me?: string | null;
@@ -127,14 +129,11 @@ interface AIOriginal {
 export default function Ponto() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [empresa, setEmpresa] = useState<EmpresaSel | null>(null);
+  const { empresa, setEmpresa } = useEmpresa();
   const [funcionarioSel, setFuncionarioSel] = useState<FuncionarioOption | null>(null);
   const [funcionario, setFuncionario] = useState("");
   const [funcionarios, setFuncionarios] = useState<FuncionarioOption[]>([]);
-  const [mesRef, setMesRef] = useState(() => {
-    const d = new Date();
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  });
+  const [mesRef, setMesRef] = useState(currentMonth);
   const [registros, setRegistros] = useState<RegistroPonto[]>([]);
   const [resumo, setResumo] = useState<ResumoCalculo | null>(null);
   const [editMode, setEditMode] = useState(false);
@@ -148,21 +147,11 @@ export default function Ponto() {
   const horarioEntrada = funcionarioSel?.horario_entrada || "08:00";
   const jornada = empresa?.jornada_padrao || "07:20";
 
-  // Load funcionarios when empresa changes
-  const handleEmpresaChange = (e: EmpresaSel | null) => {
+  const handleEmpresaChange = (e: typeof empresa) => {
     setEmpresa(e);
     setFuncionarioSel(null);
     setFuncionario("");
-    if (e) {
-      supabase
-        .from("funcionarios")
-        .select("id, nome_completo, horario_entrada, horario_saida")
-        .eq("empresa_id", e.id)
-        .order("nome_completo")
-        .then(({ data }) => setFuncionarios(data || []));
-    } else {
-      setFuncionarios([]);
-    }
+    setFuncionarios([]);
   };
 
   // Fetch previous corrections for this company
