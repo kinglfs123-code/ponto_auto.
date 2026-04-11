@@ -50,13 +50,18 @@ interface Correcao {
 
 async function callAI(body: Record<string, unknown>): Promise<AIResult> {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 55000);
+  const timeout = setTimeout(() => controller.abort(), 90000);
   try {
+    const { data: sessionData } = await supabase.auth.getSession();
+    const accessToken = sessionData?.session?.access_token;
+    if (!accessToken) throw new Error("Sessão expirada. Faça login novamente.");
+
     const resp = await fetch(FUNC_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        Authorization: `Bearer ${accessToken}`,
+        apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
       },
       body: JSON.stringify(body),
       signal: controller.signal,
@@ -426,6 +431,7 @@ export default function Ponto() {
                     if (f) setFuncionario(f.nome_completo);
                   }}
                   onManualName={setFuncionario}
+                  onLoadedFuncionarios={setFuncionarios}
                 />
               </div>
               <div className="w-28">
@@ -455,9 +461,12 @@ export default function Ponto() {
               <Camera className="h-4 w-4" /> Foto (IA)
             </Button>
           </div>
-          {image && (
-            <Button onClick={runOCR} disabled={loading || !empresa} className="gap-2">
-              {loading ? step || "..." : "Ler Folha de Ponto"}
+          {image && !empresa && (
+            <p className="text-xs text-destructive">Selecione uma empresa para ler a folha.</p>
+          )}
+          {image && empresa && (
+            <Button onClick={runOCR} disabled={loading} className="gap-2">
+              {loading ? step || "Processando..." : "Ler Folha de Ponto"}
             </Button>
           )}
         </div>
