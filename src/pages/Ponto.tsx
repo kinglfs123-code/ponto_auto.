@@ -11,7 +11,6 @@ import FuncionarioSelector, { type FuncionarioOption } from "@/components/Funcio
 import FileImporter, { type ImportedRecord } from "@/components/FileImporter";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { currentMonth } from "@/lib/utils";
-import FileImporter, { type ImportedRecord } from "@/components/FileImporter";
 import {
   parseTimeToHours,
   formatHours,
