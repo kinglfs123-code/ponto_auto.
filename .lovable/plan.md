@@ -1,74 +1,89 @@
 
 
-## Plano: Aba de Holerites com Envio por E-mail
+## Plano: Eliminar Redundâncias e Reestruturar Workflow
+
+### Problemas Encontrados
+
+**1. Interface `Empresa` duplicada em 5 arquivos**
+- `Dashboard.tsx`, `Empresas.tsx`, `Funcionarios.tsx`, `Ponto.tsx`, `Relatorios.tsx` — cada um define sua própria versão de `interface Empresa { id, cnpj, nome, jornada_padrao }`.
+- `EmpresaSelector.tsx` também define internamente.
+
+**2. Interface `Funcionario` duplicada em 3 arquivos**
+- `Funcionarios.tsx`, `Holerites.tsx`, `FuncionarioSelector.tsx` — cada um com sua versão (campos diferentes).
+
+**3. Seletor de empresa inconsistente**
+- `Ponto.tsx`, `Funcionarios.tsx`, `Holerites.tsx` usam `EmpresaSelector` (componente reutilizável).
+- `Relatorios.tsx` faz sua própria query de empresas e monta um `Select` manualmente — duplicação desnecessária.
+
+**4. Carregamento de funcionários duplicado**
+- `Ponto.tsx` (linhas 156-166) carrega funcionários ao selecionar empresa.
+- `FuncionarioSelector.tsx` (linhas 27-40) faz a mesma query independentemente.
+- `Holerites.tsx` (linha 49) faz a mesma query novamente.
+- Resultado: ao abrir Ponto, a mesma query roda 2x (Ponto + FuncionarioSelector).
+
+**5. Cálculo de mês padrão duplicado**
+- `Ponto.tsx` (linhas 134-137) e `Holerites.tsx` (linhas 33-36) têm o mesmo código para gerar `YYYY-MM`.
+
+**6. Workflow confuso — navegação sem contexto**
+- O fluxo natural é: Empresa → Funcionários → Ponto → Relatórios → Holerites.
+- Mas cada aba começa do zero: o usuário precisa re-selecionar a empresa em cada página.
+- Não há persistência da empresa selecionada entre abas.
+
+**7. `Relatorios.tsx` não usa `EmpresaSelector`**
+- Monta seu próprio dropdown, quebrando consistência visual.
 
 ### O que será feito
 
-Nova página "Holerites" onde o usuário seleciona empresa e mês, faz upload de PDFs de holerite para cada funcionário, e dispara o envio por e-mail para os funcionários que possuem e-mail cadastrado.
+#### 1. Criar tipos compartilhados (`src/types/index.ts`)
+- Mover `Empresa`, `Funcionario`, `Folha`, `Registro`, `Holerite` para um arquivo central.
+- Todos os arquivos importam daqui.
 
-### Pré-requisito: Domínio de E-mail
+#### 2. Criar contexto de empresa selecionada (`src/contexts/EmpresaContext.tsx`)
+- Context React que armazena a empresa ativa.
+- Quando o usuário seleciona empresa em qualquer aba, a seleção persiste nas outras.
+- `EmpresaSelector` consome e atualiza esse contexto.
+- Elimina re-seleção repetida entre abas.
 
-Para enviar e-mails pela plataforma, é necessário configurar um domínio de e-mail. Isso será feito como primeiro passo, através do painel de configuração de e-mails do Lovable Cloud.
+#### 3. Criar helper `currentMonth()` (`src/lib/utils.ts`)
+- Função reutilizável para gerar `YYYY-MM` do mês atual.
+- Substituir duplicação em `Ponto.tsx` e `Holerites.tsx`.
 
-### Banco de dados
+#### 4. Refatorar `Relatorios.tsx`
+- Usar `EmpresaSelector` ao invés do select manual.
+- Consumir contexto de empresa.
 
-Nova tabela `holerites`:
+#### 5. Eliminar query duplicada de funcionários em `Ponto.tsx`
+- Remover o carregamento manual em `handleEmpresaChange`.
+- Deixar o `FuncionarioSelector` ser a única fonte (já faz a query).
+- Expor os funcionários carregados via callback do `FuncionarioSelector`.
 
-| Coluna | Tipo | Notas |
-|--------|------|-------|
-| id | uuid | PK |
-| empresa_id | uuid | FK → empresas.id, NOT NULL |
-| funcionario_id | uuid | FK → funcionarios.id, NOT NULL |
-| mes_referencia | text | NOT NULL (ex: "2026-04") |
-| pdf_path | text | NOT NULL (caminho no storage) |
-| enviado | boolean | default false |
-| enviado_em | timestamptz | nullable |
-| created_at | timestamptz | default now() |
+#### 6. Adicionar `EmpresaContext.Provider` no `App.tsx`
+- Envolver as rotas com o provider.
 
-**RLS**: via `user_owns_empresa(empresa_id)`.
+### Fluxo melhorado
 
-### Storage
-
-Novo bucket `holerites` (privado) para armazenar os PDFs.
-
-### Frontend — Nova página `src/pages/Holerites.tsx`
-
-- Seletor de empresa + campo de mês de referência
-- Lista de funcionários da empresa selecionada
-- Para cada funcionário: botão de upload de PDF e indicador de status (enviado/pendente)
-- Botão "Enviar todos" que dispara o e-mail para cada funcionário com e-mail cadastrado e PDF anexado
-- Botão individual de envio por funcionário
-
-### Edge Function — `send-holerite`
-
-- Recebe `holerite_id`, busca o PDF no storage, gera signed URL
-- Envia e-mail para o funcionário com link para download do PDF (não anexo direto, pois a infra de e-mail não suporta anexos)
-- Atualiza `enviado = true` e `enviado_em = now()`
-
-### Navegação
-
-- Novo link "Holerites" no NavBar com ícone `Receipt`
-- Nova rota `/holerites` em `App.tsx` (protegida por AuthGuard)
-
-### Fluxo de e-mail
-
-Como a infraestrutura de e-mail do Lovable não suporta anexos, o e-mail conterá um **link seguro (signed URL)** para download do PDF, com validade temporária. O funcionário clica no link e baixa o holerite.
-
-### Etapas
-
-1. Configurar domínio de e-mail (será solicitado ao usuário)
-2. Criar infraestrutura de e-mail + template transacional
-3. Migration SQL (tabela `holerites` + bucket storage)
-4. Edge function `send-holerite`
-5. Página `Holerites.tsx` com CRUD e upload
-6. Atualizar NavBar e App.tsx
+```text
+Usuário seleciona empresa em qualquer aba
+  ↓
+Contexto global armazena seleção
+  ↓
+Navega para outra aba → empresa já está selecionada
+  ↓
+Menos cliques, menos confusão
+```
 
 ### Arquivos criados/alterados
 
-- **Nova migration** — tabela `holerites`, bucket `holerites`, RLS
-- **`supabase/functions/send-holerite/index.ts`** — envio de e-mail com link do PDF
-- **`src/pages/Holerites.tsx`** — nova página
-- **`src/App.tsx`** — nova rota
-- **`src/components/NavBar.tsx`** — novo link
-- Template de e-mail transacional para holerite
+- **`src/types/index.ts`** — tipos compartilhados (novo)
+- **`src/contexts/EmpresaContext.tsx`** — contexto global (novo)
+- **`src/lib/utils.ts`** — adicionar `currentMonth()`
+- **`src/components/EmpresaSelector.tsx`** — integrar com contexto
+- **`src/pages/Relatorios.tsx`** — usar `EmpresaSelector` + contexto
+- **`src/pages/Ponto.tsx`** — remover query duplicada de funcionários, usar tipos + contexto
+- **`src/pages/Funcionarios.tsx`** — usar tipos + contexto
+- **`src/pages/Holerites.tsx`** — usar tipos + contexto + `currentMonth()`
+- **`src/pages/Dashboard.tsx`** — usar tipos compartilhados
+- **`src/App.tsx`** — adicionar `EmpresaProvider`
+
+Sem mudanças no banco de dados.
 
