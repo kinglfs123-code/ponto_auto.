@@ -56,8 +56,8 @@ export default function Holerites() {
     }
   }, [empresaId, mesRef]);
 
-  const handleEmpresaChange = (id: string) => {
-    setEmpresaId(id);
+  const handleEmpresaChange = (empresa: { id: string; cnpj: string; nome: string; jornada_padrao: string } | null) => {
+    setEmpresaId(empresa?.id || "");
   };
 
   // Load data when empresa or month changes
