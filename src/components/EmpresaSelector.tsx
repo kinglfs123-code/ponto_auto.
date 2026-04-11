@@ -1,20 +1,16 @@
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-
-interface Empresa {
-  id: string;
-  cnpj: string;
-  nome: string;
-  jornada_padrao: string;
-}
+import { useEmpresa } from "@/contexts/EmpresaContext";
+import type { Empresa } from "@/types";
 
 interface Props {
-  value: string | null;
-  onChange: (empresa: Empresa | null) => void;
+  value?: string | null;
+  onChange?: (empresa: Empresa | null) => void;
 }
 
 export default function EmpresaSelector({ value, onChange }: Props) {
+  const { empresa: ctxEmpresa, setEmpresa: setCtxEmpresa } = useEmpresa();
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
 
   useEffect(() => {
@@ -23,14 +19,16 @@ export default function EmpresaSelector({ value, onChange }: Props) {
     });
   }, []);
 
+  const selectedId = value ?? ctxEmpresa?.id ?? "";
+
+  const handleChange = (v: string) => {
+    const emp = empresas.find((e) => e.id === v) || null;
+    setCtxEmpresa(emp);
+    onChange?.(emp);
+  };
+
   return (
-    <Select
-      value={value || ""}
-      onValueChange={(v) => {
-        const emp = empresas.find((e) => e.id === v) || null;
-        onChange(emp);
-      }}
-    >
+    <Select value={selectedId || ""} onValueChange={handleChange}>
       <SelectTrigger className="w-full max-w-xs">
         <SelectValue placeholder="Selecione a empresa" />
       </SelectTrigger>
