@@ -187,7 +187,7 @@ export default function Holerites() {
             </Card>
             <Card>
               <CardContent className="pt-4 pb-3 text-center">
-                <p className="text-2xl font-bold text-green-500">{totalSent}</p>
+                <p className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">{totalSent}</p>
                 <p className="text-xs text-muted-foreground">Enviados</p>
               </CardContent>
             </Card>
@@ -238,12 +238,12 @@ export default function Holerites() {
                         {hol && (
                           <div className="flex items-center gap-1.5 mt-1.5">
                             {hol.enviado ? (
-                              <Badge className="bg-green-500/15 text-green-600 border-green-500/30 gap-1">
+                              <Badge className="bg-primary/15 text-primary border-primary/30 gap-1">
                                 <CheckCircle2 className="h-3 w-3" />
                                 Enviado
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="gap-1 text-amber-600 border-amber-500/30">
+                              <Badge variant="outline" className="gap-1 text-accent-foreground border-accent gap-1">
                                 <Clock className="h-3 w-3" />
                                 PDF anexado — pendente
                               </Badge>
