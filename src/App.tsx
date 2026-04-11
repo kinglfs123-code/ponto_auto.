@@ -11,6 +11,7 @@ import Ponto from "@/pages/Ponto";
 import FolhaDetalhe from "@/pages/FolhaDetalhe";
 import Relatorios from "@/pages/Relatorios";
 import Funcionarios from "@/pages/Funcionarios";
+import Holerites from "@/pages/Holerites";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
           <Route path="/ponto/:folhaId" element={<AuthGuard><FolhaDetalhe /></AuthGuard>} />
           <Route path="/funcionarios" element={<AuthGuard><Funcionarios /></AuthGuard>} />
           <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
+          <Route path="/holerites" element={<AuthGuard><Holerites /></AuthGuard>} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

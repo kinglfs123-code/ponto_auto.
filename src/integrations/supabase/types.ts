@@ -181,6 +181,54 @@ export type Database = {
           },
         ]
       }
+      holerites: {
+        Row: {
+          created_at: string
+          empresa_id: string
+          enviado: boolean
+          enviado_em: string | null
+          funcionario_id: string
+          id: string
+          mes_referencia: string
+          pdf_path: string
+        }
+        Insert: {
+          created_at?: string
+          empresa_id: string
+          enviado?: boolean
+          enviado_em?: string | null
+          funcionario_id: string
+          id?: string
+          mes_referencia: string
+          pdf_path: string
+        }
+        Update: {
+          created_at?: string
+          empresa_id?: string
+          enviado?: boolean
+          enviado_em?: string | null
+          funcionario_id?: string
+          id?: string
+          mes_referencia?: string
+          pdf_path?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "holerites_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "holerites_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       registros_ponto: {
         Row: {
           corrigido_manualmente: boolean
