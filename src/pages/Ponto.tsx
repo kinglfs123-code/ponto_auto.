@@ -14,6 +14,7 @@ import { currentMonth } from "@/lib/utils";
 import {
   parseTimeToHours,
   formatHours,
+  formatMinutes,
   maskHM,
   applyToleranceAndDetect,
   calcularResumo,
@@ -22,6 +23,8 @@ import {
   type ResumoCalculo,
 } from "@/lib/ponto-rules";
 import { Camera, Save, Calculator, AlertTriangle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 const FUNC_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/read-timesheet`;
 
@@ -396,11 +399,30 @@ export default function Ponto() {
     }
   };
 
-  const excecaoColor = (t: string | null) => {
-    if (t === "atraso") return "text-destructive";
-    if (t === "saida_antecipada") return "text-[hsl(var(--warning))]";
-    if (t === "falta") return "text-destructive font-bold";
-    return "";
+  const excecaoBadge = (t: string | null) => {
+    if (!t) return null;
+    const map: Record<string, { label: string; className: string }> = {
+      atraso: { label: "Atraso", className: "bg-destructive/15 text-destructive border-destructive/30" },
+      saida_antecipada: { label: "Saída Ant.", className: "bg-[hsl(var(--warning)/0.15)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.3)]" },
+      falta: { label: "Falta", className: "bg-destructive/20 text-destructive font-bold border-destructive/40" },
+      folga: { label: "Folga", className: "bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)]" },
+      atestado: { label: "Atestado", className: "bg-primary/15 text-primary border-primary/30" },
+    };
+    const info = map[t] || { label: t, className: "" };
+    return <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${info.className}`}>{info.label}</Badge>;
+  };
+
+  const setExcecao = (i: number, tipo: string | null) => {
+    const u = [...registros];
+    u[i] = { ...u[i], tipo_excecao: tipo, corrigido_manualmente: true };
+    // Re-apply calculations to zero out hours for falta/atestado
+    const processed = applyToleranceAndDetect(u[i], jornada, horarioEntrada);
+    // Keep the manually set exception
+    processed.tipo_excecao = tipo;
+    processed.corrigido_manualmente = true;
+    u[i] = processed;
+    setRegistros(u);
+    setResumo(calcularResumo(u));
   };
 
   return (
