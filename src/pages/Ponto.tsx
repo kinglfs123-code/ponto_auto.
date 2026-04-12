@@ -88,37 +88,7 @@ async function callAI(body: Record<string, unknown>): Promise<AIResult> {
   }
 }
 
-/** Image preprocessing: resize + light contrast boost (no binarization) */
-function preprocessImage(dataUrl: string, maxW = 900): Promise<string> {
-  return new Promise((res, rej) => {
-    const img = new Image();
-    img.onerror = () => rej(new Error("Imagem inválida"));
-    img.onload = () => {
-      const sc = Math.min(1, maxW / img.width);
-      const w = Math.round(img.width * sc);
-      const h = Math.round(img.height * sc);
-      const c = document.createElement("canvas");
-      c.width = w;
-      c.height = h;
-      const ctx = c.getContext("2d")!;
-      ctx.drawImage(img, 0, 0, w, h);
-
-      // Light contrast boost only
-      const imageData = ctx.getImageData(0, 0, w, h);
-      const d = imageData.data;
-      const contrast = 1.2;
-      const brightness = 5;
-      for (let i = 0; i < d.length; i += 4) {
-        d[i] = Math.min(255, Math.max(0, (d[i] - 128) * contrast + 128 + brightness));
-        d[i + 1] = Math.min(255, Math.max(0, (d[i + 1] - 128) * contrast + 128 + brightness));
-        d[i + 2] = Math.min(255, Math.max(0, (d[i + 2] - 128) * contrast + 128 + brightness));
-      }
-      ctx.putImageData(imageData, 0, 0);
-      res(c.toDataURL("image/jpeg", 0.75));
-    };
-    img.src = dataUrl;
-  });
-}
+// preprocessImage imported from @/lib/ocr-utils
 
 
 interface AIOriginal {
