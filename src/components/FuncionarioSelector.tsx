@@ -10,6 +10,7 @@ export interface FuncionarioOption {
   nome_completo: string;
   horario_entrada: string;
   horario_saida: string;
+  intervalo: string;
 }
 
 interface Props {
@@ -32,7 +33,7 @@ export default function FuncionarioSelector({ empresaId, value, manualName, onSe
     }
     supabase
       .from("funcionarios")
-      .select("id, nome_completo, horario_entrada, horario_saida")
+      .select("id, nome_completo, horario_entrada, horario_saida, intervalo")
       .eq("empresa_id", empresaId)
       .order("nome_completo")
       .then(({ data }) => {
