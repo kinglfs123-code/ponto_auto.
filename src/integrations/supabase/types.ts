@@ -145,6 +145,7 @@ export type Database = {
           horario_entrada: string
           horario_saida: string
           id: string
+          intervalo: string
           nome_completo: string
         }
         Insert: {
@@ -157,6 +158,7 @@ export type Database = {
           horario_entrada?: string
           horario_saida?: string
           id?: string
+          intervalo?: string
           nome_completo: string
         }
         Update: {
@@ -169,6 +171,7 @@ export type Database = {
           horario_entrada?: string
           horario_saida?: string
           id?: string
+          intervalo?: string
           nome_completo?: string
         }
         Relationships: [
