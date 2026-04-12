@@ -28,8 +28,6 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import {
   preprocessImage,
   getConfidenceLevel,
-  CONFIDENCE_CONFIG,
-  autoCorrectRegistros,
 } from "@/lib/ocr-utils";
 
 const FUNC_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/read-timesheet`;
