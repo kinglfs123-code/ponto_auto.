@@ -25,6 +25,10 @@ import {
 import { Camera, Save, Calculator, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  preprocessImage,
+  getConfidenceLevel,
+} from "@/lib/ocr-utils";
 
 const FUNC_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/read-timesheet`;
 
@@ -82,37 +86,7 @@ async function callAI(body: Record<string, unknown>): Promise<AIResult> {
   }
 }
 
-/** Image preprocessing: resize + light contrast boost (no binarization) */
-function preprocessImage(dataUrl: string, maxW = 900): Promise<string> {
-  return new Promise((res, rej) => {
-    const img = new Image();
-    img.onerror = () => rej(new Error("Imagem inválida"));
-    img.onload = () => {
-      const sc = Math.min(1, maxW / img.width);
-      const w = Math.round(img.width * sc);
-      const h = Math.round(img.height * sc);
-      const c = document.createElement("canvas");
-      c.width = w;
-      c.height = h;
-      const ctx = c.getContext("2d")!;
-      ctx.drawImage(img, 0, 0, w, h);
-
-      // Light contrast boost only
-      const imageData = ctx.getImageData(0, 0, w, h);
-      const d = imageData.data;
-      const contrast = 1.2;
-      const brightness = 5;
-      for (let i = 0; i < d.length; i += 4) {
-        d[i] = Math.min(255, Math.max(0, (d[i] - 128) * contrast + 128 + brightness));
-        d[i + 1] = Math.min(255, Math.max(0, (d[i + 1] - 128) * contrast + 128 + brightness));
-        d[i + 2] = Math.min(255, Math.max(0, (d[i + 2] - 128) * contrast + 128 + brightness));
-      }
-      ctx.putImageData(imageData, 0, 0);
-      res(c.toDataURL("image/jpeg", 0.75));
-    };
-    img.src = dataUrl;
-  });
-}
+// preprocessImage imported from @/lib/ocr-utils
 
 
 interface AIOriginal {
@@ -180,7 +154,7 @@ export default function Ponto() {
     setLoading(true);
     try {
       setStep("Pré-processando imagem...");
-      const processed = await preprocessImage(image, 900);
+      const processed = await preprocessImage(image);
       const b64 = processed.split(",")[1];
 
       setStep("Buscando correções anteriores...");
@@ -206,10 +180,11 @@ export default function Ponto() {
         // Save originals for correction tracking
         setAiOriginals(result.registros);
 
-        // Build confidence map
+        // Build confidence map with levels
         const confMap: Record<number, string> = {};
         result.registros.forEach((r) => {
-          confMap[r.dia] = r.confianca || "alta";
+          const level = getConfidenceLevel(r.confianca);
+          confMap[r.dia] = level === "low" ? "baixa" : level === "medium" ? "media" : "alta";
         });
         setConfidenceMap(confMap);
 
@@ -233,11 +208,14 @@ export default function Ponto() {
         setResumo(calcularResumo(regs));
         setEditMode(true);
 
-        const lowConf = result.registros.filter((r) => r.confianca === "baixa").length;
+        const lowConf = result.registros.filter((r) => {
+          const level = getConfidenceLevel(r.confianca);
+          return level === "low" || level === "medium";
+        }).length;
         if (lowConf > 0) {
           toast({
-            title: `${lowConf} registro(s) com baixa confiança`,
-            description: "Campos marcados com ⚠ precisam de revisão",
+            title: `${lowConf} registro(s) precisam de revisão`,
+            description: "Campos marcados com ⚠ têm confiança baixa ou média",
           });
         }
       }
@@ -523,12 +501,16 @@ export default function Ponto() {
                   </thead>
                   <tbody>
                     {registros.map((r, i) => {
-                      const isLowConf = confidenceMap[r.dia as number] === "baixa";
+                      const confLevel = confidenceMap[r.dia as number];
+                      const isLowConf = confLevel === "baixa";
+                      const isMedConf = confLevel === "media";
+                      const rowBg = isLowConf ? "bg-destructive/5" : isMedConf ? "bg-[hsl(var(--warning)/0.08)]" : "";
                       return (
-                        <tr key={i} className={`border-b border-border/50 hover:bg-muted/30 ${isLowConf ? "bg-[hsl(var(--warning)/0.08)]" : ""}`}>
+                        <tr key={i} className={`border-b border-border/50 hover:bg-muted/30 ${rowBg}`}>
                           <td className="px-2 py-1.5 text-center font-semibold text-primary flex items-center justify-center gap-1">
                             {r.dia}
-                            {isLowConf && <AlertTriangle className="h-3 w-3 text-[hsl(var(--warning))]" />}
+                            {isLowConf && <AlertTriangle className="h-3 w-3 text-destructive" />}
+                            {isMedConf && <AlertTriangle className="h-3 w-3 text-[hsl(var(--warning))]" />}
                           </td>
                           {(["hora_entrada", "hora_saida", "hora_entrada_tarde", "hora_saida_tarde", "hora_entrada_extra", "hora_saida_extra"] as const).map((f) => (
                             <td key={f} className="px-1 py-1 text-center">
