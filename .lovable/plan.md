@@ -1,23 +1,18 @@
-
-
-## Plano: Ajustes de UI no Dashboard, EmpresaSelector e Mês de Referência
+- Plano: Remover Importação de Arquivo e Renomear Botão de Foto
 
 ### Alterações
 
-#### 1. Dashboard (`src/pages/Dashboard.tsx`)
-O layout já está conforme a screenshot — métricas em 3 cards (Empresas, Folhas de Ponto, Relatórios), ações rápidas em grid, lista de empresas. Está correto e não precisa de mudanças estruturais.
+#### 1. `src/pages/Ponto.tsx`
 
-#### 2. EmpresaSelector — remover CNPJ do dropdown (`src/components/EmpresaSelector.tsx`)
-- Linha 38: trocar `{e.nome} — {e.cnpj}` por apenas `{e.nome}`
+- Remover o import e uso do `FileImporter`
+- Remover a função `handleFileImport` (se existir)
+- Renomear o botão de foto de `Foto (IA)` para `Anexar Foto`
+- O botão "Ler Folha de Ponto" continua aparecendo após selecionar a foto
 
-#### 3. Mês de referência em formato brasileiro (`src/pages/Ponto.tsx` e `src/lib/utils.ts`)
-- Trocar o input de `mesRef` (atualmente `YYYY-MM` / `2026-04`) por um formato visual brasileiro (`04/2026`)
-- Adicionar helpers `toBrMonth("2026-04")` → `"04/2026"` e `fromBrMonth("04/2026")` → `"2026-04"` em `utils.ts`
-- O estado interno continua em `YYYY-MM` para compatibilidade com o banco, mas o input exibe e aceita `MM/YYYY`
-- Atualizar o placeholder para `"04/2026"`
+#### 2. Limpeza
 
-### Arquivos alterados
-- **`src/components/EmpresaSelector.tsx`** — remover CNPJ do label
-- **`src/lib/utils.ts`** — helpers de formatação de mês BR
-- **`src/pages/Ponto.tsx`** — input de mês em formato brasileiro
+- O arquivo `src/components/FileImporter.tsx` pode ser mantido (não causa problema) ou removido — prefiro manter caso queira reutilizar futuramente
 
+### Resultado
+
+Apenas um botão visível: **"Anexar foto"** com ícone de câmera, seguido do botão "Ler folha de ponto" quando uma imagem é selecionada.
