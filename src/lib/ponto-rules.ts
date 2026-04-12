@@ -2,7 +2,7 @@
 
 export function parseTimeToMinutes(s: string | null | undefined): number | null {
   if (!s || typeof s !== "string") return null;
-  let c = s.trim().replace(/[hH.]/, ":").replace(/[^\d:]/g, "");
+  let c = s.trim().replace(/[hH.]/g, ":").replace(/[^\d:]/g, "");
   let h: number, m: number;
   if (c.includes(":")) {
     const p = c.split(":");
@@ -29,11 +29,15 @@ export function formatHours(d: number | null | undefined): string {
   if (d == null || isNaN(d)) return "—";
   const s = d < 0 ? "-" : "";
   const a = Math.abs(d);
-  return `${s}${Math.floor(a)}h${Math.round((a % 1) * 60).toString().padStart(2, "0")}min`;
+  const totalMinutes = Math.round(a * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${s}${h}h${m.toString().padStart(2, "0")}min`;
 }
 
 export function formatMinutes(mins: number | null | undefined): string {
-  if (mins == null || isNaN(mins) || mins === 0) return "—";
+  if (mins == null || isNaN(mins)) return "—";
+  if (mins === 0) return "0min";
   const h = Math.floor(mins / 60);
   const m = Math.round(mins % 60);
   if (h > 0) return `${h}h${m.toString().padStart(2, "0")}min`;
@@ -104,7 +108,7 @@ export function matchFuncionario<T extends { nome_completo: string }>(
 const TOLERANCE_MINUTES = 5;
 
 export interface RegistroPonto {
-  dia: number | string;
+  dia: number;
   hora_entrada: string | null;
   hora_saida: string | null;
   hora_entrada_tarde: string | null;
@@ -132,16 +136,9 @@ export interface ResumoCalculo {
 /**
  * Calculate night hours (adicional noturno) for a shift.
  * Night period: 22:00 (1320min) to 05:00 (300min next day).
- * Uses intersection logic to correctly handle:
- * - Fully daytime shifts (08:00-18:00) → 0
- * - Shifts crossing into night (20:00-23:00) → 1h
- * - Overnight shifts (22:00-06:00) → 7h
- * - Early morning shifts (03:00-07:00) → 2h
  */
 function calcNightMinutes(entrada: number | null, saida: number | null): number {
   if (entrada === null || saida === null) return 0;
-  // Ignore invalid shifts (entry after exit without overnight)
-  if (entrada >= saida && saida > 300) return 0;
 
   const NIGHT_START = 22 * 60; // 1320
   const NIGHT_END = 5 * 60;    // 300
@@ -160,26 +157,36 @@ function calcNightMinutes(entrada: number | null, saida: number | null): number 
   }
 
   // Check overlap with late night period: 22:00 – 29:00 (05:00 next day)
-  const nightWindowStart = NIGHT_START;
   const nightWindowEnd = NIGHT_END + 24 * 60; // 1740
-  if (adjustedSaida > nightWindowStart) {
-    nightMinutes += Math.min(adjustedSaida, nightWindowEnd) - Math.max(entrada, nightWindowStart);
+  if (adjustedSaida > NIGHT_START) {
+    const overlapStart = Math.max(entrada, NIGHT_START);
+    const overlapEnd = Math.min(adjustedSaida, nightWindowEnd);
+    if (overlapEnd > overlapStart) {
+      nightMinutes += overlapEnd - overlapStart;
+    }
   }
 
   return Math.max(0, nightMinutes);
 }
 
-function calcNightHours(entrada: number | null, saida: number | null): number {
-  return calcNightMinutes(entrada, saida) / 60;
+/** Calculate shift duration in minutes. Handles overnight shifts. */
+function shiftDuration(entry: number | null, exit: number | null): number {
+  if (entry === null || exit === null) return 0;
+  // Overnight shift: exit <= entry means it crossed midnight
+  if (exit <= entry) return (exit + 24 * 60) - entry;
+  return exit - entry;
 }
 
 export function applyToleranceAndDetect(
   registro: Partial<RegistroPonto>,
   jornadaPadraoStr: string,
   horarioEntradaPadrao: string = "08:00",
-  horarioSaidaPadrao: string = "17:20",
+  horarioSaidaPadrao: string = "17:00",
   intervaloStr: string = "01:00"
 ): RegistroPonto {
+  // Normalize dia to number
+  const dia = typeof registro.dia === "number" ? registro.dia : parseInt(String(registro.dia)) || 0;
+
   const jornadaMinutos = parseTimeToMinutes(jornadaPadraoStr) || 440; // 7:20 default
   const entradaPadraoMin = parseTimeToMinutes(horarioEntradaPadrao) || 480;
   const saidaPadraoMin = parseTimeToMinutes(horarioSaidaPadrao) || (entradaPadraoMin + jornadaMinutos);
@@ -192,33 +199,20 @@ export function applyToleranceAndDetect(
   const ee = parseTimeToMinutes(registro.hora_entrada_extra);
   const es = parseTimeToMinutes(registro.hora_saida_extra);
 
-  let totalWorked = 0;
-  
-  // Helper: calculate shift duration with validation (ignore invalid shifts)
-  const shiftDuration = (entry: number | null, exit: number | null): number => {
-    if (entry === null || exit === null) return 0;
-    // If exit < entry and exit > 5:00, likely invalid data (not overnight)
-    if (exit < entry && exit > 300) return 0;
-    // Overnight shift
-    if (exit <= entry) return (exit + 24 * 60) - entry;
-    return exit - entry;
-  };
+  // Calculate main shift duration
+  const mainShift = shiftDuration(me, ms);
+  const afternoonShift = shiftDuration(te, ts);
+  const extraShift = shiftDuration(ee, es);
 
   const hasSplitShift = (te !== null && ts !== null);
-  totalWorked += shiftDuration(me, ms);
-  totalWorked += shiftDuration(te, ts);
-  totalWorked += shiftDuration(ee, es);
 
-  // Deduct interval only when there's a single continuous shift (no split)
-  if (me !== null && ms !== null && !hasSplitShift && totalWorked > intervaloMinutos) {
-    totalWorked -= intervaloMinutos;
+  // Deduct interval only from main continuous shift (no split), not from extras
+  let mainWorked = mainShift;
+  if (me !== null && ms !== null && !hasSplitShift && mainShift > intervaloMinutos) {
+    mainWorked = mainShift - intervaloMinutos;
   }
 
-  // Night hours calculation
-  let nightHours = 0;
-  nightHours += calcNightHours(me, ms);
-  nightHours += calcNightHours(te, ts);
-  nightHours += calcNightHours(ee, es);
+  const totalWorked = mainWorked + afternoonShift + extraShift;
 
   // Calculate delay (atraso) with 5min tolerance
   let atrasoMinutos = 0;
@@ -231,11 +225,11 @@ export function applyToleranceAndDetect(
 
   // Detect exceptions
   let tipo_excecao: string | null = registro.tipo_excecao || null;
-  
+
   // If manually set to folga/falta/atestado, respect it
   const manualExceptions = ["folga", "falta", "atestado"];
   const isManualException = tipo_excecao && manualExceptions.includes(tipo_excecao);
-  
+
   if (!isManualException) {
     tipo_excecao = null;
     const obs = (registro.obs || "").toUpperCase();
@@ -263,13 +257,31 @@ export function applyToleranceAndDetect(
   const extras = totalWorkedHours > jornadaHours ? totalWorkedHours - jornadaHours : 0;
   const normais = totalWorkedHours > 0 ? Math.min(totalWorkedHours, jornadaHours) : 0;
 
-  // Check early departure
-  if (!tipo_excecao && totalWorkedHours > 0 && totalWorkedHours < jornadaHours - TOLERANCE_MINUTES / 60) {
-    tipo_excecao = "saida_antecipada";
+  // Night hours — zero for absences
+  let nightHours = 0;
+  if (!isAbsence) {
+    nightHours += calcNightMinutes(me, ms) / 60;
+    nightHours += calcNightMinutes(te, ts) / 60;
+    nightHours += calcNightMinutes(ee, es) / 60;
+  }
+
+  // Check early departure — can coexist with atraso
+  // Compare actual last exit time with expected exit time
+  if (!isAbsence && totalWorkedHours > 0 && totalWorkedHours < jornadaHours - TOLERANCE_MINUTES / 60) {
+    // Determine actual exit time
+    const lastExit = es ?? ts ?? ms;
+    const lastExitMin = lastExit !== null ? (typeof lastExit === 'number' ? lastExit : parseTimeToMinutes(lastExit as string)) : null;
+    if (lastExitMin !== null && lastExitMin < saidaPadraoMin - TOLERANCE_MINUTES) {
+      if (tipo_excecao === "atraso") {
+        tipo_excecao = "atraso_saida_antecipada";
+      } else if (!tipo_excecao) {
+        tipo_excecao = "saida_antecipada";
+      }
+    }
   }
 
   return {
-    dia: registro.dia || 0,
+    dia,
     hora_entrada: registro.hora_entrada || null,
     hora_saida: registro.hora_saida || null,
     hora_entrada_tarde: registro.hora_entrada_tarde || null,
@@ -288,7 +300,7 @@ export function applyToleranceAndDetect(
 
 export function calcularResumo(registros: RegistroPonto[]): ResumoCalculo {
   let dias = 0, totalH = 0, extras = 0, atraso = 0, noturnas = 0;
-  
+
   for (const r of registros) {
     const total = r.horas_normais + r.horas_extras;
     if (total > 0) {
