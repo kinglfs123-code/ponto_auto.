@@ -210,11 +210,14 @@ export default function Ponto() {
         setResumo(calcularResumo(regs));
         setEditMode(true);
 
-        const lowConf = result.registros.filter((r) => r.confianca === "baixa").length;
+        const lowConf = result.registros.filter((r) => {
+          const level = getConfidenceLevel(r.confianca);
+          return level === "low" || level === "medium";
+        }).length;
         if (lowConf > 0) {
           toast({
-            title: `${lowConf} registro(s) com baixa confiança`,
-            description: "Campos marcados com ⚠ precisam de revisão",
+            title: `${lowConf} registro(s) precisam de revisão`,
+            description: "Campos marcados com ⚠ têm confiança baixa ou média",
           });
         }
       }
