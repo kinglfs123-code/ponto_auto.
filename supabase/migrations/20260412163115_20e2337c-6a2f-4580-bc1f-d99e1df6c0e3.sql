@@ -1,0 +1,1 @@
+ALTER TABLE public.registros_ponto ADD COLUMN atraso_minutos integer NOT NULL DEFAULT 0;

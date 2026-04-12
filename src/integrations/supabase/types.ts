@@ -234,6 +234,7 @@ export type Database = {
       }
       registros_ponto: {
         Row: {
+          atraso_minutos: number
           corrigido_manualmente: boolean
           created_at: string
           dia: number
@@ -252,6 +253,7 @@ export type Database = {
           tipo_excecao: string | null
         }
         Insert: {
+          atraso_minutos?: number
           corrigido_manualmente?: boolean
           created_at?: string
           dia: number
@@ -270,6 +272,7 @@ export type Database = {
           tipo_excecao?: string | null
         }
         Update: {
+          atraso_minutos?: number
           corrigido_manualmente?: boolean
           created_at?: string
           dia?: number
