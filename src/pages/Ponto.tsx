@@ -156,7 +156,7 @@ export default function Ponto() {
     setLoading(true);
     try {
       setStep("Pré-processando imagem...");
-      const processed = await preprocessImage(image, 900);
+      const processed = await preprocessImage(image);
       const b64 = processed.split(",")[1];
 
       setStep("Buscando correções anteriores...");
