@@ -2,17 +2,21 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, ClipboardList, FileText, Plus, ArrowRight, Users } from "lucide-react";
+import { Building2, ClipboardList, FileText, Plus, ArrowRight, Users, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { maskCNPJ } from "@/lib/ponto-rules";
 import NavBar from "@/components/NavBar";
+import { useWorkflowStatus, isRouteEnabled, getRouteMessage } from "@/hooks/use-workflow-status";
+import { toast } from "sonner";
 import type { Empresa } from "@/types";
+
 export default function Dashboard() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [folhasCount, setFolhasCount] = useState(0);
   const [relatoriosCount, setRelatoriosCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const workflow = useWorkflowStatus();
 
   useEffect(() => {
     Promise.all([
@@ -32,6 +36,29 @@ export default function Dashboard() {
     { label: "Folhas de Ponto", value: folhasCount, icon: ClipboardList, color: "text-primary" },
     { label: "Relatórios", value: relatoriosCount, icon: FileText, color: "text-primary" },
   ];
+
+  const quickActions = [
+    { to: "/empresas", label: "Nova Empresa", icon: Building2 },
+    { to: "/funcionarios", label: "Funcionários", icon: Users },
+    { to: "/ponto", label: "Importar Ponto", icon: ClipboardList },
+    { to: "/relatorios", label: "Relatórios", icon: FileText },
+  ];
+
+  // Determine the next recommended step
+  const getNextStep = (): string | null => {
+    if (!workflow.temEmpresa) return "/empresas";
+    if (!workflow.temFuncionario) return "/funcionarios";
+    if (!workflow.temFolha) return "/ponto";
+    return null;
+  };
+  const nextStep = getNextStep();
+
+  const handleActionClick = (e: React.MouseEvent, to: string) => {
+    if (!isRouteEnabled(to, workflow)) {
+      e.preventDefault();
+      toast.error(getRouteMessage(to));
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
@@ -76,19 +103,40 @@ export default function Dashboard() {
 
         {/* Quick actions */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 animate-fade-in" style={{ animationDelay: "200ms", animationFillMode: "backwards" }}>
-          {[
-            { to: "/empresas", label: "Nova Empresa", icon: Building2 },
-            { to: "/funcionarios", label: "Funcionários", icon: Users },
-            { to: "/ponto", label: "Importar Ponto", icon: ClipboardList },
-            { to: "/relatorios", label: "Relatórios", icon: FileText },
-          ].map((a) => {
+          {quickActions.map((a) => {
             const Icon = a.icon;
+            const enabled = isRouteEnabled(a.to, workflow);
+            const isNext = a.to === nextStep;
             return (
-              <Button key={a.to} variant="outline" asChild className="h-auto py-3 flex-col gap-1.5 border-border/50 hover:border-primary/30 hover:bg-primary/5 transition-all">
-                <Link to={a.to}>
-                  <Icon className="h-4 w-4 text-primary" />
-                  <span className="text-xs">{a.label}</span>
-                </Link>
+              <Button
+                key={a.to}
+                variant="outline"
+                asChild={enabled}
+                disabled={!enabled}
+                className={`h-auto py-3 flex-col gap-1.5 transition-all ${
+                  !enabled
+                    ? "opacity-40 cursor-not-allowed border-border/50"
+                    : isNext
+                      ? "border-primary/50 bg-primary/5 hover:bg-primary/10 ring-1 ring-primary/20 animate-pulse"
+                      : "border-border/50 hover:border-primary/30 hover:bg-primary/5"
+                }`}
+                onClick={(e: React.MouseEvent) => !enabled && handleActionClick(e, a.to)}
+              >
+                {enabled ? (
+                  <Link to={a.to}>
+                    <Icon className="h-4 w-4 text-primary" />
+                    <span className="text-xs">{a.label}</span>
+                    {isNext && <span className="text-[9px] text-primary font-medium">Próximo passo</span>}
+                  </Link>
+                ) : (
+                  <span className="flex flex-col items-center gap-1.5">
+                    <div className="relative">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                      <Lock className="h-2.5 w-2.5 absolute -top-1 -right-1.5 text-muted-foreground" />
+                    </div>
+                    <span className="text-xs text-muted-foreground">{a.label}</span>
+                  </span>
+                )}
               </Button>
             );
           })}
