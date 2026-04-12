@@ -1,46 +1,23 @@
 
 
-## Plano: Cálculo de Atraso/Extra, Tema Claro e Popup de Exceções
+## Plano: Ajustes de UI no Dashboard, EmpresaSelector e Mês de Referência
 
-### 1. Ajustar regras de cálculo (`src/lib/ponto-rules.ts`)
+### Alterações
 
-**Tolerância de 5 minutos** (atualmente 10):
-- Alterar `TOLERANCE_MINUTES` de 10 para 5
-- Calcular **minutos de atraso** efetivos: `max(0, entrada_real - entrada_esperada - 5)` e acumular no resumo
-- Calcular **horas extras** corretamente: tempo trabalhado além da jornada padrão, considerando saída após horário esperado
-- Adicionar campos `atraso_minutos` ao `RegistroPonto` para exibir o atraso exato por dia
-- Corrigir `calcularResumo` que atualmente nunca acumula `total_atraso` (linha 222-224 está vazia)
+#### 1. Dashboard (`src/pages/Dashboard.tsx`)
+O layout já está conforme a screenshot — métricas em 3 cards (Empresas, Folhas de Ponto, Relatórios), ações rápidas em grid, lista de empresas. Está correto e não precisa de mudanças estruturais.
 
-### 2. Tema claro (`src/index.css`)
+#### 2. EmpresaSelector — remover CNPJ do dropdown (`src/components/EmpresaSelector.tsx`)
+- Linha 38: trocar `{e.nome} — {e.cnpj}` por apenas `{e.nome}`
 
-Adicionar variante `.light` (ou `@media (prefers-color-scheme: light)`) com cores claras:
-- Background branco/cinza claro, foreground escuro
-- Cards em branco com bordas suaves
-- Primary mantém o roxo (#a78bfa) mas mais saturado para contraste em fundo claro
-- Adicionar toggle de tema no NavBar (ícone Sol/Lua)
-- Criar `src/contexts/ThemeContext.tsx` para persistir preferência em `localStorage`
-
-### 3. Popup de exceções na tabela de registros (`src/pages/Ponto.tsx`)
-
-Na coluna "Exceção" de cada linha da tabela, ao invés de texto simples:
-- Adicionar um botão/ícone clicável que abre um **Popover** com 3 opções: "Folga", "Falta", "Atestado"
-- Ao selecionar, atualiza `tipo_excecao` do registro e marca `corrigido_manualmente = true`
-- Zerar horas normais/extras quando é falta ou atestado
-- Exibir badge colorido na célula com o tipo selecionado
-- Adicionar "atestado" como novo tipo de exceção reconhecido (cor azul)
-
-### 4. Resumo com atraso
-
-Atualizar os cards de resumo para incluir "Atraso" com o total acumulado em minutos/horas.
+#### 3. Mês de referência em formato brasileiro (`src/pages/Ponto.tsx` e `src/lib/utils.ts`)
+- Trocar o input de `mesRef` (atualmente `YYYY-MM` / `2026-04`) por um formato visual brasileiro (`04/2026`)
+- Adicionar helpers `toBrMonth("2026-04")` → `"04/2026"` e `fromBrMonth("04/2026")` → `"2026-04"` em `utils.ts`
+- O estado interno continua em `YYYY-MM` para compatibilidade com o banco, mas o input exibe e aceita `MM/YYYY`
+- Atualizar o placeholder para `"04/2026"`
 
 ### Arquivos alterados
-
-- **`src/lib/ponto-rules.ts`** — tolerância 5min, cálculo de atraso real, campo `atraso_minutos`
-- **`src/index.css`** — variáveis do tema claro
-- **`src/contexts/ThemeContext.tsx`** — novo contexto de tema (dark/light)
-- **`src/components/NavBar.tsx`** — toggle de tema
-- **`src/App.tsx`** — ThemeProvider
-- **`src/pages/Ponto.tsx`** — popup de exceções, exibição de atraso por linha, badge colorido
-
-Sem mudanças no banco de dados.
+- **`src/components/EmpresaSelector.tsx`** — remover CNPJ do label
+- **`src/lib/utils.ts`** — helpers de formatação de mês BR
+- **`src/pages/Ponto.tsx`** — input de mês em formato brasileiro
 
