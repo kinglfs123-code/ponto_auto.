@@ -116,6 +116,7 @@ export default function Ponto() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const horarioEntrada = funcionarioSel?.horario_entrada || "08:00";
+  const horarioSaida = funcionarioSel?.horario_saida || "17:00";
   const intervalo = funcionarioSel?.intervalo || "01:00";
   const jornada = empresa?.jornada_padrao || "07:20";
 
@@ -200,8 +201,8 @@ export default function Ponto() {
               obs: r.obs || null,
             },
             jornada,
-            funcionarioSel?.horario_entrada || horarioEntrada,
-            undefined,
+            horarioEntrada,
+            horarioSaida,
             intervalo
           )
         );
@@ -230,7 +231,7 @@ export default function Ponto() {
   };
 
   const recalc = () => {
-    const processed = registros.map((r) => applyToleranceAndDetect(r, jornada, horarioEntrada, undefined, intervalo));
+    const processed = registros.map((r) => applyToleranceAndDetect(r, jornada, horarioEntrada, horarioSaida, intervalo));
     setRegistros(processed);
     setResumo(calcularResumo(processed));
   };
@@ -325,6 +326,7 @@ export default function Ponto() {
         horas_normais: r.horas_normais,
         horas_extras: r.horas_extras,
         horas_noturnas: r.horas_noturnas,
+        atraso_minutos: r.atraso_minutos,
         tipo_excecao: r.tipo_excecao,
         corrigido_manualmente: r.corrigido_manualmente,
         obs: r.obs,
@@ -367,7 +369,7 @@ export default function Ponto() {
     const u = [...registros];
     u[i] = { ...u[i], tipo_excecao: tipo, corrigido_manualmente: true };
     // Re-apply calculations to zero out hours for falta/atestado
-    const processed = applyToleranceAndDetect(u[i], jornada, horarioEntrada, undefined, intervalo);
+    const processed = applyToleranceAndDetect(u[i], jornada, horarioEntrada, horarioSaida, intervalo);
     // Keep the manually set exception
     processed.tipo_excecao = tipo;
     processed.corrigido_manualmente = true;
@@ -499,7 +501,7 @@ export default function Ponto() {
                   </thead>
                   <tbody>
                     {registros.map((r, i) => {
-                      const confLevel = confidenceMap[r.dia as number];
+                      const confLevel = confidenceMap[typeof r.dia === 'number' ? r.dia : parseInt(String(r.dia))];
                       const isLowConf = confLevel === "baixa";
                       const isMedConf = confLevel === "media";
                       const rowBg = isLowConf ? "bg-destructive/5" : isMedConf ? "bg-[hsl(var(--warning)/0.08)]" : "";
