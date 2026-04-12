@@ -12,7 +12,6 @@ import FuncionarioSelector, { type FuncionarioOption } from "@/components/Funcio
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { currentMonth, toBrMonth, fromBrMonth } from "@/lib/utils";
 import {
-  parseTimeToHours,
   formatHours,
   formatMinutes,
   maskHM,
@@ -85,9 +84,6 @@ async function callAI(body: Record<string, unknown>): Promise<AIResult> {
     clearTimeout(timeout);
   }
 }
-
-// preprocessImage imported from @/lib/ocr-utils
-
 
 interface AIOriginal {
   dia: number;
@@ -181,11 +177,13 @@ export default function Ponto() {
         // Save originals for correction tracking
         setAiOriginals(result.registros);
 
-        // Build confidence map with levels
+        // Build confidence map with levels (single pass)
         const confMap: Record<number, string> = {};
+        let lowConfCount = 0;
         result.registros.forEach((r) => {
           const level = getConfidenceLevel(r.confianca);
           confMap[r.dia] = level === "low" ? "baixa" : level === "medium" ? "media" : "alta";
+          if (level === "low" || level === "medium") lowConfCount++;
         });
         setConfidenceMap(confMap);
 
@@ -211,10 +209,7 @@ export default function Ponto() {
         setResumo(calcularResumo(regs));
         setEditMode(true);
 
-        const lowConf = result.registros.filter((r) => {
-          const level = getConfidenceLevel(r.confianca);
-          return level === "low" || level === "medium";
-        }).length;
+        const lowConf = lowConfCount;
         if (lowConf > 0) {
           toast({
             title: `${lowConf} registro(s) precisam de revisão`,
