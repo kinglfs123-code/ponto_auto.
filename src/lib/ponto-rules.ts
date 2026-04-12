@@ -249,7 +249,7 @@ export function applyToleranceAndDetect(
       tipo_excecao = "falta";
     } else if (isFolga) {
       tipo_excecao = "folga";
-    } else if (!isFolga && me === null && ms === null && te === null && ts === null) {
+    } else if (me === null && ms === null && te === null && ts === null) {
       tipo_excecao = "falta";
     } else if (atrasoMinutos > 0) {
       tipo_excecao = "atraso";
@@ -306,6 +306,6 @@ export function calcularResumo(registros: RegistroPonto[]): ResumoCalculo {
     total_extras: Math.round(extras * 100) / 100,
     total_atraso: atraso,
     total_noturnas: Math.round(noturnas * 100) / 100,
-    saldo: Math.round(extras * 100) / 100,
+    saldo: Math.round((extras - atraso / 60) * 100) / 100,
   };
 }

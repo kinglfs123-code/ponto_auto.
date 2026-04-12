@@ -1,42 +1,4 @@
-// OCR utilities: auto-correction, validation, preprocessing config
-
-/** Auto-correction rules for common OCR misreads */
-const AUTO_CORRECTION_RULES: Array<{
-  pattern: RegExp;
-  replacement: string;
-  description: string;
-}> = [
-  { pattern: /O/g, replacement: "0", description: "Letra O → zero" },
-  { pattern: /l(?=\d)/g, replacement: "1", description: "Letra l → um" },
-  { pattern: /I(?=\d)/g, replacement: "1", description: "Letra I → um" },
-  { pattern: /S(?=\d)/g, replacement: "5", description: "Letra S → cinco" },
-  { pattern: /\./g, replacement: ":", description: "Ponto → dois pontos" },
-];
-
-/** Apply auto-correction to a time string */
-export function autoCorrectTime(raw: string | null | undefined): string | null {
-  if (!raw || typeof raw !== "string") return null;
-  let corrected = raw.trim();
-
-  for (const rule of AUTO_CORRECTION_RULES) {
-    corrected = corrected.replace(rule.pattern, rule.replacement);
-  }
-
-  // Add leading zero if needed (e.g., "8:00" → "08:00")
-  if (/^\d:\d{2}$/.test(corrected)) {
-    corrected = "0" + corrected;
-  }
-
-  return corrected;
-}
-
-/** Validate HH:MM format */
-export const HORARIO_REGEX = /^([01]\d|2[0-3]):([0-5]\d)$/;
-
-export function isValidTime(time: string | null | undefined): boolean {
-  if (!time) return false;
-  return HORARIO_REGEX.test(time);
-}
+// OCR utilities: validation, preprocessing config, confidence
 
 /** Confidence thresholds and color mapping */
 export const CONFIDENCE_CONFIG = {
@@ -119,22 +81,5 @@ export function preprocessImage(
       res(c.toDataURL(config.format, config.quality));
     };
     img.src = dataUrl;
-  });
-}
-
-/** Validate and auto-correct an array of OCR time records */
-export function autoCorrectRegistros(
-  registros: Array<Record<string, unknown>>
-): Array<Record<string, unknown>> {
-  const timeFields = ["me", "ms", "te", "ts", "ee", "es"];
-  return registros.map((reg) => {
-    const corrected = { ...reg };
-    for (const field of timeFields) {
-      const val = corrected[field] as string | null;
-      if (val) {
-        corrected[field] = autoCorrectTime(val);
-      }
-    }
-    return corrected;
   });
 }
