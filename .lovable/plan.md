@@ -1,47 +1,60 @@
 
 
-## Plano: Intervalo no Cadastro de Funcionário e Melhoria nas Observações
+## Plano: Corrigir Motor de Cálculo de Horas (Extras, Atrasos, Noturnas)
 
-### Problema atual
-- O cadastro de funcionário não tem campo de intervalo (almoço). O cálculo de horas trabalhadas soma os turnos separadamente (manhã e tarde), mas quando o funcionário registra apenas entrada e saída (sem separar turnos), o intervalo não é descontado.
-- As observações do OCR já detectam "FALTA", "FOLGA", "ATESTADO", mas podem ser expandidas para cobrir mais casos.
+### Problemas identificados
+
+1. **Adicional noturno somando onde não deveria**: A função `calcNightHours` tem um bug grave — se a entrada é antes das 22h mas a saída é depois das 22h (ex: 20:00–23:00), retorna 0 incorretamente. Ela só captura dois casos: entrada >= 22:00 OU entrada < 05:00, mas ignora o cenário de cruzamento.
+
+2. **Turnos diurnos normais (08:00–17:00)**: Não deveriam ter noturnas, mas se o OCR retornar horários estranhos a função não protege.
+
+3. **Hora extra**: Cálculo simples (total - jornada) está correto na lógica, mas o atraso não é descontado do saldo — se o funcionário chegou 30min atrasado e saiu no horário, o sistema calcula como se tivesse trabalhado menos mas não desconta corretamente.
 
 ### Alterações
 
-#### 1. Migração: adicionar coluna `intervalo` à tabela `funcionarios`
-- Nova coluna `intervalo text NOT NULL DEFAULT '01:00'` (1 hora padrão)
-- Todos os funcionários existentes receberão `01:00`
+#### 1. `src/lib/ponto-rules.ts` — Reescrever `calcNightHours`
+- Nova lógica que calcula a **interseção** entre qualquer par entrada/saída e o período 22:00–05:00
+- Trata corretamente turnos que cruzam a meia-noite
+- Para turnos 100% diurnos (ex: 08:00–18:00), retorna 0 garantidamente
+- Suporta overnight shifts (22:00–06:00)
 
-#### 2. `src/types/index.ts` — adicionar `intervalo` ao tipo `Funcionario`
-- Adicionar `intervalo: string` ao interface
+#### 2. `src/lib/ponto-rules.ts` — Ajustar cálculo de extras e atraso
+- Hora extra = `max(0, totalTrabalhado - jornadaPadrao)` (já está correto)
+- Atraso: manter cálculo atual mas garantir que não interfere no cálculo de extras
+- Saída antecipada: calcular déficit = `jornadaPadrao - totalTrabalhado` quando positivo
 
-#### 3. `src/pages/Funcionarios.tsx` — campo de intervalo no formulário
-- Adicionar input com máscara HH:MM para o intervalo entre Entrada e Saída
-- Default `01:00`, label "Intervalo"
-- Exibir na tabela/cards junto com o horário
+#### 3. `src/lib/ponto-rules.ts` — Proteção contra dados inválidos
+- Se entrada > saída dentro do mesmo turno (sem overnight), ignorar o turno
+- Validar que horários parsed são razoáveis antes de calcular
 
-#### 4. `src/components/FuncionarioSelector.tsx` — incluir `intervalo` no select
-- Adicionar `intervalo` ao `FuncionarioOption` para que o Ponto.tsx tenha acesso
+### Lógica corrigida do adicional noturno
 
-#### 5. `src/lib/ponto-rules.ts` — descontar intervalo no cálculo
-- `applyToleranceAndDetect` recebe novo parâmetro `intervaloStr` (default `"01:00"`)
-- Quando o funcionário registra apenas entrada manhã + saída final (sem turnos separados), descontar o intervalo do total trabalhado
-- Quando há turnos separados (manhã + tarde), o intervalo já está implícito entre os turnos — não descontar duas vezes
-
-#### 6. `src/pages/Ponto.tsx` — passar intervalo para o cálculo
-- Usar `funcionarioSel?.intervalo || "01:00"` ao chamar `applyToleranceAndDetect`
-
-#### 7. Expandir detecção de observações em `ponto-rules.ts`
-- Adicionar detecção de: "FERIADO", "LICENÇA", "SUSPENSÃO", "COMPENSAÇÃO", "ABONO"
-- "FERIADO" → tipo_excecao = "folga"
-- "LICENÇA" / "SUSPENSÃO" → tipo_excecao = "atestado"
-- "COMPENSAÇÃO" / "ABONO" → tipo_excecao = "folga" (sem descontar)
+```text
+calcNightMinutes(entrada, saida):
+  Se entrada ou saida é null → retorna 0
+  
+  nightStart = 22:00 (1320 min)
+  nightEnd   = 05:00 (300 min)
+  
+  // Normalizar para lidar com overnight
+  Se saida <= entrada → saida += 24h
+  
+  // Período noturno: 22:00-29:00 (05:00 do dia seguinte)
+  nightA = nightStart
+  nightB = nightEnd + 24h (= 1740 min)
+  
+  // Interseção do turno com período noturno
+  overlap = max(0, min(saida, nightB) - max(entrada, nightA))
+  
+  // Também checar período noturno anterior (00:00-05:00)
+  Se entrada < nightEnd:
+    overlap += max(0, min(saida, nightEnd) - entrada)
+  
+  retorna overlap / 60  (em horas)
+```
 
 ### Arquivos alterados
-- **Migração SQL** — adicionar coluna `intervalo`
-- **`src/types/index.ts`** — tipo atualizado
-- **`src/pages/Funcionarios.tsx`** — campo de intervalo no form e listagem
-- **`src/components/FuncionarioSelector.tsx`** — incluir `intervalo`
-- **`src/lib/ponto-rules.ts`** — descontar intervalo + expandir observações
-- **`src/pages/Ponto.tsx`** — passar intervalo ao cálculo
+- **`src/lib/ponto-rules.ts`** — reescrever `calcNightHours`, ajustar validações em `applyToleranceAndDetect`
+
+Sem mudanças no banco de dados. Sem mudanças na UI.
 
