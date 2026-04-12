@@ -355,6 +355,7 @@ export default function Ponto() {
     if (!t) return null;
     const map: Record<string, { label: string; className: string }> = {
       atraso: { label: "Atraso", className: "bg-destructive/10 text-destructive border-destructive/30" },
+      atraso_saida_antecipada: { label: "Atraso+Saída Ant.", className: "bg-destructive/10 text-destructive border-destructive/30" },
       saida_antecipada: { label: "Saída Ant.", className: "bg-warning/10 text-warning border-warning/30" },
       falta: { label: "Falta", className: "bg-falta/10 text-falta font-bold border-falta/30" },
       folga: { label: "Folga", className: "bg-folga/10 text-folga border-folga/30" },
