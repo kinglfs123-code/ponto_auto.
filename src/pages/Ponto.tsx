@@ -182,10 +182,11 @@ export default function Ponto() {
         // Save originals for correction tracking
         setAiOriginals(result.registros);
 
-        // Build confidence map
+        // Build confidence map with levels
         const confMap: Record<number, string> = {};
         result.registros.forEach((r) => {
-          confMap[r.dia] = r.confianca || "alta";
+          const level = getConfidenceLevel(r.confianca);
+          confMap[r.dia] = level === "low" ? "baixa" : level === "medium" ? "media" : "alta";
         });
         setConfidenceMap(confMap);
 
