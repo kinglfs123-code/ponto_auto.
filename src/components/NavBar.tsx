@@ -39,7 +39,7 @@ export default function NavBar() {
     return (
       <>
         <header className="sticky top-0 z-40 bg-card/80 backdrop-blur-md border-b border-border px-4 py-2.5 flex items-center justify-between">
-          <span className="text-sm font-bold tracking-tight text-primary font-mono">
+          <span className="text-sm font-bold tracking-tight text-primary">
             FOLHA DE PONTO
           </span>
           <div className="flex items-center gap-1">
@@ -93,7 +93,7 @@ export default function NavBar() {
     <nav className="sticky top-0 z-40 bg-card/80 backdrop-blur-md border-b border-border px-4 py-2">
       <div className="max-w-5xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-6">
-          <span className="text-sm font-bold tracking-tight text-primary font-mono">
+          <span className="text-sm font-bold tracking-tight text-primary">
             FOLHA DE PONTO
           </span>
           <div className="flex items-center gap-1">
