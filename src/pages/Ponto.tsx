@@ -376,11 +376,12 @@ export default function Ponto() {
   const excecaoBadge = (t: string | null) => {
     if (!t) return null;
     const map: Record<string, { label: string; className: string }> = {
-      atraso: { label: "Atraso", className: "bg-destructive/15 text-destructive border-destructive/30" },
-      saida_antecipada: { label: "Saída Ant.", className: "bg-[hsl(var(--warning)/0.15)] text-[hsl(var(--warning))] border-[hsl(var(--warning)/0.3)]" },
-      falta: { label: "Falta", className: "bg-destructive/20 text-destructive font-bold border-destructive/40" },
-      folga: { label: "Folga", className: "bg-[hsl(var(--success)/0.15)] text-[hsl(var(--success))] border-[hsl(var(--success)/0.3)]" },
-      atestado: { label: "Atestado", className: "bg-primary/15 text-primary border-primary/30" },
+      atraso: { label: "Atraso", className: "bg-destructive/10 text-destructive border-destructive/30" },
+      saida_antecipada: { label: "Saída Ant.", className: "bg-warning/10 text-warning border-warning/30" },
+      falta: { label: "Falta", className: "bg-falta/10 text-falta font-bold border-falta/30" },
+      folga: { label: "Folga", className: "bg-folga/10 text-folga border-folga/30" },
+      atestado: { label: "Atestado", className: "bg-atestado/10 text-atestado border-atestado/30" },
+      feriado: { label: "Feriado", className: "bg-feriado/10 text-feriado border-feriado/30" },
     };
     const info = map[t] || { label: t, className: "" };
     return <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${info.className}`}>{info.label}</Badge>;
