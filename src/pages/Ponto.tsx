@@ -500,12 +500,16 @@ export default function Ponto() {
                   </thead>
                   <tbody>
                     {registros.map((r, i) => {
-                      const isLowConf = confidenceMap[r.dia as number] === "baixa";
+                      const confLevel = confidenceMap[r.dia as number];
+                      const isLowConf = confLevel === "baixa";
+                      const isMedConf = confLevel === "media";
+                      const rowBg = isLowConf ? "bg-destructive/5" : isMedConf ? "bg-[hsl(var(--warning)/0.08)]" : "";
                       return (
-                        <tr key={i} className={`border-b border-border/50 hover:bg-muted/30 ${isLowConf ? "bg-[hsl(var(--warning)/0.08)]" : ""}`}>
+                        <tr key={i} className={`border-b border-border/50 hover:bg-muted/30 ${rowBg}`}>
                           <td className="px-2 py-1.5 text-center font-semibold text-primary flex items-center justify-center gap-1">
                             {r.dia}
-                            {isLowConf && <AlertTriangle className="h-3 w-3 text-[hsl(var(--warning))]" />}
+                            {isLowConf && <AlertTriangle className="h-3 w-3 text-destructive" />}
+                            {isMedConf && <AlertTriangle className="h-3 w-3 text-[hsl(var(--warning))]" />}
                           </td>
                           {(["hora_entrada", "hora_saida", "hora_entrada_tarde", "hora_saida_tarde", "hora_entrada_extra", "hora_saida_extra"] as const).map((f) => (
                             <td key={f} className="px-1 py-1 text-center">
