@@ -21,6 +21,7 @@ const empty: Omit<Funcionario, "id" | "empresa_id"> = {
   cargo: "",
   horario_entrada: "08:00",
   horario_saida: "17:00",
+  intervalo: "01:00",
 };
 
 export default function Funcionarios() {
@@ -62,6 +63,7 @@ export default function Funcionarios() {
       cargo: form.cargo?.trim() || null,
       horario_entrada: form.horario_entrada || "08:00",
       horario_saida: form.horario_saida || "17:00",
+      intervalo: form.intervalo || "01:00",
     };
 
     let error;
@@ -91,6 +93,7 @@ export default function Funcionarios() {
       cargo: f.cargo || "",
       horario_entrada: f.horario_entrada,
       horario_saida: f.horario_saida,
+      intervalo: f.intervalo || "01:00",
     });
     setEditId(f.id);
     setShowForm(true);
@@ -160,6 +163,10 @@ export default function Funcionarios() {
                   <Label className="text-xs">Saída</Label>
                   <Input value={form.horario_saida} onChange={(e) => setForm({ ...form, horario_saida: maskHM(e.target.value) })} placeholder="17:00" className="bg-muted/30 border-border/50" />
                 </div>
+                <div className="flex-1">
+                  <Label className="text-xs">Intervalo</Label>
+                  <Input value={form.intervalo} onChange={(e) => setForm({ ...form, intervalo: maskHM(e.target.value) })} placeholder="01:00" className="bg-muted/30 border-border/50" />
+                </div>
               </div>
               <div className="sm:col-span-2 flex justify-end gap-2 pt-2">
                 <Button variant="outline" onClick={resetForm} size="sm">Cancelar</Button>
@@ -196,7 +203,7 @@ export default function Funcionarios() {
                     <td className="p-2.5 text-foreground text-sm">{f.nome_completo}</td>
                     <td className="p-2.5 text-muted-foreground text-sm font-mono">{maskCPF(f.cpf)}</td>
                     <td className="p-2.5 text-muted-foreground text-sm hidden sm:table-cell">{f.cargo || "—"}</td>
-                    <td className="p-2.5 text-muted-foreground text-sm hidden md:table-cell">{f.horario_entrada} – {f.horario_saida}</td>
+                    <td className="p-2.5 text-muted-foreground text-sm hidden md:table-cell">{f.horario_entrada} – {f.horario_saida} <span className="text-xs opacity-60">(int: {f.intervalo || "01:00"})</span></td>
                     <td className="p-2.5 flex gap-1 justify-end">
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(f)} className="h-7 w-7"><Pencil className="h-3.5 w-3.5" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(f.id)} className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
@@ -221,7 +228,7 @@ export default function Funcionarios() {
                       {f.cargo && <p className="text-xs text-muted-foreground">{f.cargo}</p>}
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Clock className="h-3 w-3" />
-                        {f.horario_entrada} – {f.horario_saida}
+                        {f.horario_entrada} – {f.horario_saida} <span className="opacity-60">(int: {f.intervalo || "01:00"})</span>
                       </div>
                     </div>
                     <div className="flex gap-1">

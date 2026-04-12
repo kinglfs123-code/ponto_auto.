@@ -1,0 +1,1 @@
+ALTER TABLE public.funcionarios ADD COLUMN intervalo text NOT NULL DEFAULT '01:00';

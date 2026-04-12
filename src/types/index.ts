@@ -15,6 +15,7 @@ export interface Funcionario {
   cargo: string | null;
   horario_entrada: string;
   horario_saida: string;
+  intervalo: string;
 }
 
 export interface FuncionarioBasic {

@@ -120,6 +120,7 @@ export default function Ponto() {
   const fileRef = useRef<HTMLInputElement>(null);
 
   const horarioEntrada = funcionarioSel?.horario_entrada || "08:00";
+  const intervalo = funcionarioSel?.intervalo || "01:00";
   const jornada = empresa?.jornada_padrao || "07:20";
 
   const handleEmpresaChange = (e: typeof empresa) => {
@@ -201,7 +202,9 @@ export default function Ponto() {
               obs: r.obs || null,
             },
             jornada,
-            funcionarioSel?.horario_entrada || horarioEntrada
+            funcionarioSel?.horario_entrada || horarioEntrada,
+            undefined,
+            intervalo
           )
         );
         setRegistros(regs);
@@ -232,7 +235,7 @@ export default function Ponto() {
   };
 
   const recalc = () => {
-    const processed = registros.map((r) => applyToleranceAndDetect(r, jornada, horarioEntrada));
+    const processed = registros.map((r) => applyToleranceAndDetect(r, jornada, horarioEntrada, undefined, intervalo));
     setRegistros(processed);
     setResumo(calcularResumo(processed));
   };
@@ -369,7 +372,7 @@ export default function Ponto() {
     const u = [...registros];
     u[i] = { ...u[i], tipo_excecao: tipo, corrigido_manualmente: true };
     // Re-apply calculations to zero out hours for falta/atestado
-    const processed = applyToleranceAndDetect(u[i], jornada, horarioEntrada);
+    const processed = applyToleranceAndDetect(u[i], jornada, horarioEntrada, undefined, intervalo);
     // Keep the manually set exception
     processed.tipo_excecao = tipo;
     processed.corrigido_manualmente = true;
