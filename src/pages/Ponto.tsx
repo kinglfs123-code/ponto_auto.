@@ -10,7 +10,7 @@ import EmpresaSelector from "@/components/EmpresaSelector";
 import FuncionarioSelector, { type FuncionarioOption } from "@/components/FuncionarioSelector";
 import FileImporter, { type ImportedRecord } from "@/components/FileImporter";
 import { useEmpresa } from "@/contexts/EmpresaContext";
-import { currentMonth } from "@/lib/utils";
+import { currentMonth, toBrMonth, fromBrMonth } from "@/lib/utils";
 import {
   parseTimeToHours,
   formatHours,
@@ -458,7 +458,7 @@ export default function Ponto() {
               </div>
               <div className="w-28">
                 <label className="text-xs text-muted-foreground mb-1 block">Mês ref.</label>
-                <Input value={mesRef} onChange={(e) => setMesRef(e.target.value)} placeholder="2026-04" />
+                <Input value={toBrMonth(mesRef)} onChange={(e) => setMesRef(fromBrMonth(e.target.value))} placeholder="04/2026" />
               </div>
               <div className="w-20">
                 <label className="text-xs text-muted-foreground mb-1 block">Jornada</label>

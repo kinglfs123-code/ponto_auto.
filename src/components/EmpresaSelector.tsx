@@ -35,7 +35,7 @@ export default function EmpresaSelector({ value, onChange }: Props) {
       <SelectContent>
         {empresas.map((e) => (
           <SelectItem key={e.id} value={e.id}>
-            {e.nome} — {e.cnpj}
+            {e.nome}
           </SelectItem>
         ))}
       </SelectContent>
