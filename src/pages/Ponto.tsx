@@ -372,7 +372,7 @@ export default function Ponto() {
     const u = [...registros];
     u[i] = { ...u[i], tipo_excecao: tipo, corrigido_manualmente: true };
     // Re-apply calculations to zero out hours for falta/atestado
-    const processed = applyToleranceAndDetect(u[i], jornada, horarioEntrada);
+    const processed = applyToleranceAndDetect(u[i], jornada, horarioEntrada, undefined, intervalo);
     // Keep the manually set exception
     processed.tipo_excecao = tipo;
     processed.corrigido_manualmente = true;
