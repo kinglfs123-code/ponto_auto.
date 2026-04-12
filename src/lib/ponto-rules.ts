@@ -193,21 +193,21 @@ export function applyToleranceAndDetect(
   const es = parseTimeToMinutes(registro.hora_saida_extra);
 
   let totalWorked = 0;
-  // When only morning entry + morning exit exist (no split shifts), deduct interval
-  const hasSplitShift = (te !== null && ts !== null);
-  if (me !== null && ms !== null) totalWorked += ms - me;
-  if (te !== null && ts !== null) totalWorked += ts - te;
-  if (ee !== null && es !== null) totalWorked += es - ee;
   
-  // Deduct interval only when there's a single continuous shift (no split)
-  if (me !== null && ms !== null && !hasSplitShift && totalWorked > intervaloMinutos) {
-    totalWorked -= intervaloMinutos;
-  }
+  // Helper: calculate shift duration with validation (ignore invalid shifts)
+  const shiftDuration = (entry: number | null, exit: number | null): number => {
+    if (entry === null || exit === null) return 0;
+    // If exit < entry and exit > 5:00, likely invalid data (not overnight)
+    if (exit < entry && exit > 300) return 0;
+    // Overnight shift
+    if (exit <= entry) return (exit + 24 * 60) - entry;
+    return exit - entry;
+  };
 
-  let nightHours = 0;
-  nightHours += calcNightHours(me, ms);
-  nightHours += calcNightHours(te, ts);
-  nightHours += calcNightHours(ee, es);
+  const hasSplitShift = (te !== null && ts !== null);
+  totalWorked += shiftDuration(me, ms);
+  totalWorked += shiftDuration(te, ts);
+  totalWorked += shiftDuration(ee, es);
 
   // Calculate delay (atraso) with 5min tolerance
   let atrasoMinutos = 0;
