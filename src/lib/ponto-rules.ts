@@ -176,7 +176,11 @@ export function applyToleranceAndDetect(
   // Deduct interval only when there's a single continuous shift (no split)
   if (me !== null && ms !== null && !hasSplitShift && totalWorked > intervaloMinutos) {
     totalWorked -= intervaloMinutos;
-  }
+  
+  let nightHours = 0;
+  nightHours += calcNightHours(me, ms);
+  nightHours += calcNightHours(te, ts);
+  nightHours += calcNightHours(ee, es);
 
   // Calculate delay (atraso) with 5min tolerance
   let atrasoMinutos = 0;
