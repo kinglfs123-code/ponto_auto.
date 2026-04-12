@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import NavBar from "@/components/NavBar";
 import EmpresaSelector from "@/components/EmpresaSelector";
 import FuncionarioSelector, { type FuncionarioOption } from "@/components/FuncionarioSelector";
-import FileImporter, { type ImportedRecord } from "@/components/FileImporter";
+
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { currentMonth, toBrMonth, fromBrMonth } from "@/lib/utils";
 import {
@@ -166,32 +166,6 @@ export default function Ponto() {
     return (data || []) as Correcao[];
   };
 
-  // Process imported file records
-  const handleFileImport = (records: ImportedRecord[]) => {
-    if (!empresa) {
-      toast({ title: "Selecione uma empresa primeiro", variant: "destructive" });
-      return;
-    }
-    if (records.length > 0 && !funcionario) {
-      setFuncionario(records[0].funcionario);
-    }
-    const processed = records.map((r) =>
-      applyToleranceAndDetect(
-        {
-          dia: r.data,
-          hora_entrada: r.hora_entrada || null,
-          hora_saida: r.hora_saida || null,
-        },
-        jornada,
-        horarioEntrada
-      )
-    );
-    setRegistros(processed);
-    setResumo(calcularResumo(processed));
-    setEditMode(true);
-    setAiOriginals([]);
-    setConfidenceMap({});
-  };
 
   // OCR from photo
   const onPhoto = useCallback((f: File | undefined) => {
@@ -470,7 +444,6 @@ export default function Ponto() {
 
         {/* Import options */}
         <div className="flex flex-wrap gap-3">
-          <FileImporter onImport={handleFileImport} />
           <div>
             <input
               ref={fileRef}
@@ -480,7 +453,7 @@ export default function Ponto() {
               onChange={(e) => { onPhoto(e.target.files?.[0]); e.target.value = ""; }}
             />
             <Button variant="outline" onClick={() => fileRef.current?.click()} className="gap-2">
-              <Camera className="h-4 w-4" /> Foto (IA)
+              <Camera className="h-4 w-4" /> Anexar Foto
             </Button>
           </div>
           {image && !empresa && (
