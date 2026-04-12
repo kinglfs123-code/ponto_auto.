@@ -129,22 +129,48 @@ export interface ResumoCalculo {
   saldo: number;
 }
 
-function calcNightHours(entrada: number | null, saida: number | null): number {
+/**
+ * Calculate night hours (adicional noturno) for a shift.
+ * Night period: 22:00 (1320min) to 05:00 (300min next day).
+ * Uses intersection logic to correctly handle:
+ * - Fully daytime shifts (08:00-18:00) → 0
+ * - Shifts crossing into night (20:00-23:00) → 1h
+ * - Overnight shifts (22:00-06:00) → 7h
+ * - Early morning shifts (03:00-07:00) → 2h
+ */
+function calcNightMinutes(entrada: number | null, saida: number | null): number {
   if (entrada === null || saida === null) return 0;
-  // Night hours: 22:00 (1320min) to 05:00 (300min)
-  let night = 0;
-  const nightStart = 22 * 60;
-  const nightEnd = 5 * 60;
-  
-  if (entrada >= nightStart) {
-    const end = saida < entrada ? saida + 24 * 60 : saida;
-    const nightEndAdjusted = nightEnd + 24 * 60;
-    night += Math.max(0, Math.min(end, nightEndAdjusted) - Math.max(entrada, nightStart));
-  } else if (entrada < nightEnd) {
-    night += Math.max(0, Math.min(saida, nightEnd) - entrada);
+  // Ignore invalid shifts (entry after exit without overnight)
+  if (entrada >= saida && saida > 300) return 0;
+
+  const NIGHT_START = 22 * 60; // 1320
+  const NIGHT_END = 5 * 60;    // 300
+
+  let adjustedSaida = saida;
+  // Handle overnight: if exit <= entry, it crossed midnight
+  if (saida <= entrada) {
+    adjustedSaida = saida + 24 * 60;
   }
-  
-  return night / 60;
+
+  let nightMinutes = 0;
+
+  // Check overlap with early morning period: 00:00 – 05:00
+  if (entrada < NIGHT_END) {
+    nightMinutes += Math.min(adjustedSaida, NIGHT_END) - entrada;
+  }
+
+  // Check overlap with late night period: 22:00 – 29:00 (05:00 next day)
+  const nightWindowStart = NIGHT_START;
+  const nightWindowEnd = NIGHT_END + 24 * 60; // 1740
+  if (adjustedSaida > nightWindowStart) {
+    nightMinutes += Math.min(adjustedSaida, nightWindowEnd) - Math.max(entrada, nightWindowStart);
+  }
+
+  return Math.max(0, nightMinutes);
+}
+
+function calcNightHours(entrada: number | null, saida: number | null): number {
+  return calcNightMinutes(entrada, saida) / 60;
 }
 
 export function applyToleranceAndDetect(
@@ -167,17 +193,28 @@ export function applyToleranceAndDetect(
   const es = parseTimeToMinutes(registro.hora_saida_extra);
 
   let totalWorked = 0;
-  // When only morning entry + morning exit exist (no split shifts), deduct interval
-  const hasSplitShift = (te !== null && ts !== null);
-  if (me !== null && ms !== null) totalWorked += ms - me;
-  if (te !== null && ts !== null) totalWorked += ts - te;
-  if (ee !== null && es !== null) totalWorked += es - ee;
   
+  // Helper: calculate shift duration with validation (ignore invalid shifts)
+  const shiftDuration = (entry: number | null, exit: number | null): number => {
+    if (entry === null || exit === null) return 0;
+    // If exit < entry and exit > 5:00, likely invalid data (not overnight)
+    if (exit < entry && exit > 300) return 0;
+    // Overnight shift
+    if (exit <= entry) return (exit + 24 * 60) - entry;
+    return exit - entry;
+  };
+
+  const hasSplitShift = (te !== null && ts !== null);
+  totalWorked += shiftDuration(me, ms);
+  totalWorked += shiftDuration(te, ts);
+  totalWorked += shiftDuration(ee, es);
+
   // Deduct interval only when there's a single continuous shift (no split)
   if (me !== null && ms !== null && !hasSplitShift && totalWorked > intervaloMinutos) {
     totalWorked -= intervaloMinutos;
   }
 
+  // Night hours calculation
   let nightHours = 0;
   nightHours += calcNightHours(me, ms);
   nightHours += calcNightHours(te, ts);
