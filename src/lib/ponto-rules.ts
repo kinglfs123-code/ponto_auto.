@@ -203,8 +203,8 @@ export function applyToleranceAndDetect(
     tipo_excecao = null;
     const obs = (registro.obs || "").toUpperCase();
     const isFalta = obs.includes("FALTA") || obs.includes("AUSENT");
-    const isFolga = obs.includes("FOLGA") || obs.includes("FERIADO");
-    const isAtestado = obs.includes("ATESTADO");
+    const isFolga = obs.includes("FOLGA") || obs.includes("FERIADO") || obs.includes("COMPENSAÇÃO") || obs.includes("COMPENSACAO") || obs.includes("ABONO");
+    const isAtestado = obs.includes("ATESTADO") || obs.includes("LICENÇA") || obs.includes("LICENCA") || obs.includes("SUSPENSÃO") || obs.includes("SUSPENSAO");
 
     if (isAtestado) {
       tipo_excecao = "atestado";
