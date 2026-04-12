@@ -1,48 +1,47 @@
 
-## Plano: Adaptar Design System Apple/Inter/Notion ao Projeto
 
-### Resumo
-Trocar a paleta roxa atual pela paleta azul Apple (#007AFF), atualizar tipografia para SF Pro Display, ajustar border-radius, sombras e adicionar cores semânticas de ponto.
+## Plano: Intervalo no Cadastro de Funcionário e Melhoria nas Observações
+
+### Problema atual
+- O cadastro de funcionário não tem campo de intervalo (almoço). O cálculo de horas trabalhadas soma os turnos separadamente (manhã e tarde), mas quando o funcionário registra apenas entrada e saída (sem separar turnos), o intervalo não é descontado.
+- As observações do OCR já detectam "FALTA", "FOLGA", "ATESTADO", mas podem ser expandidas para cobrir mais casos.
 
 ### Alterações
 
-#### 1. `src/index.css` — CSS Variables (dark + light)
-- **Primary**: roxo → azul Apple `#007AFF` (HSL: `211 100% 50%`)
-- **Dark mode** (`:root`): backgrounds `#000000`, `#1C1C1E`, `#2C2C2E`; text `#FFFFFF`, `#EBEBF5`
-- **Light mode** (`.light`): backgrounds `#FFFFFF`, `#F5F5F7`, `#EFEFF4`; text `#000000`, `#3C3C43`
-- **Status**: success `#34C759`, warning `#FF9500`, destructive `#FF3B30`
-- **Semânticas**: adicionar variáveis `--falta`, `--folga`, `--atestado`, `--feriado`
-- **Border**: dark `#2C2C2E`, light `#D1D1D6`
-- **Radius**: `0.625rem` (10px base)
-- **Font-family**: `-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif`
-- **Sombras**: Apple-style sutis via variáveis `--shadow-sm`, `--shadow-base`, `--shadow-md`
+#### 1. Migração: adicionar coluna `intervalo` à tabela `funcionarios`
+- Nova coluna `intervalo text NOT NULL DEFAULT '01:00'` (1 hora padrão)
+- Todos os funcionários existentes receberão `01:00`
 
-#### 2. `tailwind.config.ts`
-- Adicionar `fontFamily.sans` com SF Pro stack
-- Adicionar `fontFamily.mono` com SF Mono stack
-- Adicionar cores semânticas: `info`, `falta`, `folga`, `atestado`, `feriado`
-- Adicionar `boxShadow` customizados (sm, base, md, lg)
-- Adicionar `transitionTimingFunction` com `apple` cubic-bezier
-- Border radius Apple: sm=6px, base=10px, md=12px, lg=16px, xl=20px
+#### 2. `src/types/index.ts` — adicionar `intervalo` ao tipo `Funcionario`
+- Adicionar `intervalo: string` ao interface
 
-#### 3. `src/pages/Ponto.tsx` — Badges semânticos
-- Atualizar `excecaoBadge` para usar as novas cores semânticas (falta=vermelho, folga=azul claro, atestado=laranja, feriado=verde)
+#### 3. `src/pages/Funcionarios.tsx` — campo de intervalo no formulário
+- Adicionar input com máscara HH:MM para o intervalo entre Entrada e Saída
+- Default `01:00`, label "Intervalo"
+- Exibir na tabela/cards junto com o horário
 
-#### 4. `src/components/NavBar.tsx` — Tipografia
-- Header text usa `font-sans` (SF Pro) ao invés de `font-mono`
+#### 4. `src/components/FuncionarioSelector.tsx` — incluir `intervalo` no select
+- Adicionar `intervalo` ao `FuncionarioOption` para que o Ponto.tsx tenha acesso
 
-#### 5. `src/pages/Dashboard.tsx` — Sombras e radius
-- Cards usam `shadow-base` e radius Apple
+#### 5. `src/lib/ponto-rules.ts` — descontar intervalo no cálculo
+- `applyToleranceAndDetect` recebe novo parâmetro `intervaloStr` (default `"01:00"`)
+- Quando o funcionário registra apenas entrada manhã + saída final (sem turnos separados), descontar o intervalo do total trabalhado
+- Quando há turnos separados (manhã + tarde), o intervalo já está implícito entre os turnos — não descontar duas vezes
 
-#### 6. Cleanup `src/App.css`
-- Remover estilos legados não utilizados (logo spin, read-the-docs)
+#### 6. `src/pages/Ponto.tsx` — passar intervalo para o cálculo
+- Usar `funcionarioSel?.intervalo || "01:00"` ao chamar `applyToleranceAndDetect`
+
+#### 7. Expandir detecção de observações em `ponto-rules.ts`
+- Adicionar detecção de: "FERIADO", "LICENÇA", "SUSPENSÃO", "COMPENSAÇÃO", "ABONO"
+- "FERIADO" → tipo_excecao = "folga"
+- "LICENÇA" / "SUSPENSÃO" → tipo_excecao = "atestado"
+- "COMPENSAÇÃO" / "ABONO" → tipo_excecao = "folga" (sem descontar)
 
 ### Arquivos alterados
-- **`src/index.css`** — paleta completa dark/light
-- **`tailwind.config.ts`** — font, cores semânticas, sombras, radius
-- **`src/pages/Ponto.tsx`** — badges com cores novas
-- **`src/components/NavBar.tsx`** — font-family
-- **`src/pages/Dashboard.tsx`** — sombras Apple
-- **`src/App.css`** — limpeza
+- **Migração SQL** — adicionar coluna `intervalo`
+- **`src/types/index.ts`** — tipo atualizado
+- **`src/pages/Funcionarios.tsx`** — campo de intervalo no form e listagem
+- **`src/components/FuncionarioSelector.tsx`** — incluir `intervalo`
+- **`src/lib/ponto-rules.ts`** — descontar intervalo + expandir observações
+- **`src/pages/Ponto.tsx`** — passar intervalo ao cálculo
 
-Sem mudanças no banco de dados.
