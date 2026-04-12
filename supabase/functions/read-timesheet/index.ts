@@ -6,28 +6,33 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const BASE_PROMPT = `Você é um especialista em leitura de folhas de ponto brasileiras.
-Analise a imagem da folha de ponto com extremo cuidado. A imagem pode estar torta, borrada, com baixa resolução ou parcialmente cortada.
+const SYSTEM_PROMPT = `Você é um assistente especializado em OCR de folhas de ponto manuscritas brasileiras. Sua tarefa é extrair com MÁXIMA PRECISÃO os dados de uma foto de folha de ponto manual.
 
-REGRAS DE LEITURA:
-1. Leia TODOS os dias visíveis na folha, mesmo parcialmente legíveis
-2. Horários podem estar em formato HH:MM, HH.MM, HHhMM ou apenas HHMM
-3. Abreviações comuns: F=Folga, FJ=Falta Justificada, AT=Atestado, DSR=Descanso Semanal Remunerado, FE=Férias, LM=Licença Médica, AB=Abono
-4. Se um campo está ilegível mas você consegue inferir pelo contexto (ex: padrão dos outros dias), infira e marque confianca como "baixa"
-5. Horário de saída DEVE ser posterior ao de entrada. Se não for, provavelmente você leu errado
-6. Valide: manhã geralmente 07:00-12:00, tarde 13:00-18:00, extra após horário normal
+REGRAS IMPORTANTES:
+1. Se um campo estiver ilegível ou você não tiver CERTEZA (>90% confiança), retorne null para aquele campo
+2. Horários DEVEM estar no formato HH:MM (ex: 08:00, 17:30) - sempre com dois dígitos
+3. Horário de saída DEVE ser posterior ao de entrada. Se não for, provavelmente você leu errado
+4. Valide: manhã geralmente 07:00-12:00, tarde 13:00-18:00, extra após horário normal
+5. Preserve acentuação em nomes próprios
+6. Para cada registro diário, forneça um número de confiança (0-100) indicando quão certo você está
 7. Se a folha tem formato diferente do esperado, adapte-se ao que vê
 
-CAMPOS:
-- dia: número do dia (1-31)
-- me: manhã entrada (HH:MM)
-- ms: manhã saída (HH:MM)  
-- te: tarde entrada (HH:MM)
-- ts: tarde saída (HH:MM)
-- ee: extra entrada (HH:MM) ou null
-- es: extra saída (HH:MM) ou null
-- obs: observação (FOLGA, FALTA, ATESTADO, etc.) ou null
-- confianca: "alta" ou "baixa" para cada registro`;
+ATENÇÃO A ERROS COMUNS DE OCR:
+- Zeros (0) podem parecer com letras O
+- Número 1 pode parecer com letra l (L minúsculo) ou I
+- Número 5 pode parecer com letra S
+- Em horários, sempre use dois dígitos: 08:00, não 8:00
+- Ponto (.) deve ser interpretado como dois-pontos (:) em horários
+
+ABREVIAÇÕES COMUNS:
+F=Folga, FJ=Falta Justificada, AT=Atestado, DSR=Descanso Semanal Remunerado, FE=Férias, LM=Licença Médica, AB=Abono
+
+STATUS DE CADA DIA:
+- "normal": dia normal de trabalho
+- "falta": ausência sem justificativa
+- "folga": dia de descanso/DSR
+- "atestado": ausência justificada por atestado médico
+- "feriado": feriado nacional/estadual/municipal`;
 
 const TOOL_SCHEMA = {
   type: "function" as const,
@@ -45,14 +50,22 @@ const TOOL_SCHEMA = {
             type: "object",
             properties: {
               dia: { type: "integer" },
-              me: { type: ["string", "null"] },
-              ms: { type: ["string", "null"] },
-              te: { type: ["string", "null"] },
-              ts: { type: ["string", "null"] },
-              ee: { type: ["string", "null"] },
-              es: { type: ["string", "null"] },
-              obs: { type: ["string", "null"] },
-              confianca: { type: "string", enum: ["alta", "baixa"] },
+              me: { type: ["string", "null"], description: "Entrada manhã HH:MM" },
+              ms: { type: ["string", "null"], description: "Saída manhã HH:MM" },
+              te: { type: ["string", "null"], description: "Entrada tarde HH:MM" },
+              ts: { type: ["string", "null"], description: "Saída tarde HH:MM" },
+              ee: { type: ["string", "null"], description: "Entrada extra HH:MM" },
+              es: { type: ["string", "null"], description: "Saída extra HH:MM" },
+              obs: { type: ["string", "null"], description: "Observação: FOLGA, FALTA, ATESTADO, etc." },
+              status: {
+                type: "string",
+                enum: ["normal", "falta", "folga", "atestado", "feriado"],
+                description: "Status do dia",
+              },
+              confianca: {
+                type: "integer",
+                description: "Confiança de 0 a 100 na leitura deste registro",
+              },
             },
             required: ["dia", "confianca"],
             additionalProperties: false,
@@ -65,20 +78,45 @@ const TOOL_SCHEMA = {
   },
 };
 
-function buildPromptWithCorrections(correcoes?: Array<{ campo: string; valor_ia: string; valor_corrigido: string; dia?: number }>) {
-  let prompt = BASE_PROMPT;
-  
+/** Auto-correct common OCR misreads in time strings */
+function autoCorrectTime(raw: string | null): string | null {
+  if (!raw) return null;
+  let s = raw.trim();
+  s = s.replace(/O/g, "0");
+  s = s.replace(/l(?=\d)/g, "1");
+  s = s.replace(/I(?=\d)/g, "1");
+  s = s.replace(/S(?=\d)/g, "5");
+  s = s.replace(/\./g, ":");
+  // Add leading zero
+  if (/^\d:\d{2}$/.test(s)) s = "0" + s;
+  return s;
+}
+
+function autoCorrectRegistros(registros: Array<Record<string, unknown>>): Array<Record<string, unknown>> {
+  const timeFields = ["me", "ms", "te", "ts", "ee", "es"];
+  return registros.map((reg) => {
+    const corrected = { ...reg };
+    for (const field of timeFields) {
+      corrected[field] = autoCorrectTime(corrected[field] as string | null);
+    }
+    return corrected;
+  });
+}
+
+function buildPromptWithLearning(correcoes?: Array<{ campo: string; valor_ia: string; valor_corrigido: string; dia?: number }>) {
+  let prompt = SYSTEM_PROMPT;
+
   if (correcoes && correcoes.length > 0) {
-    prompt += `\n\nAPRENDIZADO DE CORREÇÕES ANTERIORES DESTA EMPRESA:
+    prompt += `\n\nAPRENDIZADO DE CORREÇÕES ANTERIORES:
 As seguintes correções foram feitas pelo usuário em leituras anteriores. Use como referência para melhorar sua leitura:`;
-    
+
     for (const c of correcoes.slice(0, 20)) {
       prompt += `\n- Campo "${c.campo}"${c.dia ? ` (dia ${c.dia})` : ""}: IA leu "${c.valor_ia}" → correto é "${c.valor_corrigido}"`;
     }
-    
+
     prompt += `\n\nConsidere esses padrões ao ler esta folha.`;
   }
-  
+
   return prompt;
 }
 
@@ -88,8 +126,8 @@ async function callAIWithRetry(
   correcoes?: Array<{ campo: string; valor_ia: string; valor_corrigido: string; dia?: number }>,
   attempt = 1
 ): Promise<{ nome: string; mes: string; registros: Array<Record<string, unknown>> }> {
-  const prompt = buildPromptWithCorrections(correcoes);
-  
+  const systemPrompt = buildPromptWithLearning(correcoes);
+
   const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: {
@@ -99,17 +137,19 @@ async function callAIWithRetry(
     body: JSON.stringify({
       model: "google/gemini-2.5-flash",
       messages: [
+        { role: "system", content: systemPrompt },
         {
           role: "user",
           content: [
             { type: "image_url", image_url: { url: `data:image/jpeg;base64,${image}` } },
-            { type: "text", text: prompt },
+            { type: "text", text: "Extraia todos os dados desta folha de ponto manual." },
           ],
         },
       ],
       tools: [TOOL_SCHEMA],
       tool_choice: { type: "function", function: { name: "registrar_ponto" } },
-      max_tokens: 4000,
+      temperature: 0.1,
+      max_tokens: 4096,
     }),
   });
 
@@ -119,7 +159,7 @@ async function callAIWithRetry(
 
     if (response.status === 429) {
       if (attempt < 3) {
-        await new Promise(r => setTimeout(r, 2000 * attempt));
+        await new Promise((r) => setTimeout(r, 2000 * attempt));
         return callAIWithRetry(apiKey, image, correcoes, attempt + 1);
       }
       throw { status: 429, message: "Rate limit exceeded. Tente novamente em alguns segundos." };
@@ -131,34 +171,44 @@ async function callAIWithRetry(
   }
 
   const data = await response.json();
-  
+
   // Extract from tool calling response
   const toolCall = data.choices?.[0]?.message?.tool_calls?.[0];
   if (toolCall?.function?.arguments) {
     try {
-      return JSON.parse(toolCall.function.arguments);
+      const parsed = JSON.parse(toolCall.function.arguments);
+      // Apply auto-correction to all time fields
+      if (parsed.registros) {
+        parsed.registros = autoCorrectRegistros(parsed.registros);
+      }
+      return parsed;
     } catch (e) {
       console.error("Failed to parse tool call arguments:", e);
     }
   }
 
-  // Fallback: try to extract from content (if model didn't use tool calling)
+  // Fallback: try content
   const content = data.choices?.[0]?.message?.content || "";
   if (content) {
     const clean = content.replace(/```json|```/g, "").trim();
     const m = clean.match(/\{[\s\S]*\}/);
     if (m) {
       try {
-        return JSON.parse(m[0]);
+        const parsed = JSON.parse(m[0]);
+        if (parsed.registros) {
+          parsed.registros = autoCorrectRegistros(parsed.registros);
+        }
+        return parsed;
       } catch (e) {
         console.error("Failed to parse content JSON:", e);
       }
     }
   }
 
-  // Retry with simpler prompt on failure
-  if (attempt < 2) {
-    console.log("Retrying with fallback...");
+  // Retry on failure
+  if (attempt < 3) {
+    console.log(`Retrying (attempt ${attempt + 1})...`);
+    await new Promise((r) => setTimeout(r, 2000 * attempt));
     return callAIWithRetry(apiKey, image, correcoes, attempt + 1);
   }
 
