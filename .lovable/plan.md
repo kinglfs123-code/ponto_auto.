@@ -1,55 +1,48 @@
 
+## Plano: Adaptar Design System Apple/Inter/Notion ao Projeto
 
-## Plano: Workflow Guiado com Etapas Travadas
-
-### Conceito
-
-O fluxo principal da aplicação segue uma sequência lógica:
-1. **Cadastrar Empresa** (precisa ter pelo menos 1 empresa)
-2. **Cadastrar Funcionários** (precisa ter funcionários vinculados à empresa)
-3. **Importar Ponto** (precisa de empresa + funcionários)
-4. **Holerites / Relatórios** (precisa de folhas de ponto importadas)
-
-A navegação pela barra inferior (mobile) e superior (desktop) deve **bloquear visualmente** etapas que ainda não podem ser acessadas, guiando o usuário pela ordem correta.
+### Resumo
+Trocar a paleta roxa atual pela paleta azul Apple (#007AFF), atualizar tipografia para SF Pro Display, ajustar border-radius, sombras e adicionar cores semânticas de ponto.
 
 ### Alterações
 
-#### 1. Criar hook `useWorkflowStatus` (`src/hooks/use-workflow-status.ts`)
-- Consulta o banco para verificar:
-  - `temEmpresa`: existe pelo menos 1 empresa
-  - `temFuncionario`: existe pelo menos 1 funcionário
-  - `temFolha`: existe pelo menos 1 folha de ponto
-- Retorna um mapa de rotas habilitadas/desabilitadas
-- Cache com React Query para não repetir consultas a cada render
+#### 1. `src/index.css` — CSS Variables (dark + light)
+- **Primary**: roxo → azul Apple `#007AFF` (HSL: `211 100% 50%`)
+- **Dark mode** (`:root`): backgrounds `#000000`, `#1C1C1E`, `#2C2C2E`; text `#FFFFFF`, `#EBEBF5`
+- **Light mode** (`.light`): backgrounds `#FFFFFF`, `#F5F5F7`, `#EFEFF4`; text `#000000`, `#3C3C43`
+- **Status**: success `#34C759`, warning `#FF9500`, destructive `#FF3B30`
+- **Semânticas**: adicionar variáveis `--falta`, `--folga`, `--atestado`, `--feriado`
+- **Border**: dark `#2C2C2E`, light `#D1D1D6`
+- **Radius**: `0.625rem` (10px base)
+- **Font-family**: `-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif`
+- **Sombras**: Apple-style sutis via variáveis `--shadow-sm`, `--shadow-base`, `--shadow-md`
 
-#### 2. Atualizar `NavBar.tsx`
-- Importar `useWorkflowStatus`
-- Links desabilitados ficam com **opacidade reduzida** e **cursor not-allowed**
-- Ao clicar em link travado, exibe toast explicando o pré-requisito (ex: "Cadastre uma empresa primeiro")
-- Ícone de cadeado pequeno no link travado
+#### 2. `tailwind.config.ts`
+- Adicionar `fontFamily.sans` com SF Pro stack
+- Adicionar `fontFamily.mono` com SF Mono stack
+- Adicionar cores semânticas: `info`, `falta`, `folga`, `atestado`, `feriado`
+- Adicionar `boxShadow` customizados (sm, base, md, lg)
+- Adicionar `transitionTimingFunction` com `apple` cubic-bezier
+- Border radius Apple: sm=6px, base=10px, md=12px, lg=16px, xl=20px
 
-#### 3. Atualizar `Dashboard.tsx`
-- Botões de ação rápida também respeitam o workflow
-- Botões travados ficam desabilitados com tooltip explicativo
-- Destaque visual no próximo passo recomendado (borda primary pulsante)
+#### 3. `src/pages/Ponto.tsx` — Badges semânticos
+- Atualizar `excecaoBadge` para usar as novas cores semânticas (falta=vermelho, folga=azul claro, atestado=laranja, feriado=verde)
 
-#### 4. Regras de bloqueio
+#### 4. `src/components/NavBar.tsx` — Tipografia
+- Header text usa `font-sans` (SF Pro) ao invés de `font-mono`
 
-```text
-Rota              Requisito
-─────────────────────────────────
-/                 Sempre acessível
-/empresas         Sempre acessível
-/funcionarios     temEmpresa = true
-/ponto            temFuncionario = true
-/holerites        temFolha = true
-/relatorios       temFolha = true
-```
+#### 5. `src/pages/Dashboard.tsx` — Sombras e radius
+- Cards usam `shadow-base` e radius Apple
+
+#### 6. Cleanup `src/App.css`
+- Remover estilos legados não utilizados (logo spin, read-the-docs)
 
 ### Arquivos alterados
-- **`src/hooks/use-workflow-status.ts`** — novo hook
-- **`src/components/NavBar.tsx`** — links condicionais
-- **`src/pages/Dashboard.tsx`** — ações rápidas condicionais com destaque no próximo passo
+- **`src/index.css`** — paleta completa dark/light
+- **`tailwind.config.ts`** — font, cores semânticas, sombras, radius
+- **`src/pages/Ponto.tsx`** — badges com cores novas
+- **`src/components/NavBar.tsx`** — font-family
+- **`src/pages/Dashboard.tsx`** — sombras Apple
+- **`src/App.css`** — limpeza
 
 Sem mudanças no banco de dados.
-
