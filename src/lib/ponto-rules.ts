@@ -151,11 +151,13 @@ export function applyToleranceAndDetect(
   registro: Partial<RegistroPonto>,
   jornadaPadraoStr: string,
   horarioEntradaPadrao: string = "08:00",
-  horarioSaidaPadrao: string = "17:20"
+  horarioSaidaPadrao: string = "17:20",
+  intervaloStr: string = "01:00"
 ): RegistroPonto {
   const jornadaMinutos = parseTimeToMinutes(jornadaPadraoStr) || 440; // 7:20 default
   const entradaPadraoMin = parseTimeToMinutes(horarioEntradaPadrao) || 480;
   const saidaPadraoMin = parseTimeToMinutes(horarioSaidaPadrao) || (entradaPadraoMin + jornadaMinutos);
+  const intervaloMinutos = parseTimeToMinutes(intervaloStr) || 60;
 
   const me = parseTimeToMinutes(registro.hora_entrada);
   const ms = parseTimeToMinutes(registro.hora_saida);
@@ -165,14 +167,16 @@ export function applyToleranceAndDetect(
   const es = parseTimeToMinutes(registro.hora_saida_extra);
 
   let totalWorked = 0;
+  // When only morning entry + morning exit exist (no split shifts), deduct interval
+  const hasSplitShift = (te !== null && ts !== null);
   if (me !== null && ms !== null) totalWorked += ms - me;
   if (te !== null && ts !== null) totalWorked += ts - te;
   if (ee !== null && es !== null) totalWorked += es - ee;
-
-  let nightHours = 0;
-  nightHours += calcNightHours(me, ms);
-  nightHours += calcNightHours(te, ts);
-  nightHours += calcNightHours(ee, es);
+  
+  // Deduct interval only when there's a single continuous shift (no split)
+  if (me !== null && ms !== null && !hasSplitShift && totalWorked > intervaloMinutos) {
+    totalWorked -= intervaloMinutos;
+  }
 
   // Calculate delay (atraso) with 5min tolerance
   let atrasoMinutos = 0;
