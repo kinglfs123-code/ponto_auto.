@@ -175,13 +175,8 @@ export default function Dashboard() {
                 <div key={e.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors group">
                   <div>
                     <p className="font-medium text-sm text-foreground">{e.nome}</p>
-                    <p className="text-xs text-muted-foreground">CNPJ: {maskCNPJ(e.cnpj)} · Jornada: {e.jornada_padrao}</p>
+                    <p className="text-xs text-muted-foreground">CNPJ: {maskCNPJ(e.cnpj)}</p>
                   </div>
-                  <Button variant="ghost" size="sm" asChild className="gap-1 text-muted-foreground hover:text-primary">
-                    <Link to={`/ponto?empresa=${e.id}`}>
-                      Importar <ArrowRight className="h-3 w-3 transition-transform group-hover:translate-x-0.5" />
-                    </Link>
-                  </Button>
                 </div>
               ))
             )}
