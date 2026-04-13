@@ -51,8 +51,20 @@ export default function Relatorios() {
   };
 
   const download = async (path: string) => {
-    const { data } = await supabase.storage.from("relatorios").createSignedUrl(path, 300);
-    if (data?.signedUrl) window.open(data.signedUrl, "_blank");
+    const { data, error } = await supabase.storage.from("relatorios").createSignedUrl(path, 300);
+    if (error) {
+      toast({ title: "Erro ao baixar", description: error.message, variant: "destructive" });
+      return;
+    }
+    if (data?.signedUrl) {
+      const a = document.createElement("a");
+      a.href = data.signedUrl;
+      a.target = "_blank";
+      a.rel = "noopener noreferrer";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    }
   };
 
   const meses = [...new Set(folhas.map((f) => f.mes_referencia))].sort().reverse();
