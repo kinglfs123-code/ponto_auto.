@@ -1,31 +1,31 @@
 
 
-## Plano: Limpar Dashboard e verificar Holerites
+## Plano: Corrigir erro "Invalid key" na geração de relatórios
 
-### Alterações no Dashboard (`src/pages/Dashboard.tsx`)
+### Causa raiz
 
-1. **Remover botão "Importar"** da lista de empresas (linhas 180-184) — essa ação já existe nos quick actions. Substituir por um link simples "Ver detalhes" apontando para `/empresas`, ou remover o botão completamente.
+O nome do arquivo gerado inclui o `mes_referencia` diretamente (ex: `Março`), e o acento no "ç" torna a key inválida para o Supabase Storage.
 
-2. **Remover "Jornada: XX:XX"** da linha de cada empresa (linha 178). Manter apenas `CNPJ: XX.XXX.XXX/XXXX-XX`.
+### Correção
 
-### Verificação da aba Holerites
+**Arquivo:** `supabase/functions/generate-report/index.ts`
 
-A aba Holerites (`src/pages/Holerites.tsx`) foi revisada e a lógica está completa:
-- Seleção de empresa e mês
-- Upload de PDF por funcionário (com upsert no storage)
-- Envio individual via edge function `send-holerite`
-- Envio em massa ("Enviar todos")
-- Status de enviado/pendente com badges
-- Estados vazios e loading
+Sanitizar o `mes_referencia` antes de usá-lo no nome do arquivo, removendo acentos e caracteres especiais:
 
-A edge function `send-holerite` marca o holerite como enviado e gera URL assinada, mas **não envia e-mail de fato** (apenas retorna o HTML e URL). Isso é esperado para MVP — o envio real depende de configuração de domínio de e-mail.
+```typescript
+// Antes
+const fileName = `${user.id}/${empresa_id}_${mes_referencia}.json`;
 
-### Resumo das mudanças
+// Depois
+const safeMes = mes_referencia
+  .normalize("NFD")
+  .replace(/[\u0300-\u036f]/g, "")
+  .replace(/[^a-zA-Z0-9_-]/g, "_");
+const fileName = `${user.id}/${empresa_id}_${safeMes}.json`;
+```
 
-| Arquivo | Alteração |
-|---------|-----------|
-| `src/pages/Dashboard.tsx` | Remover botão "Importar" da lista de empresas |
-| `src/pages/Dashboard.tsx` | Remover texto "Jornada: XX:XX" |
+Isso converte "Março" em "Marco", eliminando o erro de storage.
 
-Duas edições simples no mesmo arquivo, sem impacto em outras páginas.
+### Arquivo alterado
+- `supabase/functions/generate-report/index.ts` — 1 trecho (~3 linhas)
 
