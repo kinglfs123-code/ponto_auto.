@@ -96,7 +96,11 @@ serve(async (req) => {
     };
 
     // Store as JSON file (a proper PDF lib can be added later)
-    const fileName = `${user.id}/${empresa_id}_${mes_referencia}.json`;
+    const safeMes = mes_referencia
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[^a-zA-Z0-9_-]/g, "_");
+    const fileName = `${user.id}/${empresa_id}_${safeMes}.json`;
     const blob = new Blob([JSON.stringify(report, null, 2)], { type: "application/json" });
 
     const { error: uploadErr } = await supabase.storage
