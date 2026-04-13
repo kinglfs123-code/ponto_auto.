@@ -1,25 +1,31 @@
 
 
-## Plano: Corrigir 3 erros de build em ponto-rules.ts
+## Plano: Limpar Dashboard e verificar Holerites
 
-### Problemas
+### Alterações no Dashboard (`src/pages/Dashboard.tsx`)
 
-1. **Linha 195**: `funcionarioSel` não existe — deve usar o parâmetro `horarioSaidaPadrao` que já é recebido pela função
-2. **Linhas 294 e 318**: `saidaPadraoMin` não existe — a variável nunca foi declarada a partir de `horarioSaidaPadrao`
+1. **Remover botão "Importar"** da lista de empresas (linhas 180-184) — essa ação já existe nos quick actions. Substituir por um link simples "Ver detalhes" apontando para `/empresas`, ou remover o botão completamente.
 
-### Correções
+2. **Remover "Jornada: XX:XX"** da linha de cada empresa (linha 178). Manter apenas `CNPJ: XX.XXX.XXX/XXXX-XX`.
 
-**Linha 195** — substituir:
-```typescript
-const horarioSaida = funcionarioSel?.horario_saida || "13:10";
-```
-por:
-```typescript
-const saidaPadraoMin = parseTimeToMinutes(horarioSaidaPadrao) || 780;
-```
+### Verificação da aba Holerites
 
-Isso declara `saidaPadraoMin` (que já é usado nas linhas 294 e 318), eliminando os 3 erros de uma vez. O valor `780` corresponde a 13:00 como fallback.
+A aba Holerites (`src/pages/Holerites.tsx`) foi revisada e a lógica está completa:
+- Seleção de empresa e mês
+- Upload de PDF por funcionário (com upsert no storage)
+- Envio individual via edge function `send-holerite`
+- Envio em massa ("Enviar todos")
+- Status de enviado/pendente com badges
+- Estados vazios e loading
 
-### Arquivo alterado
-- `src/lib/ponto-rules.ts` — 1 linha (linha 195)
+A edge function `send-holerite` marca o holerite como enviado e gera URL assinada, mas **não envia e-mail de fato** (apenas retorna o HTML e URL). Isso é esperado para MVP — o envio real depende de configuração de domínio de e-mail.
+
+### Resumo das mudanças
+
+| Arquivo | Alteração |
+|---------|-----------|
+| `src/pages/Dashboard.tsx` | Remover botão "Importar" da lista de empresas |
+| `src/pages/Dashboard.tsx` | Remover texto "Jornada: XX:XX" |
+
+Duas edições simples no mesmo arquivo, sem impacto em outras páginas.
 
