@@ -2,7 +2,10 @@
 
 export function parseTimeToMinutes(s: string | null | undefined): number | null {
   if (!s || typeof s !== "string") return null;
-  let c = s.trim().replace(/[hH.]/g, ":").replace(/[^\d:]/g, "");
+  let c = s
+    .trim()
+    .replace(/[hH.]/g, ":")
+    .replace(/[^\d:]/g, "");
   let h: number, m: number;
   if (c.includes(":")) {
     const p = c.split(":");
@@ -78,14 +81,15 @@ export function validateCPF(cpf: string): boolean {
 
 /** Normalize a name for fuzzy comparison: remove accents, lowercase, trim */
 export function normalizeName(s: string): string {
-  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim();
 }
 
 /** Match a name against a list of employees using fuzzy comparison */
-export function matchFuncionario<T extends { nome_completo: string }>(
-  nome: string,
-  lista: T[]
-): T | null {
+export function matchFuncionario<T extends { nome_completo: string }>(nome: string, lista: T[]): T | null {
   if (!nome || lista.length === 0) return null;
   const n = normalizeName(nome);
   // Exact
@@ -141,7 +145,7 @@ function calcNightMinutes(entrada: number | null, saida: number | null): number 
   if (entrada === null || saida === null) return 0;
 
   const NIGHT_START = 22 * 60; // 1320
-  const NIGHT_END = 5 * 60;    // 300
+  const NIGHT_END = 5 * 60; // 300
 
   let adjustedSaida = saida;
   // Handle overnight: if exit <= entry, it crossed midnight
@@ -173,7 +177,7 @@ function calcNightMinutes(entrada: number | null, saida: number | null): number 
 function shiftDuration(entry: number | null, exit: number | null): number {
   if (entry === null || exit === null) return 0;
   // Overnight shift: exit <= entry means it crossed midnight
-  if (exit <= entry) return (exit + 24 * 60) - entry;
+  if (exit <= entry) return exit + 24 * 60 - entry;
   return exit - entry;
 }
 
@@ -182,13 +186,13 @@ export function applyToleranceAndDetect(
   jornadaPadraoStr: string,
   horarioEntradaPadrao: string = "08:00",
   horarioSaidaPadrao: string = "17:00",
-  intervaloStr: string = "01:00"
+  intervaloStr: string = "01:00",
 ): RegistroPonto {
   const dia = typeof registro.dia === "number" ? registro.dia : parseInt(String(registro.dia)) || 0;
 
   const jornadaMinutos = parseTimeToMinutes(jornadaPadraoStr) || 440; // 7h20 default
   const entradaPadraoMin = parseTimeToMinutes(horarioEntradaPadrao) || 480;
-  const saidaPadraoMin = parseTimeToMinutes(horarioSaidaPadrao) || (entradaPadraoMin + jornadaMinutos);
+  const horarioSaida = funcionarioSel?.horario_saida || "13:10";
 
   const me = parseTimeToMinutes(registro.hora_entrada);
   const ms = parseTimeToMinutes(registro.hora_saida);
@@ -206,17 +210,25 @@ export function applyToleranceAndDetect(
     tipo_excecao = null;
     const obs = (registro.obs || "").toUpperCase();
     const isFalta = obs.includes("FALTA") || obs.includes("AUSENT");
-    const isFolga = obs.includes("FOLGA") || obs.includes("FERIADO") || obs.includes("COMPENSAÇÃO") || obs.includes("COMPENSACAO") || obs.includes("ABONO");
-    const isAtestado = obs.includes("ATESTADO") || obs.includes("LICENÇA") || obs.includes("LICENCA") || obs.includes("SUSPENSÃO") || obs.includes("SUSPENSAO");
+    const isFolga =
+      obs.includes("FOLGA") ||
+      obs.includes("FERIADO") ||
+      obs.includes("COMPENSAÇÃO") ||
+      obs.includes("COMPENSACAO") ||
+      obs.includes("ABONO");
+    const isAtestado =
+      obs.includes("ATESTADO") ||
+      obs.includes("LICENÇA") ||
+      obs.includes("LICENCA") ||
+      obs.includes("SUSPENSÃO") ||
+      obs.includes("SUSPENSAO");
 
     if (isAtestado) tipo_excecao = "atestado";
     else if (isFalta) tipo_excecao = "falta";
     else if (isFolga) tipo_excecao = "folga";
   }
 
-  const jornadaHours = jornadaMinutos / 60;
-
-  // Ausências (folga, atestado, falta): horas_normais = jornada devida
+  // If absence type (folga, atestado, falta from obs) → everything zero
   const isAbsence = tipo_excecao === "falta" || tipo_excecao === "atestado" || tipo_excecao === "folga";
   if (isAbsence) {
     return {
@@ -227,7 +239,7 @@ export function applyToleranceAndDetect(
       hora_saida_tarde: registro.hora_saida_tarde || null,
       hora_entrada_extra: registro.hora_entrada_extra || null,
       hora_saida_extra: registro.hora_saida_extra || null,
-      horas_normais: Math.round(jornadaHours * 100) / 100,
+      horas_normais: 0,
       horas_extras: 0,
       horas_noturnas: 0,
       atraso_minutos: tipo_excecao === "falta" ? jornadaMinutos : 0,
@@ -237,7 +249,7 @@ export function applyToleranceAndDetect(
     };
   }
 
-  // Sem registros → falta total
+  // No records at all → falta
   if (me === null && ms === null && te === null && ts === null) {
     return {
       dia,
@@ -247,7 +259,7 @@ export function applyToleranceAndDetect(
       hora_saida_tarde: registro.hora_saida_tarde || null,
       hora_entrada_extra: registro.hora_entrada_extra || null,
       hora_saida_extra: registro.hora_saida_extra || null,
-      horas_normais: Math.round(jornadaHours * 100) / 100,
+      horas_normais: 0,
       horas_extras: 0,
       horas_noturnas: 0,
       atraso_minutos: jornadaMinutos,
@@ -257,45 +269,40 @@ export function applyToleranceAndDetect(
     };
   }
 
-  // === LÓGICA DUPLA (Especialista v3) ===
-
-  // Primeiro e último horário do dia
+  // === NEW LOGIC: Compare punch times against standard schedule ===
+  // First entry and last exit of the day
   const primeiraEntrada = me ?? te ?? ee;
   const ultimaSaida = es ?? ts ?? ms;
-
-  // Calcular total de minutos trabalhados (soma dos turnos)
-  let totalTrabalhado = 0;
-  totalTrabalhado += shiftDuration(me, ms);
-  totalTrabalhado += shiftDuration(te, ts);
-  totalTrabalhado += shiftDuration(ee, es);
 
   let extraMinutos = 0;
   let atrasoMinutos = 0;
 
-  // MÉTODO 2 primeiro: Batidas fora do horário cadastrado
-  // Chegou ANTES do horário cadastrado = EXTRA
-  if (primeiraEntrada !== null && entradaPadraoMin !== null && primeiraEntrada < entradaPadraoMin) {
-    extraMinutos += (entradaPadraoMin - primeiraEntrada);
-  }
-  // Chegou DEPOIS do horário cadastrado = ATRASO
-  if (primeiraEntrada !== null && entradaPadraoMin !== null && primeiraEntrada > entradaPadraoMin) {
-    atrasoMinutos += (primeiraEntrada - entradaPadraoMin);
-  }
-  // Saiu DEPOIS do horário cadastrado = EXTRA
-  if (ultimaSaida !== null && saidaPadraoMin !== null && ultimaSaida > saidaPadraoMin) {
-    extraMinutos += (ultimaSaida - saidaPadraoMin);
-  }
-  // Saiu ANTES do horário cadastrado = ATRASO
-  if (ultimaSaida !== null && saidaPadraoMin !== null && ultimaSaida < saidaPadraoMin) {
-    atrasoMinutos += (saidaPadraoMin - ultimaSaida);
+  // ENTRY: arrived before standard = extra, after = atraso (with 5min tolerance)
+  if (primeiraEntrada !== null) {
+    const diffEntrada = primeiraEntrada - entradaPadraoMin;
+    if (diffEntrada < -TOLERANCE_MINUTES) {
+      // Arrived early → extra (amount before standard entry)
+      extraMinutos += Math.abs(diffEntrada);
+    } else if (diffEntrada > TOLERANCE_MINUTES) {
+      // Arrived late → atraso
+      atrasoMinutos += diffEntrada;
+    }
   }
 
-  // MÉTODO 1: Total trabalhado vs jornada (sobrescreve)
-  if (totalTrabalhado > jornadaMinutos) {
-    extraMinutos = totalTrabalhado - jornadaMinutos;
-  } else if (totalTrabalhado < jornadaMinutos) {
-    atrasoMinutos = jornadaMinutos - totalTrabalhado;
+  // EXIT: left after standard = extra, before = atraso (with 5min tolerance)
+  if (ultimaSaida !== null) {
+    const diffSaida = ultimaSaida - saidaPadraoMin;
+    if (diffSaida > TOLERANCE_MINUTES) {
+      // Left late → extra
+      extraMinutos += diffSaida;
+    } else if (diffSaida < -TOLERANCE_MINUTES) {
+      // Left early → atraso
+      atrasoMinutos += Math.abs(diffSaida);
+    }
   }
+
+  // Normal hours = standard workday (always, when they worked)
+  const jornadaHours = jornadaMinutos / 60;
 
   // Night hours calculation
   let nightMinutes = 0;
@@ -305,10 +312,11 @@ export function applyToleranceAndDetect(
 
   // Detect exception type
   if (atrasoMinutos > 0 && extraMinutos > 0) {
+    // Has both delay and extra — unusual but possible
     tipo_excecao = null;
   } else if (atrasoMinutos > 0) {
-    const hasEarlyExit = ultimaSaida !== null && (ultimaSaida - saidaPadraoMin) < -TOLERANCE_MINUTES;
-    const hasLateEntry = primeiraEntrada !== null && (primeiraEntrada - entradaPadraoMin) > TOLERANCE_MINUTES;
+    const hasEarlyExit = ultimaSaida !== null && ultimaSaida - saidaPadraoMin < -TOLERANCE_MINUTES;
+    const hasLateEntry = primeiraEntrada !== null && primeiraEntrada - entradaPadraoMin > TOLERANCE_MINUTES;
     if (hasLateEntry && hasEarlyExit) {
       tipo_excecao = "atraso_saida_antecipada";
     } else if (hasEarlyExit) {
@@ -337,7 +345,11 @@ export function applyToleranceAndDetect(
 }
 
 export function calcularResumo(registros: RegistroPonto[]): ResumoCalculo {
-  let dias = 0, totalH = 0, extras = 0, atraso = 0, noturnas = 0;
+  let dias = 0,
+    totalH = 0,
+    extras = 0,
+    atraso = 0,
+    noturnas = 0;
 
   for (const r of registros) {
     const total = r.horas_normais + r.horas_extras;
@@ -350,10 +362,9 @@ export function calcularResumo(registros: RegistroPonto[]): ResumoCalculo {
     atraso += r.atraso_minutos || 0;
   }
 
-  // Saldo = benefícios (extras + noturnas) - prejuízos (atraso)
+  // Saldo = extras(min) - atraso(min), converted to hours
   const extrasMin = Math.round(extras * 60);
-  const noturnasMin = Math.round(noturnas * 60);
-  const saldo = (extrasMin + noturnasMin - atraso) / 60;
+  const saldo = (extrasMin - atraso) / 60;
 
   return {
     dias_trabalhados: dias,
