@@ -269,38 +269,33 @@ export function applyToleranceAndDetect(
   totalTrabalhado += shiftDuration(te, ts);
   totalTrabalhado += shiftDuration(ee, es);
 
-  // MÉTODO 1: Total trabalhado vs jornada
-  let extraLogica1 = 0;
-  let atrasoLogica1 = 0;
+  let extraMinutos = 0;
+  let atrasoMinutos = 0;
+
+  // MÉTODO 2 primeiro: Batidas fora do horário cadastrado
+  // Chegou ANTES do horário cadastrado = EXTRA
+  if (primeiraEntrada !== null && entradaPadraoMin !== null && primeiraEntrada < entradaPadraoMin) {
+    extraMinutos += (entradaPadraoMin - primeiraEntrada);
+  }
+  // Chegou DEPOIS do horário cadastrado = ATRASO
+  if (primeiraEntrada !== null && entradaPadraoMin !== null && primeiraEntrada > entradaPadraoMin) {
+    atrasoMinutos += (primeiraEntrada - entradaPadraoMin);
+  }
+  // Saiu DEPOIS do horário cadastrado = EXTRA
+  if (ultimaSaida !== null && saidaPadraoMin !== null && ultimaSaida > saidaPadraoMin) {
+    extraMinutos += (ultimaSaida - saidaPadraoMin);
+  }
+  // Saiu ANTES do horário cadastrado = ATRASO
+  if (ultimaSaida !== null && saidaPadraoMin !== null && ultimaSaida < saidaPadraoMin) {
+    atrasoMinutos += (saidaPadraoMin - ultimaSaida);
+  }
+
+  // MÉTODO 1: Total trabalhado vs jornada (sobrescreve)
   if (totalTrabalhado > jornadaMinutos) {
-    extraLogica1 = totalTrabalhado - jornadaMinutos;
+    extraMinutos = totalTrabalhado - jornadaMinutos;
   } else if (totalTrabalhado < jornadaMinutos) {
-    atrasoLogica1 = jornadaMinutos - totalTrabalhado;
+    atrasoMinutos = jornadaMinutos - totalTrabalhado;
   }
-
-  // MÉTODO 2: Batidas fora do horário cadastrado
-  let extraLogica2 = 0;
-  let atrasoLogica2 = 0;
-  if (primeiraEntrada !== null && entradaPadraoMin !== null) {
-    if (primeiraEntrada < entradaPadraoMin) {
-      extraLogica2 += (entradaPadraoMin - primeiraEntrada);
-    } else if (primeiraEntrada > entradaPadraoMin) {
-      atrasoLogica2 += (primeiraEntrada - entradaPadraoMin);
-    }
-  }
-  if (ultimaSaida !== null && saidaPadraoMin !== null) {
-    if (ultimaSaida > saidaPadraoMin) {
-      extraLogica2 += (ultimaSaida - saidaPadraoMin);
-    } else if (ultimaSaida < saidaPadraoMin) {
-      atrasoLogica2 += (saidaPadraoMin - ultimaSaida);
-    }
-  }
-
-  // Extra = MENOR entre as duas lógicas (o que realmente foi trabalhado a mais)
-  const extraMinutos = Math.min(extraLogica1, extraLogica2);
-
-  // Atraso = MAIOR entre as duas lógicas
-  const atrasoMinutos = Math.max(atrasoLogica1, atrasoLogica2);
 
   // Night hours calculation
   let nightMinutes = 0;
