@@ -1,28 +1,32 @@
 
 
-## Plano: Implementar Lógica Dupla de Extras (Especialista v2)
+## Plano: Ajustar Saldo no Resumo Mensal
 
-### Diferenças entre o código atual e a referência do especialista
+### Diferença encontrada
 
-1. **Extras usa apenas comparação de batidas** — falta a LÓGICA 1 (total trabalhado vs jornada). O especialista usa `Math.max()` entre as duas lógicas.
-2. **`horas_normais = 0` em ausências** — o especialista retorna `JORNADA_NORMAL` sempre (folga, feriado, atestado, falta), pois a jornada "devida" permanece.
-3. **Atraso baseado em batidas** — o especialista calcula atraso como `JORNADA_NORMAL - totalTrabalhado` (LÓGICA 1), não pela diferença de horário de batida.
-4. **`totalTrabalhado` não é calculado** — o código atual não soma a duração real dos turnos.
+| Aspecto | Código atual | Referência do especialista |
+|---------|-------------|---------------------------|
+| Saldo | `extras(min) - atraso(min)` | `totalTrabalhadas - totalAtraso` |
+| Noturno | ✅ Correto (variável separada) | ✅ Igual |
 
-### Correções em `src/lib/ponto-rules.ts`
+O saldo atual mede apenas a diferença líquida de extras vs atrasos. A referência do especialista define saldo como **total trabalhado menos total de atraso**, que reflete melhor o balanço real de horas.
 
-#### `applyToleranceAndDetect`
+### Correção em `src/lib/ponto-rules.ts`
 
-1. Calcular `totalTrabalhado` somando duração de cada turno (manhã + tarde + extra)
-2. **LÓGICA 1**: Se `totalTrabalhado > jornadaMinutos` → `extraLogica1 = totalTrabalhado - jornadaMinutos`; senão → `atrasoLogica1 = jornadaMinutos - totalTrabalhado`
-3. **LÓGICA 2**: Manter lógica de batidas (chegou antes/saiu depois = `extraHorario`)
-4. **Extra final**: `Math.max(extraLogica1, extraLogica2)` — o maior prevalece
-5. **Atraso final**: usar `atrasoLogica1` (baseado no total trabalhado)
-6. Ausências (folga, atestado, falta): retornar `horas_normais = jornadaHours` (não 0)
-7. Falta sem registros: `horas_normais = jornadaHours`, `atraso = jornadaMinutos`
+Na função `calcularResumo`:
+1. Adicionar acumulador `totalTrabalhadas` somando `r.horas_normais + r.horas_extras` (ou a duração total de cada dia)
+2. Alterar saldo para: `saldo = totalTrabalhadas(min) - totalAtraso(min)`
+
+```typescript
+// Antes
+const extrasMin = Math.round(extras * 60);
+const saldo = (extrasMin - atraso) / 60;
+
+// Depois
+const trabalhadasMin = Math.round(totalH * 60);
+const saldo = (trabalhadasMin - atraso) / 60;
+```
 
 ### Arquivo alterado
-- `src/lib/ponto-rules.ts` — ajustar `applyToleranceAndDetect`
-
-Sem mudanças no banco de dados. Sem mudanças na UI.
+- `src/lib/ponto-rules.ts` — 2 linhas na função `calcularResumo`
 
