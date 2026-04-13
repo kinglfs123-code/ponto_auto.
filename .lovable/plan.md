@@ -1,32 +1,25 @@
 
 
-## Plano: Ajustar Saldo no Resumo Mensal
+## Plano: Corrigir 3 erros de build em ponto-rules.ts
 
-### Diferença encontrada
+### Problemas
 
-| Aspecto | Código atual | Referência do especialista |
-|---------|-------------|---------------------------|
-| Saldo | `extras(min) - atraso(min)` | `totalTrabalhadas - totalAtraso` |
-| Noturno | ✅ Correto (variável separada) | ✅ Igual |
+1. **Linha 195**: `funcionarioSel` não existe — deve usar o parâmetro `horarioSaidaPadrao` que já é recebido pela função
+2. **Linhas 294 e 318**: `saidaPadraoMin` não existe — a variável nunca foi declarada a partir de `horarioSaidaPadrao`
 
-O saldo atual mede apenas a diferença líquida de extras vs atrasos. A referência do especialista define saldo como **total trabalhado menos total de atraso**, que reflete melhor o balanço real de horas.
+### Correções
 
-### Correção em `src/lib/ponto-rules.ts`
-
-Na função `calcularResumo`:
-1. Adicionar acumulador `totalTrabalhadas` somando `r.horas_normais + r.horas_extras` (ou a duração total de cada dia)
-2. Alterar saldo para: `saldo = totalTrabalhadas(min) - totalAtraso(min)`
-
+**Linha 195** — substituir:
 ```typescript
-// Antes
-const extrasMin = Math.round(extras * 60);
-const saldo = (extrasMin - atraso) / 60;
-
-// Depois
-const trabalhadasMin = Math.round(totalH * 60);
-const saldo = (trabalhadasMin - atraso) / 60;
+const horarioSaida = funcionarioSel?.horario_saida || "13:10";
+```
+por:
+```typescript
+const saidaPadraoMin = parseTimeToMinutes(horarioSaidaPadrao) || 780;
 ```
 
+Isso declara `saidaPadraoMin` (que já é usado nas linhas 294 e 318), eliminando os 3 erros de uma vez. O valor `780` corresponde a 13:00 como fallback.
+
 ### Arquivo alterado
-- `src/lib/ponto-rules.ts` — 2 linhas na função `calcularResumo`
+- `src/lib/ponto-rules.ts` — 1 linha (linha 195)
 
