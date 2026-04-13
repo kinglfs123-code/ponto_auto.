@@ -257,7 +257,7 @@ export function applyToleranceAndDetect(
     };
   }
 
-  // === LÓGICA DUPLA DE EXTRAS (Especialista v2) ===
+  // === LÓGICA DUPLA (Especialista v3) ===
 
   // Primeiro e último horário do dia
   const primeiraEntrada = me ?? te ?? ee;
@@ -269,7 +269,7 @@ export function applyToleranceAndDetect(
   totalTrabalhado += shiftDuration(te, ts);
   totalTrabalhado += shiftDuration(ee, es);
 
-  // LÓGICA 1: Total trabalhado vs jornada
+  // MÉTODO 1: Total trabalhado vs jornada
   let extraLogica1 = 0;
   let atrasoLogica1 = 0;
   if (totalTrabalhado > jornadaMinutos) {
@@ -278,20 +278,29 @@ export function applyToleranceAndDetect(
     atrasoLogica1 = jornadaMinutos - totalTrabalhado;
   }
 
-  // LÓGICA 2: Batidas fora do horário cadastrado
+  // MÉTODO 2: Batidas fora do horário cadastrado
   let extraLogica2 = 0;
-  if (primeiraEntrada !== null && primeiraEntrada < entradaPadraoMin) {
-    extraLogica2 += (entradaPadraoMin - primeiraEntrada);
+  let atrasoLogica2 = 0;
+  if (primeiraEntrada !== null && entradaPadraoMin !== null) {
+    if (primeiraEntrada < entradaPadraoMin) {
+      extraLogica2 += (entradaPadraoMin - primeiraEntrada);
+    } else if (primeiraEntrada > entradaPadraoMin) {
+      atrasoLogica2 += (primeiraEntrada - entradaPadraoMin);
+    }
   }
-  if (ultimaSaida !== null && ultimaSaida > saidaPadraoMin) {
-    extraLogica2 += (ultimaSaida - saidaPadraoMin);
+  if (ultimaSaida !== null && saidaPadraoMin !== null) {
+    if (ultimaSaida > saidaPadraoMin) {
+      extraLogica2 += (ultimaSaida - saidaPadraoMin);
+    } else if (ultimaSaida < saidaPadraoMin) {
+      atrasoLogica2 += (saidaPadraoMin - ultimaSaida);
+    }
   }
 
-  // Extra final = o MAIOR entre as duas lógicas
-  const extraMinutos = Math.max(extraLogica1, extraLogica2);
+  // Extra = MENOR entre as duas lógicas (o que realmente foi trabalhado a mais)
+  const extraMinutos = Math.min(extraLogica1, extraLogica2);
 
-  // Atraso = baseado no total trabalhado (Lógica 1)
-  const atrasoMinutos = atrasoLogica1;
+  // Atraso = MAIOR entre as duas lógicas
+  const atrasoMinutos = Math.max(atrasoLogica1, atrasoLogica2);
 
   // Night hours calculation
   let nightMinutes = 0;
