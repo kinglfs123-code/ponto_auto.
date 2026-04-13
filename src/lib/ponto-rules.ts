@@ -214,7 +214,9 @@ export function applyToleranceAndDetect(
     else if (isFolga) tipo_excecao = "folga";
   }
 
-  // If absence type (folga, atestado, falta from obs) → everything zero
+  const jornadaHours = jornadaMinutos / 60;
+
+  // Ausências (folga, atestado, falta): horas_normais = jornada devida
   const isAbsence = tipo_excecao === "falta" || tipo_excecao === "atestado" || tipo_excecao === "folga";
   if (isAbsence) {
     return {
@@ -225,7 +227,7 @@ export function applyToleranceAndDetect(
       hora_saida_tarde: registro.hora_saida_tarde || null,
       hora_entrada_extra: registro.hora_entrada_extra || null,
       hora_saida_extra: registro.hora_saida_extra || null,
-      horas_normais: 0,
+      horas_normais: Math.round(jornadaHours * 100) / 100,
       horas_extras: 0,
       horas_noturnas: 0,
       atraso_minutos: tipo_excecao === "falta" ? jornadaMinutos : 0,
@@ -235,7 +237,7 @@ export function applyToleranceAndDetect(
     };
   }
 
-  // No records at all → falta
+  // Sem registros → falta total
   if (me === null && ms === null && te === null && ts === null) {
     return {
       dia,
@@ -245,7 +247,7 @@ export function applyToleranceAndDetect(
       hora_saida_tarde: registro.hora_saida_tarde || null,
       hora_entrada_extra: registro.hora_entrada_extra || null,
       hora_saida_extra: registro.hora_saida_extra || null,
-      horas_normais: 0,
+      horas_normais: Math.round(jornadaHours * 100) / 100,
       horas_extras: 0,
       horas_noturnas: 0,
       atraso_minutos: jornadaMinutos,
@@ -255,40 +257,41 @@ export function applyToleranceAndDetect(
     };
   }
 
-  // === NEW LOGIC: Compare punch times against standard schedule ===
-  // First entry and last exit of the day
+  // === LÓGICA DUPLA DE EXTRAS (Especialista v2) ===
+
+  // Primeiro e último horário do dia
   const primeiraEntrada = me ?? te ?? ee;
   const ultimaSaida = es ?? ts ?? ms;
 
-  let extraMinutos = 0;
-  let atrasoMinutos = 0;
+  // Calcular total de minutos trabalhados (soma dos turnos)
+  let totalTrabalhado = 0;
+  totalTrabalhado += shiftDuration(me, ms);
+  totalTrabalhado += shiftDuration(te, ts);
+  totalTrabalhado += shiftDuration(ee, es);
 
-  // ENTRY: arrived before standard = extra, after = atraso (with 5min tolerance)
-  if (primeiraEntrada !== null) {
-    const diffEntrada = primeiraEntrada - entradaPadraoMin;
-    if (diffEntrada < -TOLERANCE_MINUTES) {
-      // Arrived early → extra (amount before standard entry)
-      extraMinutos += Math.abs(diffEntrada);
-    } else if (diffEntrada > TOLERANCE_MINUTES) {
-      // Arrived late → atraso
-      atrasoMinutos += diffEntrada;
-    }
+  // LÓGICA 1: Total trabalhado vs jornada
+  let extraLogica1 = 0;
+  let atrasoLogica1 = 0;
+  if (totalTrabalhado > jornadaMinutos) {
+    extraLogica1 = totalTrabalhado - jornadaMinutos;
+  } else if (totalTrabalhado < jornadaMinutos) {
+    atrasoLogica1 = jornadaMinutos - totalTrabalhado;
   }
 
-  // EXIT: left after standard = extra, before = atraso (with 5min tolerance)
-  if (ultimaSaida !== null) {
-    const diffSaida = ultimaSaida - saidaPadraoMin;
-    if (diffSaida > TOLERANCE_MINUTES) {
-      // Left late → extra
-      extraMinutos += diffSaida;
-    } else if (diffSaida < -TOLERANCE_MINUTES) {
-      // Left early → atraso
-      atrasoMinutos += Math.abs(diffSaida);
-    }
+  // LÓGICA 2: Batidas fora do horário cadastrado
+  let extraLogica2 = 0;
+  if (primeiraEntrada !== null && primeiraEntrada < entradaPadraoMin) {
+    extraLogica2 += (entradaPadraoMin - primeiraEntrada);
+  }
+  if (ultimaSaida !== null && ultimaSaida > saidaPadraoMin) {
+    extraLogica2 += (ultimaSaida - saidaPadraoMin);
   }
 
-  // Normal hours = standard workday (always, when they worked)
-  const jornadaHours = jornadaMinutos / 60;
+  // Extra final = o MAIOR entre as duas lógicas
+  const extraMinutos = Math.max(extraLogica1, extraLogica2);
+
+  // Atraso = baseado no total trabalhado (Lógica 1)
+  const atrasoMinutos = atrasoLogica1;
 
   // Night hours calculation
   let nightMinutes = 0;
@@ -298,7 +301,6 @@ export function applyToleranceAndDetect(
 
   // Detect exception type
   if (atrasoMinutos > 0 && extraMinutos > 0) {
-    // Has both delay and extra — unusual but possible
     tipo_excecao = null;
   } else if (atrasoMinutos > 0) {
     const hasEarlyExit = ultimaSaida !== null && (ultimaSaida - saidaPadraoMin) < -TOLERANCE_MINUTES;
