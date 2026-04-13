@@ -192,7 +192,7 @@ export function applyToleranceAndDetect(
 
   const jornadaMinutos = parseTimeToMinutes(jornadaPadraoStr) || 440; // 7h20 default
   const entradaPadraoMin = parseTimeToMinutes(horarioEntradaPadrao) || 480;
-  const horarioSaida = funcionarioSel?.horario_saida || "13:10";
+  const saidaPadraoMin = parseTimeToMinutes(horarioSaidaPadrao) || 780;
 
   const me = parseTimeToMinutes(registro.hora_entrada);
   const ms = parseTimeToMinutes(registro.hora_saida);
