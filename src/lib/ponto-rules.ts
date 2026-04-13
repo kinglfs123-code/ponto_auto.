@@ -346,9 +346,9 @@ export function calcularResumo(registros: RegistroPonto[]): ResumoCalculo {
     atraso += r.atraso_minutos || 0;
   }
 
-  // Saldo = extras(min) - atraso(min), converted to hours
-  const extrasMin = Math.round(extras * 60);
-  const saldo = (extrasMin - atraso) / 60;
+  // Saldo = totalTrabalhadas(min) - totalAtraso(min), converted to hours
+  const trabalhadasMin = Math.round(totalH * 60);
+  const saldo = (trabalhadasMin - atraso) / 60;
 
   return {
     dias_trabalhados: dias,
