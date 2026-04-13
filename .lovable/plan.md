@@ -1,31 +1,40 @@
 
 
-## Plano: Corrigir erro "Invalid key" na geração de relatórios
+## Plano: Corrigir botão Download de relatórios
 
-### Causa raiz
+### Diagnóstico
 
-O nome do arquivo gerado inclui o `mes_referencia` diretamente (ex: `Março`), e o acento no "ç" torna a key inválida para o Supabase Storage.
+O código ignora erros do `createSignedUrl`. Se a chamada falhar (ex: erro de permissão ou rede), nada acontece — sem feedback ao usuário.
+
+A storage policy e o arquivo existem corretamente, então o problema provavelmente é:
+1. O erro do `createSignedUrl` está sendo silenciado
+2. Possível bloqueio de popup no `window.open`
 
 ### Correção
 
-**Arquivo:** `supabase/functions/generate-report/index.ts`
+**Arquivo:** `src/pages/Relatorios.tsx` — função `download` (linhas 53-56)
 
-Sanitizar o `mes_referencia` antes de usá-lo no nome do arquivo, removendo acentos e caracteres especiais:
+Adicionar tratamento de erro e usar `window.location.href` em vez de `window.open` para evitar bloqueio de popup:
 
 ```typescript
-// Antes
-const fileName = `${user.id}/${empresa_id}_${mes_referencia}.json`;
-
-// Depois
-const safeMes = mes_referencia
-  .normalize("NFD")
-  .replace(/[\u0300-\u036f]/g, "")
-  .replace(/[^a-zA-Z0-9_-]/g, "_");
-const fileName = `${user.id}/${empresa_id}_${safeMes}.json`;
+const download = async (path: string) => {
+  const { data, error } = await supabase.storage.from("relatorios").createSignedUrl(path, 300);
+  if (error) {
+    toast({ title: "Erro ao baixar", description: error.message, variant: "destructive" });
+    return;
+  }
+  if (data?.signedUrl) {
+    const a = document.createElement("a");
+    a.href = data.signedUrl;
+    a.target = "_blank";
+    a.rel = "noopener noreferrer";
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  }
+};
 ```
 
-Isso converte "Março" em "Marco", eliminando o erro de storage.
-
 ### Arquivo alterado
-- `supabase/functions/generate-report/index.ts` — 1 trecho (~3 linhas)
+- `src/pages/Relatorios.tsx` — função `download` (~4 linhas → ~13 linhas)
 
