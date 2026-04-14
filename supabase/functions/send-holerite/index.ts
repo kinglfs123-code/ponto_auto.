@@ -98,32 +98,28 @@ Deno.serve(async (req) => {
 
     const empresaNome = empresa?.nome || "Empresa";
 
-    // Send email via Lovable transactional email
-    // For now, use the edge function invoke pattern
-    const emailHtml = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-        <h2 style="color: #1a1a2e;">Holerite - ${holerite.mes_referencia}</h2>
-        <p>Olá <strong>${func.nome_completo}</strong>,</p>
-        <p>Seu holerite referente ao mês <strong>${holerite.mes_referencia}</strong> está disponível para download.</p>
-        <p style="margin: 24px 0;">
-          <a href="${signedData.signedUrl}" 
-             style="background-color: #6366f1; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold;">
-            Baixar Holerite (PDF)
-          </a>
-        </p>
-        <p style="color: #666; font-size: 13px;">Este link é válido por 1 hora. Após expirar, solicite um novo envio.</p>
-        <hr style="border: none; border-top: 1px solid #eee; margin: 24px 0;" />
-        <p style="color: #999; font-size: 12px;">${empresaNome} — Folha de Ponto</p>
-      </div>
-    `;
+    // Send transactional email via Lovable email infrastructure
+    const { error: emailError } = await adminClient.functions.invoke("send-transactional-email", {
+      body: {
+        templateName: "holerite-enviado",
+        recipientEmail: func.email,
+        idempotencyKey: `holerite-${holerite_id}-${Date.now()}`,
+        templateData: {
+          nomeCompleto: func.nome_completo,
+          mesReferencia: holerite.mes_referencia,
+          empresaNome,
+          downloadUrl: signedData.signedUrl,
+        },
+      },
+    });
 
-    // Try sending via Resend or transactional email infrastructure
-    // For MVP, we'll use the LOVABLE_API_KEY to send via the platform
-    const lovableApiKey = Deno.env.get("LOVABLE_API_KEY");
-    
-    // Use Supabase Auth admin to send a custom email isn't possible directly,
-    // so we'll store the signed URL and mark as "link generated" 
-    // The actual email sending will work once the email domain is configured
+    if (emailError) {
+      console.error("Failed to send transactional email", emailError);
+      return new Response(JSON.stringify({ error: "Falha ao enviar e-mail" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Update holerite as sent
     await adminClient
@@ -134,10 +130,8 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: "Holerite processado com sucesso",
-        download_url: signedData.signedUrl,
+        message: "Holerite enviado com sucesso",
         email: func.email,
-        email_html: emailHtml,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

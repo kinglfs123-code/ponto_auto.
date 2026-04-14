@@ -13,14 +13,6 @@ import { useEmpresa } from "@/contexts/EmpresaContext";
 import { currentMonth } from "@/lib/utils";
 import type { FuncionarioBasic, Holerite } from "@/types";
 import { Upload, Send, CheckCircle2, Clock, FileText, Mail, RefreshCw } from "lucide-react";
-import emailjs from "@emailjs/browser";
-
-// ⚠️ Substitua pelos seus valores do painel EmailJS (emailjs.com)
-const EMAILJS_PUBLIC_KEY = "q7KpzllOSKdarxLxM";
-const EMAILJS_SERVICE_ID = "service_931blj3";
-const EMAILJS_TEMPLATE_ID = "template_eqbo5n3";
-
-emailjs.init(EMAILJS_PUBLIC_KEY);
 
 export default function Holerites() {
   const isMobile = useIsMobile();
@@ -54,7 +46,6 @@ export default function Holerites() {
     setEmpresa(emp);
   };
 
-  // Load data when empresa or month changes
   const handleLoad = () => loadData();
 
   const getHolerite = (funcId: string) => holerites.find((h) => h.funcionario_id === funcId);
@@ -101,23 +92,15 @@ export default function Holerites() {
 
     setSending((p) => ({ ...p, [funcId]: true }));
     try {
-      // 1. Gerar URL assinada do PDF via edge function
       const { data, error } = await supabase.functions.invoke("send-holerite", {
         body: { holerite_id: holerite.id },
       });
       if (error) throw error;
 
-      // 2. Enviar e-mail real via EmailJS
-      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, {
-        to_email: func.email,
-        subject: `Holerite - ${mesRef}`,
-        message: `Olá ${func.nome_completo},\n\nSeu holerite referente ao mês ${mesRef} está disponível para download:\n\n${data.download_url}\n\nEste link é válido por 1 hora.`,
-      });
-
       toast({ title: "Holerite enviado!", description: `E-mail enviado para ${func.email}` });
       await loadData();
     } catch (err: any) {
-      toast({ title: "Erro ao enviar", description: err?.text || err?.message || "Falha no envio", variant: "destructive" });
+      toast({ title: "Erro ao enviar", description: err?.message || "Falha no envio", variant: "destructive" });
     } finally {
       setSending((p) => ({ ...p, [funcId]: false }));
     }
