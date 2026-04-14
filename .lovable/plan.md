@@ -1,29 +1,22 @@
 
 
-## Plano: Migrar envio de holerites do EmailJS para e-mail nativo do Lovable
-
-### Problema
-O EmailJS com Yahoo está bloqueando o envio por falhas de autenticação repetidas. A solução é eliminar essa dependência e usar o sistema de e-mail integrado do Lovable.
+## Plano: Substituir Lovable Email pelo Resend
 
 ### O que será feito
 
-1. **Configurar infraestrutura de e-mail** — preparar filas, tabelas e funções necessárias no backend
+1. **Adicionar secret `RESEND_API_KEY`** — solicitar que você insira sua chave de API do Resend
 
-2. **Criar template de e-mail "holerite-enviado"** — template React Email com o visual do app para notificar o funcionário com link de download do PDF
+2. **Reescrever `supabase/functions/send-holerite/index.ts`** — usar o código Resend que você enviou (com pequenos ajustes):
+   - Baixar o PDF do Storage e converter para base64
+   - Enviar via API do Resend com o PDF anexado
+   - Atualizar status do holerite no banco
+   - Manter validação de autenticação e ownership
 
-3. **Atualizar a Edge Function `send-holerite`** — em vez de apenas gerar URL, ela agora também dispara o envio via `send-transactional-email` com o template criado
+3. **Fazer deploy** da Edge Function atualizada
 
-4. **Limpar `src/pages/Holerites.tsx`** — remover toda dependência do EmailJS (import, credenciais, `emailjs.send()`). O envio agora será feito inteiramente pela Edge Function no backend
-
-5. **Criar página de cancelamento de inscrição** — página obrigatória para links de descadastro nos e-mails
-
-6. **Remover pacote `@emailjs/browser`** do projeto
-
-### Domínio de e-mail
-O domínio `notify.pontoauto.rf.gd` já está configurado mas aguarda verificação DNS. Toda a infraestrutura será montada agora — os e-mails começarão a ser enviados automaticamente assim que o DNS for verificado. Você pode acompanhar o progresso em **Cloud → Emails**.
+### Nota sobre remetente
+O Resend gratuito (sem domínio verificado) usa `onboarding@resend.dev` — funciona apenas para o e-mail da sua conta Resend. Para enviar para qualquer destinatário, será necessário verificar um domínio no painel do Resend.
 
 ### Resultado esperado
-- Envio de holerites funcionará sem depender do EmailJS/Yahoo
-- E-mails profissionais enviados do seu próprio domínio
-- Sistema com fila, retentativas automáticas e log de envios
+O holerite será enviado por e-mail via Resend com o PDF anexado diretamente, sem depender da verificação DNS do domínio Lovable.
 
