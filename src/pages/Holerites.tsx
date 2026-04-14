@@ -1,9 +1,9 @@
-import { useState, useCallback } from "react"; // holerites
+import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import NavBar from "@/components/NavBar";
@@ -12,7 +12,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { currentMonth } from "@/lib/utils";
 import type { FuncionarioBasic, Holerite } from "@/types";
-import { Upload, Send, CheckCircle2, Clock, FileText, Mail, RefreshCw } from "lucide-react";
+import { Upload, Send, CheckCircle2, Clock, FileText, Mail, RefreshCw, Trash2 } from "lucide-react";
 
 export default function Holerites() {
   const isMobile = useIsMobile();
@@ -42,11 +42,14 @@ export default function Holerites() {
     }
   }, [empresaId, mesRef]);
 
+  // Auto-load when empresa or month changes
+  useEffect(() => {
+    if (empresaId && mesRef) loadData();
+  }, [empresaId, mesRef, loadData]);
+
   const handleEmpresaChange = (emp: { id: string; cnpj: string; nome: string; jornada_padrao: string } | null) => {
     setEmpresa(emp);
   };
-
-  const handleLoad = () => loadData();
 
   const getHolerite = (funcId: string) => holerites.find((h) => h.funcionario_id === funcId);
 
@@ -78,6 +81,20 @@ export default function Holerites() {
       toast({ title: "Erro no upload", description: err.message, variant: "destructive" });
     } finally {
       setUploading((p) => ({ ...p, [funcId]: false }));
+    }
+  };
+
+  const handleDeletePdf = async (funcId: string) => {
+    const hol = getHolerite(funcId);
+    if (!hol) return;
+    if (!confirm("Excluir o PDF deste holerite?")) return;
+    try {
+      await supabase.storage.from("holerites").remove([hol.pdf_path]);
+      await supabase.from("holerites").delete().eq("id", hol.id);
+      toast({ title: "PDF excluído" });
+      await loadData();
+    } catch (err: any) {
+      toast({ title: "Erro ao excluir", description: err.message, variant: "destructive" });
     }
   };
 
@@ -134,12 +151,12 @@ export default function Holerites() {
     <div className="min-h-screen bg-background pb-24 md:pb-8">
       <NavBar />
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6 animate-fade-in">
-        <h1 className="text-2xl font-bold text-foreground">Holerites</h1>
+        <h1 className="text-2xl font-bold text-foreground tracking-tight">Holerites</h1>
 
         {/* Filters */}
         <Card>
-          <CardContent className="pt-6 space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+          <CardContent className="pt-5 space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
               <div className="space-y-1.5">
                 <label className="text-sm font-medium text-muted-foreground">Empresa</label>
                 <EmpresaSelector value={empresaId} onChange={handleEmpresaChange} />
@@ -148,10 +165,6 @@ export default function Holerites() {
                 <label className="text-sm font-medium text-muted-foreground">Mês de Referência</label>
                 <Input type="month" value={mesRef} onChange={(e) => setMesRef(e.target.value)} />
               </div>
-              <Button onClick={handleLoad} disabled={!empresaId || !mesRef || loading}>
-                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-                Carregar
-              </Button>
             </div>
           </CardContent>
         </Card>
@@ -173,7 +186,7 @@ export default function Holerites() {
             </Card>
             <Card>
               <CardContent className="pt-4 pb-3 text-center">
-                <p className="text-2xl font-bold text-emerald-500 dark:text-emerald-400">{totalSent}</p>
+                <p className="text-2xl font-bold text-[hsl(var(--success))]">{totalSent}</p>
                 <p className="text-xs text-muted-foreground">Enviados</p>
               </CardContent>
             </Card>
@@ -192,7 +205,7 @@ export default function Holerites() {
         {loading && (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-20 w-full rounded-lg" />
+              <Skeleton key={i} className="h-20 w-full rounded-2xl" />
             ))}
           </div>
         )}
@@ -229,7 +242,7 @@ export default function Holerites() {
                                 Enviado
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="gap-1 text-accent-foreground border-accent gap-1">
+                              <Badge variant="outline" className="gap-1 text-accent-foreground border-accent">
                                 <Clock className="h-3 w-3" />
                                 PDF anexado — pendente
                               </Badge>
@@ -239,7 +252,7 @@ export default function Holerites() {
                       </div>
 
                       {/* Actions */}
-                      <div className={`flex items-center gap-2 ${isMobile ? "justify-end" : ""}`}>
+                      <div className={`flex items-center gap-2 ${isMobile ? "justify-end" : ""} flex-wrap`}>
                         {/* Upload button */}
                         <label className="cursor-pointer">
                           <input
@@ -257,15 +270,26 @@ export default function Holerites() {
                             <span>
                               {isUploading ? (
                                 <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                              ) : hol ? (
-                                <FileText className="h-3.5 w-3.5" />
                               ) : (
                                 <Upload className="h-3.5 w-3.5" />
                               )}
-                              {hol ? "Substituir PDF" : "Anexar PDF"}
+                              Anexar PDF
                             </span>
                           </Button>
                         </label>
+
+                        {/* Delete PDF button */}
+                        {hol && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1.5 text-muted-foreground hover:text-destructive"
+                            onClick={() => handleDeletePdf(func.id)}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            Excluir PDF
+                          </Button>
+                        )}
 
                         {/* Send button */}
                         {hol && func.email && (

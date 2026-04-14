@@ -3,17 +3,27 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { maskCNPJ, validateCNPJ, maskHM } from "@/lib/ponto-rules";
-import { Plus, Trash2, Building2 } from "lucide-react";
+import { Plus, Trash2, Building2, Pencil } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import type { Empresa } from "@/types";
+
 export default function Empresas() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
   const [nome, setNome] = useState("");
   const [cnpj, setCnpj] = useState("");
   const [jornada, setJornada] = useState("07:20");
   const [loading, setLoading] = useState(false);
+
+  // Edit state
+  const [editOpen, setEditOpen] = useState(false);
+  const [editEmpresa, setEditEmpresa] = useState<Empresa | null>(null);
+  const [editNome, setEditNome] = useState("");
+  const [editCnpj, setEditCnpj] = useState("");
+  const [editJornada, setEditJornada] = useState("");
+  const [editLoading, setEditLoading] = useState(false);
 
   const load = async () => {
     const { data } = await supabase.from("empresas").select("*").order("created_at");
@@ -55,13 +65,44 @@ export default function Empresas() {
     load();
   };
 
+  const openEdit = (emp: Empresa) => {
+    setEditEmpresa(emp);
+    setEditNome(emp.nome);
+    setEditCnpj(maskCNPJ(emp.cnpj));
+    setEditJornada(emp.jornada_padrao);
+    setEditOpen(true);
+  };
+
+  const saveEdit = async () => {
+    if (!editEmpresa) return;
+    if (!editNome.trim() || !validateCNPJ(editCnpj)) {
+      toast({ title: "Preencha nome e CNPJ válido", variant: "destructive" });
+      return;
+    }
+    setEditLoading(true);
+    const { error } = await supabase.from("empresas").update({
+      nome: editNome.trim(),
+      cnpj: editCnpj.replace(/\D/g, ""),
+      jornada_padrao: editJornada || "07:20",
+    }).eq("id", editEmpresa.id);
+
+    if (error) {
+      toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Empresa atualizada!" });
+      setEditOpen(false);
+      load();
+    }
+    setEditLoading(false);
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
       <NavBar />
       <div className="max-w-2xl mx-auto p-4 space-y-4">
-        <h1 className="text-xl font-bold text-foreground animate-fade-in">Empresas</h1>
+        <h1 className="text-2xl font-bold text-foreground tracking-tight animate-fade-in">Empresas</h1>
 
-        <Card className="animate-fade-in border-border/50">
+        <Card className="animate-fade-in">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base text-primary">
               <Plus className="h-4 w-4" /> Nova Empresa
@@ -69,11 +110,11 @@ export default function Empresas() {
           </CardHeader>
           <CardContent>
             <form onSubmit={add} className="space-y-3">
-              <Input placeholder="Nome da empresa" value={nome} onChange={(e) => setNome(e.target.value)} className="bg-muted/30 border-border/50" />
-              <Input placeholder="CNPJ" value={cnpj} onChange={(e) => setCnpj(maskCNPJ(e.target.value))} maxLength={18} className="bg-muted/30 border-border/50" />
+              <Input placeholder="Nome da empresa" value={nome} onChange={(e) => setNome(e.target.value)} />
+              <Input placeholder="CNPJ" value={cnpj} onChange={(e) => setCnpj(maskCNPJ(e.target.value))} maxLength={18} />
               <div className="flex items-center gap-2">
                 <span className="text-sm text-muted-foreground">Jornada:</span>
-                <Input value={jornada} onChange={(e) => setJornada(maskHM(e.target.value))} className="w-20 bg-muted/30 border-border/50" maxLength={5} placeholder="07:20" />
+                <Input value={jornada} onChange={(e) => setJornada(maskHM(e.target.value))} className="w-20" maxLength={5} placeholder="07:20" />
               </div>
               <Button type="submit" disabled={loading} className="w-full">
                 {loading ? "Adicionando..." : "Adicionar Empresa"}
@@ -94,12 +135,13 @@ export default function Empresas() {
             {empresas.map((emp, i) => (
               <Card
                 key={emp.id}
-                className="animate-fade-in border-border/50 hover:border-primary/20 transition-colors"
+                className="animate-fade-in hover:shadow-md transition-all cursor-pointer"
                 style={{ animationDelay: `${i * 60}ms`, animationFillMode: "backwards" }}
+                onClick={() => openEdit(emp)}
               >
                 <CardContent className="flex items-center justify-between py-3 px-4">
                   <div className="flex items-center gap-3">
-                    <div className="h-9 w-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                    <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
                       <Building2 className="h-4 w-4 text-primary" />
                     </div>
                     <div>
@@ -109,15 +151,43 @@ export default function Empresas() {
                       </p>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" onClick={() => remove(emp.id)} className="text-muted-foreground hover:text-destructive h-8 w-8">
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+                  <div className="flex items-center gap-1">
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); openEdit(emp); }} className="h-8 w-8 text-muted-foreground hover:text-primary">
+                      <Pencil className="h-4 w-4" />
+                    </Button>
+                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); remove(emp.id); }} className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
           </div>
         )}
       </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Empresa</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Input placeholder="Nome da empresa" value={editNome} onChange={(e) => setEditNome(e.target.value)} />
+            <Input placeholder="CNPJ" value={editCnpj} onChange={(e) => setEditCnpj(maskCNPJ(e.target.value))} maxLength={18} />
+            <div className="flex items-center gap-2">
+              <span className="text-sm text-muted-foreground">Jornada:</span>
+              <Input value={editJornada} onChange={(e) => setEditJornada(maskHM(e.target.value))} className="w-20" maxLength={5} placeholder="07:20" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)}>Cancelar</Button>
+            <Button onClick={saveEdit} disabled={editLoading}>
+              {editLoading ? "Salvando..." : "Salvar"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
