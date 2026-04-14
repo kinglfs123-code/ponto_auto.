@@ -18,7 +18,7 @@ import emailjs from "@emailjs/browser";
 // ⚠️ Substitua pelos seus valores do painel EmailJS (emailjs.com)
 const EMAILJS_PUBLIC_KEY = "q7KpzllOSKdarxLxM";
 const EMAILJS_SERVICE_ID = "service_931blj3";
-const EMAILJS_TEMPLATE_ID = "SUA_TEMPLATE_ID";
+const EMAILJS_TEMPLATE_ID = "template_eqbo5n3";
 
 emailjs.init(EMAILJS_PUBLIC_KEY);
 
