@@ -100,6 +100,9 @@ Deno.serve(async (req) => {
 
     // Send transactional email via Lovable email infrastructure
     const { error: emailError } = await adminClient.functions.invoke("send-transactional-email", {
+      headers: {
+        Authorization: `Bearer ${serviceRoleKey}`,
+      },
       body: {
         templateName: "holerite-enviado",
         recipientEmail: func.email,
