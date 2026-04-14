@@ -1,14 +1,17 @@
 
 
-## Plano: Substituir o Template ID do EmailJS
+## Plano: Testar envio de holerite novamente
 
-### Alteração
+### O que faremos
 
-**Arquivo:** `src/pages/Holerites.tsx`
+1. Acessar o preview logado com `jv@outlook.com` / `12345678`
+2. Navegar para a pagina Holerites
+3. Selecionar a empresa "Emporio do Pao" e mes 2026-04
+4. Clicar em "Enviar" no card da Joana Dark (que ja tem PDF anexado e status pendente)
+5. Verificar se o e-mail e enviado com sucesso (sem erro do Yahoo)
 
-Substituir `"SUA_TEMPLATE_ID"` por `"template_eqbo5n3"` na constante `EMAILJS_TEMPLATE_ID`.
+### Resultado esperado
 
-### Resumo
-- 1 linha alterada
-- Com isso, as 3 credenciais do EmailJS estarão configuradas e o envio de holerites por e-mail ficará funcional
+- Toast de sucesso "Holerite enviado!"
+- Status muda para "Enviado" no card da Joana Dark
 
