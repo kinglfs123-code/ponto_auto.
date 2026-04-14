@@ -1,17 +1,23 @@
 
 
-## Plano: Testar envio de holerite novamente
+## Plano: Corrigir erro de RLS no upload de holerites
 
-### O que faremos
+### Problema
+O upload de PDFs com `upsert: true` tenta atualizar um arquivo existente no bucket `holerites`, mas nao existe uma policy de UPDATE no `storage.objects` para esse bucket. Isso causa o erro "new row violates row-level security policy".
 
-1. Acessar o preview logado com `jv@outlook.com` / `12345678`
-2. Navegar para a pagina Holerites
-3. Selecionar a empresa "Emporio do Pao" e mes 2026-04
-4. Clicar em "Enviar" no card da Joana Dark (que ja tem PDF anexado e status pendente)
-5. Verificar se o e-mail e enviado com sucesso (sem erro do Yahoo)
+### Solucao
+
+1. **Criar migration** adicionando uma policy de UPDATE no storage para o bucket `holerites`:
+```sql
+CREATE POLICY "Users can update holerite PDFs"
+ON storage.objects FOR UPDATE
+TO authenticated
+USING (bucket_id = 'holerites')
+WITH CHECK (bucket_id = 'holerites');
+```
+
+Isso permite que usuarios autenticados substituam PDFs existentes no bucket.
 
 ### Resultado esperado
-
-- Toast de sucesso "Holerite enviado!"
-- Status muda para "Enviado" no card da Joana Dark
+O upload e substituicao de PDFs de holerites funcionara sem erro de RLS.
 
