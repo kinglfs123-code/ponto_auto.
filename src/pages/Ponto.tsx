@@ -414,10 +414,6 @@ export default function Ponto() {
                 <label className="text-xs text-muted-foreground mb-1 block">Mês ref.</label>
                 <Input value={toBrMonth(mesRef)} onChange={(e) => setMesRef(fromBrMonth(e.target.value))} placeholder="04/2026" />
               </div>
-              <div className="w-20">
-                <label className="text-xs text-muted-foreground mb-1 block">Jornada</label>
-                <Input value={jornada} disabled className="text-center" />
-              </div>
             </div>
           </CardContent>
         </Card>
