@@ -16,8 +16,8 @@ import { Upload, Send, CheckCircle2, Clock, FileText, Mail, RefreshCw } from "lu
 import emailjs from "@emailjs/browser";
 
 // ⚠️ Substitua pelos seus valores do painel EmailJS (emailjs.com)
-const EMAILJS_PUBLIC_KEY = "SUA_PUBLIC_KEY";
-const EMAILJS_SERVICE_ID = "SUA_SERVICE_ID";
+const EMAILJS_PUBLIC_KEY = "q7KpzllOSKdarxLxM";
+const EMAILJS_SERVICE_ID = "service_931blj3";
 const EMAILJS_TEMPLATE_ID = "SUA_TEMPLATE_ID";
 
 emailjs.init(EMAILJS_PUBLIC_KEY);
