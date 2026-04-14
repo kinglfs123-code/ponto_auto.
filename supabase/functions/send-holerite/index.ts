@@ -99,11 +99,14 @@ Deno.serve(async (req) => {
     const empresaNome = empresa?.nome || "Empresa";
 
     // Send transactional email via Lovable email infrastructure
-    const { error: emailError } = await adminClient.functions.invoke("send-transactional-email", {
+    const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-transactional-email`, {
+      method: "POST",
       headers: {
         Authorization: `Bearer ${serviceRoleKey}`,
+        apikey: serviceRoleKey,
+        "Content-Type": "application/json",
       },
-      body: {
+      body: JSON.stringify({
         templateName: "holerite-enviado",
         recipientEmail: func.email,
         idempotencyKey: `holerite-${holerite_id}-${Date.now()}`,
@@ -113,11 +116,15 @@ Deno.serve(async (req) => {
           empresaNome,
           downloadUrl: signedData.signedUrl,
         },
-      },
+      }),
     });
 
-    if (emailError) {
-      console.error("Failed to send transactional email", emailError);
+    if (!emailResponse.ok) {
+      const errorText = await emailResponse.text();
+      console.error("Failed to send transactional email", {
+        status: emailResponse.status,
+        body: errorText,
+      });
       return new Response(JSON.stringify({ error: "Falha ao enviar e-mail" }), {
         status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
