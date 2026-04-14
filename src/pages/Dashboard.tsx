@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, ClipboardList, FileText, Plus, ArrowRight, Users, Lock } from "lucide-react";
+import { Building2, ClipboardList, FileText, Plus, Users, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { maskCNPJ } from "@/lib/ponto-rules";
@@ -13,24 +13,123 @@ import type { Empresa } from "@/types";
 
 export default function Dashboard() {
   const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [folhasCount, setFolhasCount] = useState(0);
-  const [relatoriosCount, setRelatoriosCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const workflow = useWorkflowStatus();
 
   useEffect(() => {
-    Promise.all([
-      supabase.from("empresas").select("*"),
-      supabase.from("folhas_ponto").select("id", { count: "exact", head: true }),
-      supabase.from("relatorios").select("id", { count: "exact", head: true }),
-    ]).then(([emp, fol, rel]) => {
-      if (emp.data) setEmpresas(emp.data);
-      setFolhasCount(fol.count || 0);
-      setRelatoriosCount(rel.count || 0);
+    supabase.from("empresas").select("*").then(({ data }) => {
+      if (data) setEmpresas(data);
       setLoading(false);
     });
   }, []);
 
+  const quickActions = [
+    { to: "/empresas", label: "Nova Empresa", icon: Building2 },
+    { to: "/funcionarios", label: "Funcionários", icon: Users },
+    { to: "/ponto", label: "Importar Ponto", icon: ClipboardList },
+    { to: "/relatorios", label: "Relatórios", icon: FileText },
+  ];
+
+  const getNextStep = (): string | null => {
+    if (!workflow.temEmpresa) return "/empresas";
+    if (!workflow.temFuncionario) return "/funcionarios";
+    if (!workflow.temFolha) return "/ponto";
+    return null;
+  };
+  const nextStep = getNextStep();
+
+  const handleActionClick = (e: React.MouseEvent, to: string) => {
+    if (!isRouteEnabled(to, workflow)) {
+      e.preventDefault();
+      toast.error(getRouteMessage(to));
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background pb-20 md:pb-4">
+      <NavBar />
+      <div className="max-w-4xl mx-auto p-4 space-y-6">
+        <div className="animate-fade-in">
+          <h1 className="text-2xl font-bold text-foreground tracking-tight">Painel</h1>
+          <p className="text-sm text-muted-foreground mt-0.5">Visão geral do sistema</p>
+        </div>
+
+        {/* Quick actions */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 animate-fade-in" style={{ animationDelay: "100ms", animationFillMode: "backwards" }}>
+          {quickActions.map((a) => {
+            const Icon = a.icon;
+            const enabled = isRouteEnabled(a.to, workflow);
+            const isNext = a.to === nextStep;
+            return (
+              <Button
+                key={a.to}
+                variant="outline"
+                asChild={enabled}
+                disabled={!enabled}
+                className={`h-auto py-3 flex-col gap-1.5 transition-all ${
+                  !enabled
+                    ? "opacity-40 cursor-not-allowed border-border/50"
+                    : isNext
+                      ? "border-primary/50 bg-primary/5 hover:bg-primary/10 ring-1 ring-primary/20 animate-pulse"
+                      : "border-border/50 hover:border-primary/30 hover:bg-primary/5"
+                }`}
+                onClick={(e: React.MouseEvent) => !enabled && handleActionClick(e, a.to)}
+              >
+                {enabled ? (
+                  <Link to={a.to}>
+                    <Icon className="h-4 w-4 text-primary" />
+                    <span className="text-xs">{a.label}</span>
+                    {isNext && <span className="text-[9px] text-primary font-medium">Próximo passo</span>}
+                  </Link>
+                ) : (
+                  <span className="flex flex-col items-center gap-1.5">
+                    <div className="relative">
+                      <Icon className="h-4 w-4 text-muted-foreground" />
+                      <Lock className="h-2.5 w-2.5 absolute -top-1 -right-1.5 text-muted-foreground" />
+                    </div>
+                    <span className="text-xs text-muted-foreground">{a.label}</span>
+                  </span>
+                )}
+              </Button>
+            );
+          })}
+        </div>
+
+        {/* Companies list */}
+        <Card className="animate-fade-in" style={{ animationDelay: "200ms", animationFillMode: "backwards" }}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base font-semibold">Suas Empresas</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            {loading ? (
+              Array.from({ length: 2 }).map((_, i) => (
+                <div key={i} className="flex items-center justify-between p-3 rounded-xl bg-muted/30">
+                  <div className="space-y-1.5">
+                    <Skeleton className="h-4 w-32" />
+                    <Skeleton className="h-3 w-48" />
+                  </div>
+                </div>
+              ))
+            ) : empresas.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-muted flex items-center justify-center">
+                  <Building2 className="h-6 w-6 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground text-sm mb-3">Nenhuma empresa cadastrada</p>
+                <Button asChild size="sm">
+                  <Link to="/empresas" className="gap-1.5">
+                    <Plus className="h-4 w-4" /> Cadastrar Empresa
+                  </Link>
+                </Button>
+              </div>
+            ) : (
+              empresas.map((e) => (
+                <div key={e.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                  <div>
+                    <p className="font-medium text-sm text-foreground">{e.nome}</p>
+                    <p className="text-xs text-muted-foreground">CNPJ: {maskCNPJ(e.cnpj)}</p>
+                  </div>
+                </div>
               ))
             )}
           </CardContent>
