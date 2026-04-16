@@ -1,6 +1,6 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, ClipboardList, FileText, LogOut, Home, Users, Receipt, Sun, Moon, Lock } from "lucide-react";
+import { Building2, ClipboardList, FileText, LogOut, Home, Users, Receipt, Sun, Moon, Lock, IdCard } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -11,6 +11,7 @@ const links = [
   { to: "/", label: "Início", icon: Home },
   { to: "/empresas", label: "Empresas", icon: Building2 },
   { to: "/funcionarios", label: "Funcionários", icon: Users },
+  { to: "/rh-control", label: "RH Control", icon: IdCard },
   { to: "/ponto", label: "Ponto", icon: ClipboardList },
   { to: "/holerites", label: "Holerites", icon: Receipt },
   { to: "/relatorios", label: "Relatórios", icon: FileText },

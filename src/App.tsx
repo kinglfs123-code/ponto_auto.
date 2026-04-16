@@ -13,6 +13,7 @@ import Ponto from "@/pages/Ponto";
 import FolhaDetalhe from "@/pages/FolhaDetalhe";
 import Relatorios from "@/pages/Relatorios";
 import Funcionarios from "@/pages/Funcionarios";
+import RHControl from "@/pages/RHControl";
 import Holerites from "@/pages/Holerites";
 import Unsubscribe from "@/pages/Unsubscribe";
 import NotFound from "@/pages/NotFound";
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/ponto" element={<AuthGuard><Ponto /></AuthGuard>} />
               <Route path="/ponto/:folhaId" element={<AuthGuard><FolhaDetalhe /></AuthGuard>} />
               <Route path="/funcionarios" element={<AuthGuard><Funcionarios /></AuthGuard>} />
+              <Route path="/rh-control" element={<AuthGuard><RHControl /></AuthGuard>} />
               <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
               <Route path="/holerites" element={<AuthGuard><Holerites /></AuthGuard>} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
