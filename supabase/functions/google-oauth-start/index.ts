@@ -9,12 +9,15 @@ const corsHeaders = {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  console.log("[oauth-start] invoked", { method: req.method });
+
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
     const CLIENT_ID = Deno.env.get("GOOGLE_OAUTH_CLIENT_ID");
 
     if (!CLIENT_ID) {
+      console.error("[oauth-start] missing GOOGLE_OAUTH_CLIENT_ID");
       return new Response(JSON.stringify({
         error: "GOOGLE_OAUTH_CLIENT_ID não configurado",
       }), {
@@ -24,10 +27,9 @@ Deno.serve(async (req) => {
 
     // Validação de usuário feita no código (verify_jwt=false no gateway porque
     // o gateway não aceita JWT ES256 — fazemos a validação aqui via getUser).
-    // É obrigatório identificar o usuário para que o callback saiba em qual
-    // conta salvar o token do Google Agenda.
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
+      console.warn("[oauth-start] missing Authorization header");
       return new Response(JSON.stringify({ error: "Não autenticado" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -38,6 +40,7 @@ Deno.serve(async (req) => {
     });
     const { data: userData, error: userErr } = await userClient.auth.getUser();
     if (userErr || !userData.user) {
+      console.warn("[oauth-start] invalid token", { err: userErr?.message });
       return new Response(JSON.stringify({ error: "Token inválido" }), {
         status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -47,7 +50,12 @@ Deno.serve(async (req) => {
     const returnTo: string = body.return_to || "/funcionarios";
     const origin: string | undefined = typeof body.origin === "string" ? body.origin : undefined;
 
-    // state inclui user_id + return_to + origin + nonce; codificado em base64url
+    console.log("[oauth-start] params", {
+      uid: userData.user.id,
+      return_to: returnTo,
+      origin,
+    });
+
     const stateObj = {
       uid: userData.user.id,
       rt: returnTo,
@@ -72,11 +80,16 @@ Deno.serve(async (req) => {
 
     const url = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
 
-    return new Response(JSON.stringify({ url }), {
+    console.log("[oauth-start] generated google url", {
+      redirect_uri: redirectUri,
+      url_prefix: url.slice(0, 60),
+    });
+
+    return new Response(JSON.stringify({ url, redirect_uri: redirectUri }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {
-    console.error("google-oauth-start error:", e);
+    console.error("[oauth-start] error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro" }), {
       status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
