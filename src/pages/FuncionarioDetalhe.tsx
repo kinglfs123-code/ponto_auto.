@@ -148,6 +148,29 @@ export default function FuncionarioDetalhe() {
       if (insErr) throw insErr;
       toast({ title: "Documento anexado" });
       await loadAll();
+
+      // Auto-disparar análise IA quando for um contrato
+      if (categoria === "contrato") {
+        try {
+          const { data: docRow } = await supabase
+            .from("funcionario_documentos")
+            .select("id")
+            .eq("storage_path", path)
+            .maybeSingle();
+          if (docRow?.id) {
+            toast({ title: "Analisando contrato com IA…" });
+            supabase.functions
+              .invoke("analyze-contract", { body: { documento_id: docRow.id } })
+              .then(({ error }) => {
+                if (error) {
+                  toast({ title: "Falha na análise", description: error.message, variant: "destructive" });
+                }
+              });
+          }
+        } catch {
+          // silencioso — UI do AnaliseContrato também tenta auto-analisar
+        }
+      }
     } catch (err: any) {
       toast({ title: "Erro no upload", description: err.message, variant: "destructive" });
     } finally {
