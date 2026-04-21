@@ -69,6 +69,37 @@ export default function Relatorios() {
     }
   };
 
+  const handleDeleteFolha = async (folha: Folha) => {
+    if (!confirm(`Excluir a folha de ${folha.funcionario} (${folha.mes_referencia})?`)) return;
+    try {
+      const { error: regErr } = await supabase.from("registros_ponto").delete().eq("folha_id", folha.id);
+      if (regErr) throw regErr;
+      const { error: folhaErr } = await supabase.from("folhas_ponto").delete().eq("id", folha.id);
+      if (folhaErr) throw folhaErr;
+      toast({ title: "Folha excluída" });
+      setFolhas((prev) => prev.filter((f) => f.id !== folha.id));
+    } catch (err: unknown) {
+      toast({ title: "Erro ao excluir", description: err instanceof Error ? err.message : "Erro", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteMes = async (mes: string) => {
+    const mesfolhas = folhas.filter((f) => f.mes_referencia === mes);
+    if (mesfolhas.length === 0) return;
+    if (!confirm(`Excluir todas as ${mesfolhas.length} folha(s) de ${mes}?`)) return;
+    try {
+      const ids = mesfolhas.map((f) => f.id);
+      const { error: regErr } = await supabase.from("registros_ponto").delete().in("folha_id", ids);
+      if (regErr) throw regErr;
+      const { error: folhaErr } = await supabase.from("folhas_ponto").delete().in("id", ids);
+      if (folhaErr) throw folhaErr;
+      toast({ title: `Folhas de ${mes} excluídas` });
+      setFolhas((prev) => prev.filter((f) => f.mes_referencia !== mes));
+    } catch (err: unknown) {
+      toast({ title: "Erro ao excluir", description: err instanceof Error ? err.message : "Erro", variant: "destructive" });
+    }
+  };
+
   const deleteRelatorio = async (r: Relatorio) => {
     if (!confirm("Excluir este relatório?")) return;
     try {
@@ -111,27 +142,55 @@ export default function Relatorios() {
                       <div key={mes} className="p-3 rounded-xl bg-muted/30 space-y-1">
                         <div className="flex items-center justify-between">
                           <span className="font-semibold text-sm">{mes}</span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => gerarRelatorio(mes)}
-                            disabled={generating}
-                            className="gap-1"
-                          >
-                            <FileText className="h-3 w-3" /> {generating ? "..." : "Gerar PDF"}
-                          </Button>
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => gerarRelatorio(mes)}
+                              disabled={generating}
+                              className="gap-1"
+                            >
+                              <FileText className="h-3 w-3" /> {generating ? "..." : "Gerar PDF"}
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleDeleteMes(mes)}
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              title={`Excluir todas as folhas de ${mes}`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </div>
                         {mesfolhas.map((f) => (
-                          <Link
+                          <div
                             key={f.id}
-                            to={`/ponto/${f.id}`}
-                            className="block text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            className="flex items-center justify-between gap-2 px-1"
                           >
-                            {f.funcionario} ·{" "}
-                            <span className={f.status === "finalizada" ? "text-[hsl(var(--success))]" : "text-[hsl(var(--warning))]"}>
-                              {f.status}
-                            </span>
-                          </Link>
+                            <Link
+                              to={`/ponto/${f.id}`}
+                              className="block text-xs text-muted-foreground hover:text-foreground transition-colors flex-1 min-w-0 truncate"
+                            >
+                              {f.funcionario} ·{" "}
+                              <span className={f.status === "finalizada" ? "text-[hsl(var(--success))]" : "text-[hsl(var(--warning))]"}>
+                                {f.status}
+                              </span>
+                            </Link>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleDeleteFolha(f);
+                              }}
+                              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                              title="Excluir folha"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         ))}
                       </div>
                     );
