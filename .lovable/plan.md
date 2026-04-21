@@ -1,49 +1,39 @@
 
 
-## Plano: Anexar holerite/folha + ações de exclusão e edição no perfil do colaborador
+## Plano: Adicionar exclusão na página Relatórios
 
-A página `FuncionarioDetalhe` atualmente só lista holerites/folhas existentes, sem permitir anexar novos nem excluir/editar. Vou adicionar essas ações dentro do próprio perfil.
+A página `/relatorios` lista folhas de ponto (Março, 2026-04) sem opção de excluir. Hoje só permite "Gerar PDF". A exclusão de relatórios gerados já existe, mas a lista está vazia no seu caso.
 
-### 1. Aba **Holerites** — adicionar "Anexar PDF" e "Excluir PDF"
+### O que será adicionado em `src/pages/Relatorios.tsx`
 
-Reaproveitar a lógica de `Holerites.tsx` (upload com `upsert`, mesma estrutura de path `${empresa_id}/${mes}/${func_id}.pdf`).
+**1. Excluir folha individual**
+Em cada nome de funcionário listado dentro do mês (ex: "Nicoly Cristina · rascunho"), adicionar um ícone de lixeira ao lado. Ao clicar:
+- Confirma com o usuário
+- Apaga `registros_ponto` daquela folha (sem cascade no banco)
+- Apaga a `folhas_ponto` correspondente
+- Recarrega a lista
 
-- **Cabeçalho da aba**: campo `<Input type="month">` para selecionar o mês de referência + botão **"Anexar PDF"** (input file oculto, accept `application/pdf`).
-- Ao anexar: faz upload no bucket `holerites`, faz upsert na tabela `holerites` (insere se novo, atualiza `pdf_path` e zera `enviado` se já existir naquele mês), recarrega lista.
-- **Em cada item da lista**: além de "Ver" e "Enviar", adicionar botão **"Excluir"** (ícone lixeira, vermelho) — remove arquivo do Storage + linha da tabela após confirmação.
+**2. Excluir mês inteiro**
+No cabeçalho de cada mês (ao lado do botão "Gerar PDF"), adicionar um botão lixeira que:
+- Confirma "Excluir todas as folhas de [mês]?"
+- Apaga registros + folhas de todos os funcionários daquele mês
+- Recarrega
 
-### 2. Aba **Folhas** — adicionar "Nova folha" e "Excluir folha"
-
-- **Cabeçalho da aba**: botão **"Nova folha de ponto"** que navega para `/ponto?empresa=<empresa_id>&funcionario=<id>` (a página Ponto já aceita esse pré-preenchimento via query). Alternativa: campo de mês + botão que cria diretamente uma folha em branco vinculada ao funcionário e abre `/ponto/<id_da_folha>`.
-- **Em cada folha listada**: ao lado do link de abrir, adicionar botão **"Excluir"** (ícone lixeira) — remove de `folhas_ponto` (cascata via FK não existe; vou também apagar `registros_ponto` da folha antes) após confirmação.
-
-### 3. Aba **Resumo** — adicionar "Editar informações"
-
-Botão **"Editar"** no card de cabeçalho (ao lado do nome) abre um modal (`Dialog`) com campos:
-- Nome completo, CPF, e-mail, cargo, data de nascimento, horário entrada/saída, intervalo.
-
-Ao salvar: `update` na tabela `funcionarios` e recarregar perfil. Reusar máscaras já existentes (`maskCPF`).
-
-### 4. Aba **Férias** — já tem CRUD; apenas adicionar **editar**
-
-Hoje só permite criar e excluir. Adicionar botão **lápis** em cada card de férias que abre o mesmo formulário pré-preenchido para `update`.
-
-### 5. Aba **Documentos** — sem mudanças
-
-Já tem anexar e excluir.
+**3. Pequeno ajuste no link**
+O `<Link>` envolvendo o nome do funcionário precisa se tornar uma `<div>` com link interno + botão de excluir lado a lado, com `stopPropagation` para o botão não disparar navegação.
 
 ### Resumo Técnico
 
-| Arquivo | Mudança |
+| Item | Mudança |
 |---|---|
-| `src/pages/FuncionarioDetalhe.tsx` | Adicionar: state de mês para holerite, `handleUploadHolerite`, `handleDeleteHolerite`, `handleDeleteFolha`, `handleNovaFolha`, modal de edição do funcionário, modal de edição de férias |
-| Nenhuma mudança de schema | Todas as tabelas (`holerites`, `folhas_ponto`, `registros_ponto`, `funcionarios`, `funcionario_ferias`) já existem com RLS adequada |
-| Nenhum novo bucket | Reuso de `holerites` |
+| Arquivo | `src/pages/Relatorios.tsx` |
+| Novas funções | `handleDeleteFolha(folha)`, `handleDeleteMes(mes)` |
+| Banco | Sem mudanças — RLS já permite DELETE em `folhas_ponto` e `registros_ponto` |
+| UX | Lixeiras vermelhas com `confirm()` antes de apagar; toast de sucesso/erro |
 
-### Comportamento esperado após as mudanças
+### Comportamento final
 
-- Aba **Holerites**: input de mês + botão "Anexar PDF" no topo; cada holerite tem Ver / Enviar / Excluir.
-- Aba **Folhas**: botão "Nova folha" no topo; cada folha tem link para abrir + botão Excluir.
-- Aba **Resumo**: botão "Editar" abre modal e atualiza os dados do colaborador.
-- Aba **Férias**: cada item ganha botão de editar além do excluir já existente.
+- Lista de meses: cada mês ganha um botão lixeira que apaga tudo daquele período.
+- Cada funcionário dentro do mês: ganha lixeira individual.
+- Relatórios gerados: continua como está (já tem exclusão funcional).
 
