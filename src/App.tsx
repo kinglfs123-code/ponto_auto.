@@ -13,6 +13,7 @@ import Ponto from "@/pages/Ponto";
 import FolhaDetalhe from "@/pages/FolhaDetalhe";
 import Relatorios from "@/pages/Relatorios";
 import Funcionarios from "@/pages/Funcionarios";
+import FuncionarioDetalhe from "@/pages/FuncionarioDetalhe";
 
 import Holerites from "@/pages/Holerites";
 import Unsubscribe from "@/pages/Unsubscribe";
@@ -35,6 +36,7 @@ const App = () => (
               <Route path="/ponto" element={<AuthGuard><Ponto /></AuthGuard>} />
               <Route path="/ponto/:folhaId" element={<AuthGuard><FolhaDetalhe /></AuthGuard>} />
               <Route path="/funcionarios" element={<AuthGuard><Funcionarios /></AuthGuard>} />
+              <Route path="/funcionarios/:id" element={<AuthGuard><FuncionarioDetalhe /></AuthGuard>} />
               
               <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
               <Route path="/holerites" element={<AuthGuard><Holerites /></AuthGuard>} />

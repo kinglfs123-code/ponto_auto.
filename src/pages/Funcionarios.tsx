@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import NavBar from "@/components/NavBar";
@@ -32,6 +33,12 @@ export default function Funcionarios() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+
+  const sortAlfabetico = (arr: Funcionario[]) =>
+    [...arr].sort((a, b) =>
+      a.nome_completo.localeCompare(b.nome_completo, "pt-BR", { sensitivity: "base" })
+    );
 
   useEffect(() => {
     if (!empresa) { setFuncionarios([]); return; }
@@ -42,7 +49,7 @@ export default function Funcionarios() {
       .order("nome_completo")
       .then(({ data, error }) => {
         if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
-        else setFuncionarios((data as Funcionario[]) || []);
+        else setFuncionarios(sortAlfabetico((data as Funcionario[]) || []));
       });
   }, [empresa]);
 
@@ -79,7 +86,7 @@ export default function Funcionarios() {
       toast({ title: editId ? "Atualizado!" : "Cadastrado!" });
       resetForm();
       const { data } = await supabase.from("funcionarios").select("*").eq("empresa_id", empresa.id).order("nome_completo");
-      setFuncionarios((data as Funcionario[]) || []);
+      setFuncionarios(sortAlfabetico((data as Funcionario[]) || []));
     }
     setLoading(false);
   };
@@ -199,12 +206,16 @@ export default function Funcionarios() {
               </thead>
               <tbody>
                 {funcionarios.map((f) => (
-                  <tr key={f.id} className="border-t border-border/30 hover:bg-muted/20 transition-colors">
+                  <tr
+                    key={f.id}
+                    onClick={() => navigate(`/funcionarios/${f.id}`)}
+                    className="border-t border-border/30 hover:bg-muted/20 transition-colors cursor-pointer"
+                  >
                     <td className="p-2.5 text-foreground text-sm">{f.nome_completo}</td>
                     <td className="p-2.5 text-muted-foreground text-sm font-mono">{maskCPF(f.cpf)}</td>
                     <td className="p-2.5 text-muted-foreground text-sm hidden sm:table-cell">{f.cargo || "—"}</td>
                     <td className="p-2.5 text-muted-foreground text-sm hidden md:table-cell">{f.horario_entrada} – {f.horario_saida} <span className="text-xs opacity-60">(int: {f.intervalo || "01:00"})</span></td>
-                    <td className="p-2.5 flex gap-1 justify-end">
+                    <td className="p-2.5 flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(f)} className="h-7 w-7"><Pencil className="h-3.5 w-3.5" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(f.id)} className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
                     </td>
@@ -219,7 +230,11 @@ export default function Funcionarios() {
         {funcionarios.length > 0 && isMobile && (
           <div className="space-y-2 animate-fade-in">
             {funcionarios.map((f) => (
-              <Card key={f.id} className="border-border/50">
+              <Card
+                key={f.id}
+                onClick={() => navigate(`/funcionarios/${f.id}`)}
+                className="border-border/50 cursor-pointer hover:bg-muted/20 transition-colors"
+              >
                 <CardContent className="py-3 px-4">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
@@ -231,7 +246,7 @@ export default function Funcionarios() {
                         {f.horario_entrada} – {f.horario_saida} <span className="opacity-60">(int: {f.intervalo || "01:00"})</span>
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(f)} className="h-7 w-7"><Pencil className="h-3.5 w-3.5" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(f.id)} className="h-7 w-7 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
                     </div>

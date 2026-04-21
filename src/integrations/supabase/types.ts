@@ -221,6 +221,108 @@ export type Database = {
           },
         ]
       }
+      funcionario_documentos: {
+        Row: {
+          categoria: string
+          created_at: string
+          empresa_id: string
+          funcionario_id: string
+          id: string
+          mime_type: string | null
+          nome_arquivo: string
+          storage_path: string
+          tamanho_bytes: number | null
+        }
+        Insert: {
+          categoria: string
+          created_at?: string
+          empresa_id: string
+          funcionario_id: string
+          id?: string
+          mime_type?: string | null
+          nome_arquivo: string
+          storage_path: string
+          tamanho_bytes?: number | null
+        }
+        Update: {
+          categoria?: string
+          created_at?: string
+          empresa_id?: string
+          funcionario_id?: string
+          id?: string
+          mime_type?: string | null
+          nome_arquivo?: string
+          storage_path?: string
+          tamanho_bytes?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funcionario_documentos_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funcionario_documentos_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      funcionario_ferias: {
+        Row: {
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          dias: number
+          empresa_id: string
+          funcionario_id: string
+          id: string
+          observacao: string | null
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          data_fim: string
+          data_inicio: string
+          dias: number
+          empresa_id: string
+          funcionario_id: string
+          id?: string
+          observacao?: string | null
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          dias?: number
+          empresa_id?: string
+          funcionario_id?: string
+          id?: string
+          observacao?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "funcionario_ferias_empresa_id_fkey"
+            columns: ["empresa_id"]
+            isOneToOne: false
+            referencedRelation: "empresas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "funcionario_ferias_funcionario_id_fkey"
+            columns: ["funcionario_id"]
+            isOneToOne: false
+            referencedRelation: "funcionarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       funcionarios: {
         Row: {
           cargo: string | null
