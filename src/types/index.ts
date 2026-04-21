@@ -77,3 +77,38 @@ export interface FuncionarioFerias {
   observacao: string | null;
   created_at: string;
 }
+
+export interface ContratoAnalise {
+  id: string;
+  funcionario_id: string;
+  empresa_id: string;
+  documento_id: string | null;
+  data_admissao: string | null;
+  tipo_contrato: string | null;
+  data_vencimento: string | null;
+  data_prorrogacao: string | null;
+  data_proximas_ferias: string | null;
+  observacoes: string | null;
+  confianca: number;
+  dados_brutos: unknown;
+  created_at: string;
+  updated_at: string;
+}
+
+export type TipoAlerta = "vencimento_contrato" | "prorrogacao" | "ferias_5_meses";
+export type StatusAlerta = "pendente" | "sincronizado" | "erro";
+
+export interface ContratoAlerta {
+  id: string;
+  contrato_id: string;
+  funcionario_id: string;
+  empresa_id: string;
+  tipo: TipoAlerta;
+  data_evento: string;
+  data_lembrete: string;
+  google_event_id: string | null;
+  status: StatusAlerta;
+  erro_mensagem: string | null;
+  created_at: string;
+  updated_at: string;
+}
