@@ -35,7 +35,7 @@ const App = () => (
               <Route path="/ponto" element={<AuthGuard><Ponto /></AuthGuard>} />
               <Route path="/ponto/:folhaId" element={<AuthGuard><FolhaDetalhe /></AuthGuard>} />
               <Route path="/funcionarios" element={<AuthGuard><Funcionarios /></AuthGuard>} />
-              <Route path="/rh-control" element={<AuthGuard><RHControl /></AuthGuard>} />
+              
               <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
               <Route path="/holerites" element={<AuthGuard><Holerites /></AuthGuard>} />
               <Route path="/unsubscribe" element={<Unsubscribe />} />
