@@ -24,9 +24,9 @@ export default function Dashboard() {
   }, []);
 
   const quickActions = [
-    { to: "/empresas", label: "Nova Empresa", icon: Building2 },
-    { to: "/funcionarios", label: "Funcionários", icon: Users },
-    { to: "/ponto", label: "Importar Ponto", icon: ClipboardList },
+    { to: "/empresas", label: "Nova empresa", icon: Building2 },
+    { to: "/funcionarios", label: "Colaboradores", icon: Users },
+    { to: "/ponto", label: "Importar ponto", icon: ClipboardList },
     { to: "/relatorios", label: "Relatórios", icon: FileText },
   ];
 
@@ -118,7 +118,7 @@ export default function Dashboard() {
                 <p className="text-muted-foreground text-sm mb-3">Nenhuma empresa cadastrada</p>
                 <Button asChild size="sm">
                   <Link to="/empresas" className="gap-1.5">
-                    <Plus className="h-4 w-4" /> Cadastrar Empresa
+                    <Plus className="h-4 w-4" /> Cadastrar empresa
                   </Link>
                 </Button>
               </div>

@@ -58,7 +58,7 @@ export default function Funcionarios() {
   const handleSave = async () => {
     if (!empresa) return;
     if (!form.nome_completo.trim()) { toast({ title: "Nome é obrigatório", variant: "destructive" }); return; }
-    if (!validateCPF(form.cpf)) { toast({ title: "CPF inválido (11 dígitos)", variant: "destructive" }); return; }
+    if (!validateCPF(form.cpf)) { toast({ title: "CPF inválido", description: "Informe os 11 dígitos.", variant: "destructive" }); return; }
 
     setLoading(true);
     const payload = {
@@ -83,7 +83,7 @@ export default function Funcionarios() {
     if (error) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: editId ? "Atualizado!" : "Cadastrado!" });
+      toast({ title: editId ? "Colaborador atualizado" : "Colaborador cadastrado" });
       resetForm();
       const { data } = await supabase.from("funcionarios").select("*").eq("empresa_id", empresa.id).order("nome_completo");
       setFuncionarios(sortAlfabetico((data as Funcionario[]) || []));
@@ -112,7 +112,7 @@ export default function Funcionarios() {
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
     else {
       setFuncionarios((prev) => prev.filter((f) => f.id !== id));
-      toast({ title: "Excluído!" });
+      toast({ title: "Colaborador excluído" });
     }
   };
 
@@ -127,7 +127,7 @@ export default function Funcionarios() {
           </div>
           {empresa && (
             <Button size="sm" onClick={() => { resetForm(); setShowForm(true); }} className="gap-1.5">
-              <Plus className="h-4 w-4" /> Novo
+              <Plus className="h-4 w-4" /> Novo colaborador
             </Button>
           )}
         </div>
@@ -136,7 +136,7 @@ export default function Funcionarios() {
           <Card className="animate-fade-in border-border/50">
             <CardHeader className="pb-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-base">{editId ? "Editar" : "Novo"} Funcionário</CardTitle>
+                <CardTitle className="text-base">{editId ? "Editar colaborador" : "Novo colaborador"}</CardTitle>
                 <Button variant="ghost" size="icon" onClick={resetForm} className="h-8 w-8"><X className="h-4 w-4" /></Button>
               </div>
             </CardHeader>
@@ -188,7 +188,7 @@ export default function Funcionarios() {
             <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-muted flex items-center justify-center">
               <Users className="h-6 w-6 text-muted-foreground" />
             </div>
-            <p className="text-muted-foreground text-sm">Nenhum funcionário cadastrado.</p>
+            <p className="text-muted-foreground text-sm">Nenhum colaborador cadastrado.</p>
           </div>
         )}
 

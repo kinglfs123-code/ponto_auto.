@@ -10,8 +10,8 @@ import { toast } from "sonner";
 const links = [
   { to: "/", label: "Início", icon: Home },
   { to: "/empresas", label: "Empresas", icon: Building2 },
-  { to: "/funcionarios", label: "Funcionários", icon: Users },
-  
+  { to: "/funcionarios", label: "Colaboradores", icon: Users },
+
   { to: "/ponto", label: "Ponto", icon: ClipboardList },
   { to: "/holerites", label: "Holerites", icon: Receipt },
   { to: "/relatorios", label: "Relatórios", icon: FileText },
