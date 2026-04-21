@@ -99,7 +99,7 @@ export default function FuncionarioDetalhe() {
     setLoading(true);
     const { data: fData, error: fErr } = await supabase.from("funcionarios").select("*").eq("id", id).maybeSingle();
     if (fErr || !fData) {
-      toast({ title: "Funcionário não encontrado", variant: "destructive" });
+      toast({ title: "Colaborador não encontrado", variant: "destructive" });
       setLoading(false);
       return;
     }
@@ -407,7 +407,7 @@ export default function FuncionarioDetalhe() {
           <Button variant="ghost" onClick={() => navigate("/funcionarios")} className="gap-2">
             <ArrowLeft className="h-4 w-4" /> Voltar
           </Button>
-          <p className="text-center text-muted-foreground mt-8">Funcionário não encontrado.</p>
+          <p className="text-center text-muted-foreground mt-8">Colaborador não encontrado.</p>
         </div>
       </div>
     );
@@ -421,7 +421,7 @@ export default function FuncionarioDetalhe() {
       <div className="max-w-4xl mx-auto p-4 space-y-4 animate-fade-in">
         {/* Header */}
         <Button variant="ghost" size="sm" onClick={() => navigate("/funcionarios")} className="gap-2 -ml-2">
-          <ArrowLeft className="h-4 w-4" /> Funcionários
+          <ArrowLeft className="h-4 w-4" /> Colaboradores
         </Button>
 
         <Card className="border-border/50">

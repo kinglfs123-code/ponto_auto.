@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { formatHours } from "@/lib/ponto-rules";
 import NavBar from "@/components/NavBar";
@@ -11,10 +11,18 @@ import { CheckCircle2, ArrowLeft } from "lucide-react";
 interface Folha {
   id: string;
   funcionario: string;
+  funcionario_id: string | null;
   mes_referencia: string;
   status: string;
   empresa_id: string;
   empresas: { nome: string; cnpj: string } | null;
+}
+
+interface FuncionarioInfo {
+  cargo: string | null;
+  horario_entrada: string;
+  horario_saida: string;
+  intervalo: string;
 }
 
 interface Registro {
@@ -33,10 +41,16 @@ interface Registro {
   obs: string | null;
 }
 
+const MESES_PT = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
 export default function FolhaDetalhe() {
   const { folhaId } = useParams();
   const navigate = useNavigate();
   const [folha, setFolha] = useState<Folha | null>(null);
+  const [funcInfo, setFuncInfo] = useState<FuncionarioInfo | null>(null);
   const [registros, setRegistros] = useState<Registro[]>([]);
 
   useEffect(() => {
@@ -47,7 +61,20 @@ export default function FolhaDetalhe() {
       .eq("id", folhaId)
       .single()
       .then(({ data }) => {
-        if (data) setFolha(data as unknown as Folha);
+        if (data) {
+          const f = data as unknown as Folha;
+          setFolha(f);
+          if (f.funcionario_id) {
+            supabase
+              .from("funcionarios")
+              .select("cargo, horario_entrada, horario_saida, intervalo")
+              .eq("id", f.funcionario_id)
+              .maybeSingle()
+              .then(({ data: fd }) => {
+                if (fd) setFuncInfo(fd as FuncionarioInfo);
+              });
+          }
+        }
       });
     supabase
       .from("registros_ponto")
@@ -65,7 +92,7 @@ export default function FolhaDetalhe() {
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Folha finalizada!" });
+      toast({ title: "Folha finalizada com sucesso" });
       setFolha((f) => f ? { ...f, status: "finalizada" } : f);
     }
   };
@@ -81,33 +108,51 @@ export default function FolhaDetalhe() {
   const totExtras = registros.reduce((s, r) => s + (r.horas_extras || 0), 0);
   const totNoturnas = registros.reduce((s, r) => s + (r.horas_noturnas || 0), 0);
 
+  const [ano, mes] = folha.mes_referencia.split("-");
+  const mesNome = MESES_PT[parseInt(mes, 10) - 1] || mes;
+
   return (
     <div className="min-h-screen bg-background">
       <NavBar />
-      <div className="max-w-5xl mx-auto p-4 space-y-4">
+      <div className="max-w-6xl mx-auto p-4 space-y-4">
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="gap-1">
           <ArrowLeft className="h-4 w-4" /> Voltar
         </Button>
 
+        {/* Cabeçalho da folha */}
         <Card>
-          <CardHeader className="flex-row items-center justify-between">
-            <div>
-              <CardTitle>{folha.funcionario}</CardTitle>
-              <p className="text-sm text-muted-foreground">
-                {folha.empresas?.nome} · {folha.mes_referencia} ·{" "}
-                <span className={folha.status === "finalizada" ? "text-[hsl(var(--success))]" : "text-[hsl(var(--warning))]"}>
-                  {folha.status}
-                </span>
-              </p>
+          <CardContent className="py-4 space-y-3">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h1 className="text-xl font-bold text-foreground">Folha de Ponto Mensal</h1>
+                <p className="text-sm text-muted-foreground mt-0.5">
+                  {mesNome} de {ano} ·{" "}
+                  <span className={folha.status === "finalizada" ? "text-[hsl(var(--success))]" : "text-[hsl(var(--warning))]"}>
+                    {folha.status === "finalizada" ? "Finalizada" : "Rascunho"}
+                  </span>
+                </p>
+              </div>
+              {folha.status === "rascunho" && (
+                <Button onClick={finalizar} size="sm" className="gap-1">
+                  <CheckCircle2 className="h-4 w-4" /> Finalizar
+                </Button>
+              )}
             </div>
-            {folha.status === "rascunho" && (
-              <Button onClick={finalizar} size="sm" className="gap-1">
-                <CheckCircle2 className="h-4 w-4" /> Finalizar
-              </Button>
-            )}
-          </CardHeader>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-x-4 gap-y-2 text-sm pt-2 border-t border-border">
+              <Info label="Empresa" value={folha.empresas?.nome || "—"} />
+              <Info label="Colaborador" value={folha.funcionario} />
+              <Info label="Cargo" value={funcInfo?.cargo || "—"} />
+              <Info label="Intervalo" value={funcInfo?.intervalo || "—"} />
+              <Info label="Horário de entrada" value={funcInfo?.horario_entrada || "—"} />
+              <Info label="Horário de saída" value={funcInfo?.horario_saida || "—"} />
+              <Info label="Mês" value={mesNome} />
+              <Info label="Ano" value={ano} />
+            </div>
+          </CardContent>
         </Card>
 
+        {/* Totais */}
         <div className="grid grid-cols-3 gap-3">
           <Card><CardContent className="py-3 text-center">
             <p className="text-[10px] text-muted-foreground uppercase">Normais</p>
@@ -123,36 +168,48 @@ export default function FolhaDetalhe() {
           </CardContent></Card>
         </div>
 
+        {/* Tabela estilo planilha */}
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full text-xs min-w-[600px]">
-                <thead>
-                  <tr className="border-b text-muted-foreground">
-                    {["Dia", "Ent M", "Saí M", "Ent T", "Saí T", "Ent E", "Saí E", "Normal", "Extra", "Not.", "Exceção", "Obs"].map((h) => (
-                      <th key={h} className="px-2 py-2 text-center font-medium">{h}</th>
+              <table className="w-full md:table-fixed text-sm border-collapse min-w-[560px]">
+                <colgroup>
+                  <col className="md:w-[8%]" />
+                  <col className="md:w-[23%]" />
+                  <col className="md:w-[23%]" />
+                  <col className="md:w-[23%]" />
+                  <col className="md:w-[23%]" />
+                </colgroup>
+                <thead className="sticky top-0 bg-card">
+                  <tr>
+                    {["Dia", "Entrada", "Saída p/ intervalo", "Volta do intervalo", "Saída"].map((h) => (
+                      <th
+                        key={h}
+                        className="px-3 py-2.5 text-center font-semibold text-foreground border border-foreground/80"
+                      >
+                        {h}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {registros.map((r) => (
-                    <tr key={r.id} className="border-b border-border/50">
-                      <td className="px-2 py-1.5 text-center font-semibold text-primary">{r.dia}</td>
-                      <td className="px-2 py-1 text-center">{r.hora_entrada || "—"}</td>
-                      <td className="px-2 py-1 text-center">{r.hora_saida || "—"}</td>
-                      <td className="px-2 py-1 text-center">{r.hora_entrada_tarde || "—"}</td>
-                      <td className="px-2 py-1 text-center">{r.hora_saida_tarde || "—"}</td>
-                      <td className="px-2 py-1 text-center">{r.hora_entrada_extra || "—"}</td>
-                      <td className="px-2 py-1 text-center">{r.hora_saida_extra || "—"}</td>
-                      <td className="px-2 py-1 text-center">{formatHours(r.horas_normais)}</td>
-                      <td className="px-2 py-1 text-center text-[hsl(var(--success))]">
-                        {r.horas_extras > 0 ? formatHours(r.horas_extras) : "—"}
+                    <tr key={r.id} className="dark:hover:bg-muted/10 hover:bg-muted/30">
+                      <td className="px-3 py-2 text-center font-semibold text-foreground border border-foreground/80">
+                        {String(r.dia).padStart(2, "0")}
                       </td>
-                      <td className="px-2 py-1 text-center text-[hsl(var(--warning))]">
-                        {r.horas_noturnas > 0 ? formatHours(r.horas_noturnas) : "—"}
+                      <td className="px-3 py-2 text-center text-foreground border border-foreground/80">
+                        {r.hora_entrada || "—"}
                       </td>
-                      <td className="px-2 py-1 text-center text-[10px]">{r.tipo_excecao || "—"}</td>
-                      <td className="px-2 py-1 text-center text-[10px] text-muted-foreground">{r.obs || "—"}</td>
+                      <td className="px-3 py-2 text-center text-foreground border border-foreground/80">
+                        {r.hora_saida || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-center text-foreground border border-foreground/80">
+                        {r.hora_entrada_tarde || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-center text-foreground border border-foreground/80">
+                        {r.hora_saida_tarde || "—"}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -161,6 +218,15 @@ export default function FolhaDetalhe() {
           </CardContent>
         </Card>
       </div>
+    </div>
+  );
+}
+
+function Info({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p className="text-sm text-foreground font-medium truncate">{value}</p>
     </div>
   );
 }

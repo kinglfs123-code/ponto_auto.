@@ -103,7 +103,7 @@ export default function Holerites() {
     if (!holerite) return;
     const func = funcionarios.find((f) => f.id === funcId);
     if (!func?.email) {
-      toast({ title: "Erro", description: "Funcionário não possui e-mail cadastrado", variant: "destructive" });
+      toast({ title: "Erro", description: "Colaborador não possui e-mail cadastrado", variant: "destructive" });
       return;
     }
 
@@ -175,13 +175,13 @@ export default function Holerites() {
             <Card>
               <CardContent className="pt-4 pb-3 text-center">
                 <p className="text-2xl font-bold text-foreground">{funcionarios.length}</p>
-                <p className="text-xs text-muted-foreground">Funcionários</p>
+                <p className="text-xs text-muted-foreground">Colaboradores</p>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4 pb-3 text-center">
                 <p className="text-2xl font-bold text-primary">{totalUploaded}</p>
-                <p className="text-xs text-muted-foreground">PDFs Anexados</p>
+                <p className="text-xs text-muted-foreground">PDFs anexados</p>
               </CardContent>
             </Card>
             <Card>
@@ -321,8 +321,8 @@ export default function Holerites() {
           <Card>
             <CardContent className="py-12 text-center">
               <FileText className="h-12 w-12 mx-auto text-muted-foreground/40 mb-3" />
-              <p className="text-muted-foreground">Nenhum funcionário cadastrado nesta empresa.</p>
-              <p className="text-sm text-muted-foreground/70 mt-1">Cadastre funcionários primeiro na aba "Funcionários".</p>
+              <p className="text-muted-foreground">Nenhum colaborador cadastrado nesta empresa.</p>
+              <p className="text-sm text-muted-foreground/70 mt-1">Cadastre colaboradores primeiro na aba "Colaboradores".</p>
             </CardContent>
           </Card>
         )}

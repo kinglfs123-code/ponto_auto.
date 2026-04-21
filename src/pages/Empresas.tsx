@@ -35,7 +35,7 @@ export default function Empresas() {
   const add = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!nome.trim() || !validateCNPJ(cnpj)) {
-      toast({ title: "Preencha nome e CNPJ válido (14 dígitos)", variant: "destructive" });
+      toast({ title: "Dados inválidos", description: "Preencha nome e CNPJ válido (14 dígitos).", variant: "destructive" });
       return;
     }
     setLoading(true);
@@ -52,7 +52,7 @@ export default function Empresas() {
       toast({ title: "Erro ao adicionar", description: error.message, variant: "destructive" });
     } else {
       setNome(""); setCnpj(""); setJornada("07:20");
-      toast({ title: "Empresa adicionada!" });
+      toast({ title: "Empresa adicionada" });
       load();
     }
     setLoading(false);
@@ -76,7 +76,7 @@ export default function Empresas() {
   const saveEdit = async () => {
     if (!editEmpresa) return;
     if (!editNome.trim() || !validateCNPJ(editCnpj)) {
-      toast({ title: "Preencha nome e CNPJ válido", variant: "destructive" });
+      toast({ title: "Dados inválidos", description: "Preencha nome e CNPJ válido.", variant: "destructive" });
       return;
     }
     setEditLoading(true);
@@ -89,7 +89,7 @@ export default function Empresas() {
     if (error) {
       toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Empresa atualizada!" });
+      toast({ title: "Empresa atualizada" });
       setEditOpen(false);
       load();
     }
@@ -105,7 +105,7 @@ export default function Empresas() {
         <Card className="animate-fade-in">
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2 text-base text-primary">
-              <Plus className="h-4 w-4" /> Nova Empresa
+              <Plus className="h-4 w-4" /> Nova empresa
             </CardTitle>
           </CardHeader>
           <CardContent>
@@ -117,7 +117,7 @@ export default function Empresas() {
                 <Input value={jornada} onChange={(e) => setJornada(maskHM(e.target.value))} className="w-20" maxLength={5} placeholder="07:20" />
               </div>
               <Button type="submit" disabled={loading} className="w-full">
-                {loading ? "Adicionando..." : "Adicionar Empresa"}
+                {loading ? "Adicionando..." : "Adicionar empresa"}
               </Button>
             </form>
           </CardContent>
@@ -170,7 +170,7 @@ export default function Empresas() {
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>Editar Empresa</DialogTitle>
+            <DialogTitle>Editar empresa</DialogTitle>
           </DialogHeader>
           <div className="space-y-3 py-2">
             <Input placeholder="Nome da empresa" value={editNome} onChange={(e) => setEditNome(e.target.value)} />
