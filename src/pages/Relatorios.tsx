@@ -142,27 +142,55 @@ export default function Relatorios() {
                       <div key={mes} className="p-3 rounded-xl bg-muted/30 space-y-1">
                         <div className="flex items-center justify-between">
                           <span className="font-semibold text-sm">{mes}</span>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => gerarRelatorio(mes)}
-                            disabled={generating}
-                            className="gap-1"
-                          >
-                            <FileText className="h-3 w-3" /> {generating ? "..." : "Gerar PDF"}
-                          </Button>
+                          <div className="flex items-center gap-1.5">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => gerarRelatorio(mes)}
+                              disabled={generating}
+                              className="gap-1"
+                            >
+                              <FileText className="h-3 w-3" /> {generating ? "..." : "Gerar PDF"}
+                            </Button>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={() => handleDeleteMes(mes)}
+                              className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                              title={`Excluir todas as folhas de ${mes}`}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
                         </div>
                         {mesfolhas.map((f) => (
-                          <Link
+                          <div
                             key={f.id}
-                            to={`/ponto/${f.id}`}
-                            className="block text-xs text-muted-foreground hover:text-foreground transition-colors"
+                            className="flex items-center justify-between gap-2 px-1"
                           >
-                            {f.funcionario} ·{" "}
-                            <span className={f.status === "finalizada" ? "text-[hsl(var(--success))]" : "text-[hsl(var(--warning))]"}>
-                              {f.status}
-                            </span>
-                          </Link>
+                            <Link
+                              to={`/ponto/${f.id}`}
+                              className="block text-xs text-muted-foreground hover:text-foreground transition-colors flex-1 min-w-0 truncate"
+                            >
+                              {f.funcionario} ·{" "}
+                              <span className={f.status === "finalizada" ? "text-[hsl(var(--success))]" : "text-[hsl(var(--warning))]"}>
+                                {f.status}
+                              </span>
+                            </Link>
+                            <Button
+                              size="icon"
+                              variant="ghost"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleDeleteFolha(f);
+                              }}
+                              className="h-7 w-7 shrink-0 text-muted-foreground hover:text-destructive"
+                              title="Excluir folha"
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         ))}
                       </div>
                     );
