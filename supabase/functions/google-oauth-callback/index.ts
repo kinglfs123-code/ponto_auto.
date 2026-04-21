@@ -59,8 +59,9 @@ Deno.serve(async (req) => {
     const CLIENT_SECRET = Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET");
     const APP_ORIGIN = Deno.env.get("APP_ORIGIN") || "";
 
-    const buildAppUrl = (path: string, params: Record<string, string>) => {
-      const base = APP_ORIGIN || "/";
+    const buildAppUrl = (path: string, params: Record<string, string>, originOverride?: string) => {
+      const candidate = originOverride && isAllowedOrigin(originOverride) ? originOverride : APP_ORIGIN;
+      const base = candidate || "/";
       const u = new URL(path, base.endsWith("/") ? base : base + "/");
       Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v));
       return u.toString();
@@ -70,8 +71,9 @@ Deno.serve(async (req) => {
       return new Response("OAuth não configurado", { status: 500 });
     }
     if (error) {
-      const back = state ? decodeState(state)?.rt || "/funcionarios" : "/funcionarios";
-      return htmlRedirect(buildAppUrl(back, { google: "error", reason: error }), "Erro na autorização");
+      const dec = state ? decodeState(state) : null;
+      const back = dec?.rt || "/funcionarios";
+      return htmlRedirect(buildAppUrl(back, { google: "error", reason: error }, dec?.og), "Erro na autorização");
     }
     if (!code || !state) {
       return new Response("Parâmetros inválidos", { status: 400 });
