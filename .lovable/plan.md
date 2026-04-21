@@ -1,65 +1,51 @@
 
 
-## Plano: Corrigir bug do `analyze-contract` e executar o teste completo
+## Plano: Corrigir erro "Erro ao carregar alertas" no `sync-calendar-alerts`
 
 ### Diagnóstico
 
-O contrato de Ludimila (`Admissão - LUDIMILA DOS SANTOS ÂNGELO.pdf`, 179 KB) já foi anexado, mas a função `analyze-contract` falha com **"Maximum call stack size exceeded"** na linha 91:
+A edge function `sync-calendar-alerts` falha com 500 / "Erro ao carregar alertas" porque a query usa embeds do PostgREST:
 
 ```ts
-const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+.select("*, funcionarios:funcionario_id(nome_completo), empresas:empresa_id(owner_id)")
 ```
 
-O spread `...` em arrays grandes estoura a pilha de chamadas. Bug clássico de conversão base64 em Deno.
+Mas a tabela `contrato_alertas` **não tem foreign keys declaradas** para `funcionarios` nem `empresas` (confirmado via `information_schema`). Sem FK, PostgREST não consegue fazer o join e retorna erro — que a função engole com uma mensagem genérica.
 
-### O que será feito
+Os alertas em si existem corretamente (3 alertas para Ludimila, status `pendente`).
 
-**1. Corrigir `supabase/functions/analyze-contract/index.ts`**
+### Correções
 
-Substituir a conversão por uma versão segura em chunks:
+**1. Reescrever a query em `supabase/functions/sync-calendar-alerts/index.ts`** sem depender de embed:
 
-```ts
-function arrayBufferToBase64(buf: ArrayBuffer): string {
-  const bytes = new Uint8Array(buf);
-  let binary = "";
-  const chunk = 0x8000; // 32 KB
-  for (let i = 0; i < bytes.length; i += chunk) {
-    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk) as unknown as number[]);
-  }
-  return btoa(binary);
-}
-```
+- Buscar `contrato_alertas` puros via `.in("id", alerta_ids)`
+- Coletar `funcionario_id` e `empresa_id` únicos
+- Fazer 2 queries paralelas: `funcionarios` (nome) e `empresas` (owner_id)
+- Montar mapas em memória e usar nos eventos
 
-Também trocar `image_url` por `file` quando o mime for `application/pdf` (Gemini aceita PDFs nativamente via `data:application/pdf;base64,...` no campo `image_url`, mas deixar explícito o tipo aumenta a confiabilidade).
+**2. Melhorar log de erro**: trocar `throw new Error("Erro ao carregar alertas")` por `throw new Error(\`Erro ao carregar alertas: ${aErr?.message}\`)` para diagnósticos futuros.
 
-**2. Redeploy** da função `analyze-contract`.
+**3. Redeploy** da função `sync-calendar-alerts`.
 
-**3. Disparar a análise** chamando a edge function via `supabase--curl_edge_functions` para o documento `c3e058af-7c06-41e3-928b-50edd0e43775` da Ludimila.
-
-**4. Validar resultado** lendo `contratos_analise` e `contrato_alertas` no banco — confirmar:
-- `data_admissao`, `tipo_contrato`, `data_vencimento`, `data_prorrogacao` extraídos
-- `data_proximas_ferias` calculada (admissão + 12 meses)
-- 1 a 3 alertas criados (vencimento −2d, prorrogação −2d, férias −5m)
-
-**5. Sincronizar com Google Agenda** chamando `sync-calendar-alerts`. Como a integração depende de OAuth feito no navegador pelo usuário, vou:
-- Verificar se já existe token em `google_calendar_tokens` para o usuário
-- Se sim: disparar a sincronização e validar `google_event_id` preenchido
-- Se não: reportar que falta o passo manual de "Conectar Google Agenda" na UI (clicar no botão na aba Documentos), e deixar a análise pronta para ser sincronizada
+**4. Testar fluxo** chamando `supabase--curl_edge_functions` com os 3 `alerta_ids` da Ludimila e validar:
+- Resposta `{ results: [...] }` com `status: "sincronizado"`
+- `google_event_id` preenchido em `contrato_alertas`
+- Status atualizado para `sincronizado`
 
 ### Resumo Técnico
 
 | Item | Mudança |
 |---|---|
-| `analyze-contract/index.ts` | função `arrayBufferToBase64` em chunks de 32 KB |
-| Deploy | redeploy de `analyze-contract` |
-| Teste 1 | `curl_edge_functions` → `analyze-contract` com `documento_id` da Ludimila |
-| Teste 2 | `read_query` em `contratos_analise` + `contrato_alertas` |
-| Teste 3 | `curl_edge_functions` → `sync-calendar-alerts` (se token Google existir) |
+| `sync-calendar-alerts/index.ts` | Substituir embed por 3 queries separadas + mapas |
+| Log de erro | Incluir `aErr.message` real |
+| Deploy | Redeploy de `sync-calendar-alerts` |
+| Teste | `curl_edge_functions` com os 3 alerta_ids da Ludimila |
+| Validação | `read_query` em `contrato_alertas` confirmando `google_event_id` e `status=sincronizado` |
 
 ### O que NÃO muda
 
-- Schema do banco
-- Lógica de cálculo de datas
+- Schema do banco (não vamos adicionar FKs agora — fora de escopo)
+- Lógica OAuth (já funciona — o badge "Google Agenda conectado" está verde)
+- Função `analyze-contract`
 - UI de `AnaliseContrato.tsx`
-- Função `sync-calendar-alerts` (já está correta)
 
