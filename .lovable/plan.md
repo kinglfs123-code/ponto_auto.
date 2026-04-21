@@ -1,39 +1,45 @@
 
 
-## Plano: Refinar análise de contrato (auto-análise + auto-sync)
+## Plano: Corrigir redirect do OAuth Google para preservar a origem do usuário
 
-### Mudanças
+### Diagnóstico
 
-**1. `src/pages/FuncionarioDetalhe.tsx`**
-- Remover linha `<p>PDF, DOCX, JPEG, PNG (máx 10MB)</p>` (linha 630).
-- Após `handleUploadDoc` concluir com sucesso para categoria `contrato`, disparar automaticamente a análise via `supabase.functions.invoke("analyze-contract", { body: { documento_id } })` em background. Toast leve no início ("Analisando contrato com IA…") e sucesso/erro ao final. Refresh dos docs já existe.
+O OAuth **está funcionando** — o token está salvo na tabela `google_calendar_tokens` (user `jv@outlook.com`, `expires_at` futuro, `scope` correto). O problema real:
 
-**2. `src/components/AnaliseContrato.tsx`**
+1. O secret `APP_ORIGIN` está fixo em `https://a0d53f07-de8c-4fd7-b593-224b7e2b1463.lovable.app` (domínio **published**).
+2. O usuário está navegando no domínio **preview**: `https://id-preview--a0d53f07-...lovable.app`.
+3. Após a troca de tokens, o callback redireciona para `${APP_ORIGIN}/funcionarios/{id}?google=ok` — ou seja, para o domínio published, **não** para o preview onde o usuário estava.
+4. No published, ele provavelmente não está logado, então a página `/funcionarios/{id}` não carrega o badge "conectado", e a impressão é que "nada foi salvo".
 
-*Disparo automático da análise*
-- Remover o card "Análise inteligente do contrato" com o botão "Analisar com IA" (bloco `if (!analise)`, linhas 196-218). No lugar, mostrar apenas um estado discreto de loading se `analyzing === true` ("Analisando contrato…"), ou nada se sem análise e sem contrato.
-- Adicionar `useEffect` que, quando `ultimoContrato` existir, `!analise`, e `!analyzing`, dispara `handleAnalisar()` automaticamente uma única vez por documento (guarda em ref para não repetir).
-- Remover o botão "Reanalisar" do header (linhas 234-237). Reanálise passa a ser automática se um novo contrato for anexado (já coberto pela lógica acima, pois `ultimoContrato.id` muda).
+Por isso os logs do `google-oauth-callback` não mostram nada na sessão atual: o callback foi chamado **uma vez** (às 18:40), salvou o token, e desde então o usuário está reabrindo o fluxo mas sempre acabando no domínio errado.
 
-*Sincronização automática*
-- Remover o botão "Sincronizar no Google Agenda" (linhas 265-268).
-- Após `load()` carregar alertas, se `googleConectado === true` e existirem alertas com `status !== "sincronizado"`, chamar `handleSincronizar()` automaticamente (guarda em ref para não repetir no mesmo render).
-- Manter o botão "Conectar Google Agenda" visível apenas quando `googleConectado === false` E existirem alertas pendentes (já é o caso). Após conectar (retorno OAuth `?google=ok`), o effect dispara o sync automático.
+### Correção
 
-*Remover badge de baixa confiança*
-- Em `confiancaBadge`, remover totalmente o uso do badge no header da Card de análise (linhas 231-233). Não exibir o nível de confiança na UI. A função `confiancaBadge` pode ser removida.
-- Ajustar título: trocar `"Análise do contrato"` (linha 228) por simplesmente o ícone Sparkles + nada de texto, OU manter um título mais discreto. **Decisão:** remover o `CardTitle` inteiro e deixar apenas os campos extraídos no `CardContent`. O `CardHeader` é eliminado quando não há nada a mostrar nele.
+**1. `supabase/functions/google-oauth-start/index.ts`**
+- Aceitar um campo `origin` no body (`window.location.origin` enviado pelo client).
+- Incluir `origin` no payload do `state` (junto com `uid`, `rt`, `n`).
 
-### Comportamento final
+**2. `supabase/functions/google-oauth-callback/index.ts`**
+- Decodificar `origin` do `state`.
+- Trocar a lógica de `buildAppUrl` para usar o `origin` do state como base; cair no `APP_ORIGIN` apenas se `origin` ausente.
+- Validar que o `origin` é uma URL `https://*.lovable.app` ou um domínio confiável (lista permitida) — para impedir open-redirect.
 
-| Ação do usuário | Resultado automático |
-|---|---|
-| Anexa contrato | Toast "Analisando…" → análise IA roda em background → campos aparecem |
-| Análise gera alertas + Google conectado | Sincronização ao Google Agenda automática, sem clique |
-| Análise gera alertas + Google NÃO conectado | Botão "Conectar Google Agenda" aparece; após conectar, sync automático |
+**3. `src/components/AnaliseContrato.tsx` (`handleConectarGoogle`)**
+- Enviar `origin: window.location.origin` no body do `invoke("google-oauth-start", ...)`.
 
-### Arquivos editados
+**4. Redeploy** das duas funções.
 
-- `src/pages/FuncionarioDetalhe.tsx` — remove rodapé de formatos + auto-trigger da análise no upload
-- `src/components/AnaliseContrato.tsx` — remove botão Analisar, botão Reanalisar, botão Sincronizar, badge de confiança e título "Análise do contrato"; adiciona effects para auto-analisar e auto-sincronizar
+**5. Testar**: clicar em "Conectar Google Agenda" no preview → autorizar → confirmar que o redirect volta para `id-preview--...lovable.app/funcionarios/{id}?google=ok` e o badge fica verde.
+
+### Validação extra
+
+- `read_query` em `google_calendar_tokens` para confirmar que continua existindo um único registro ativo.
+- `edge_function_logs` em `google-oauth-callback` para confirmar nova invocação.
+
+### O que NÃO muda
+
+- Schema do banco
+- `analyze-contract`, `sync-calendar-alerts`
+- Lista de redirect URIs no Google Cloud Console (continua sendo só `${SUPABASE_URL}/functions/v1/google-oauth-callback`)
+- `APP_ORIGIN` (continua como fallback)
 
