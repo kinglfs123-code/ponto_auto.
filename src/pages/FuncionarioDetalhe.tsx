@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -11,7 +11,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Mail, Briefcase, Cake, Clock, FileText, Upload, Trash2, Download, Send, Plus, Calendar, Loader2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  ArrowLeft, Mail, Briefcase, Cake, Clock, FileText, Upload, Trash2, Download, Send, Plus, Calendar, Loader2, Pencil,
+} from "lucide-react";
 import { maskCPF } from "@/lib/ponto-rules";
 import type { Funcionario, Folha, Holerite, FuncionarioDocumento, CategoriaDocumento, FuncionarioFerias, StatusFerias } from "@/types";
 
@@ -42,6 +45,22 @@ const formatMes = (m: string) => {
 const initials = (nome: string) =>
   nome.split(" ").filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
 
+const currentMonth = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+};
+
+type EditForm = {
+  nome_completo: string;
+  cpf: string;
+  email: string;
+  cargo: string;
+  data_nascimento: string;
+  horario_entrada: string;
+  horario_saida: string;
+  intervalo: string;
+};
+
 export default function FuncionarioDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -53,8 +72,26 @@ export default function FuncionarioDetalhe() {
   const [loading, setLoading] = useState(true);
   const [uploadingCat, setUploadingCat] = useState<CategoriaDocumento | null>(null);
 
-  // Férias form
+  // Holerite upload
+  const [holeriteMes, setHoleriteMes] = useState(currentMonth());
+  const [uploadingHolerite, setUploadingHolerite] = useState(false);
+  const holeriteInputRef = useRef<HTMLInputElement>(null);
+
+  // Folha
+  const [folhaMes, setFolhaMes] = useState(currentMonth());
+  const [creatingFolha, setCreatingFolha] = useState(false);
+
+  // Edit funcionario
+  const [editOpen, setEditOpen] = useState(false);
+  const [editForm, setEditForm] = useState<EditForm>({
+    nome_completo: "", cpf: "", email: "", cargo: "", data_nascimento: "",
+    horario_entrada: "", horario_saida: "", intervalo: "",
+  });
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  // Férias form (criar/editar)
   const [showFeriasForm, setShowFeriasForm] = useState(false);
+  const [editingFeriasId, setEditingFeriasId] = useState<string | null>(null);
   const [feriasForm, setFeriasForm] = useState({ data_inicio: "", data_fim: "", status: "planejada" as StatusFerias, observacao: "" });
 
   const loadAll = useCallback(async () => {
@@ -84,7 +121,7 @@ export default function FuncionarioDetalhe() {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  // Upload documento
+  // ==== Documentos ====
   const handleUploadDoc = async (categoria: CategoriaDocumento, file: File) => {
     if (!func) return;
     if (file.size > 10 * 1024 * 1024) {
@@ -134,7 +171,43 @@ export default function FuncionarioDetalhe() {
     else { toast({ title: "Documento excluído" }); await loadAll(); }
   };
 
-  // Holerites
+  // ==== Holerites ====
+  const handleUploadHolerite = async (file: File) => {
+    if (!func) return;
+    if (file.type !== "application/pdf") {
+      toast({ title: "Erro", description: "Selecione um arquivo PDF", variant: "destructive" });
+      return;
+    }
+    if (!holeriteMes) {
+      toast({ title: "Selecione o mês", variant: "destructive" });
+      return;
+    }
+    setUploadingHolerite(true);
+    try {
+      const path = `${func.empresa_id}/${holeriteMes}/${func.id}.pdf`;
+      const { error: upErr } = await supabase.storage.from("holerites").upload(path, file, { upsert: true });
+      if (upErr) throw upErr;
+
+      const existing = holerites.find((h) => h.mes_referencia === holeriteMes);
+      if (existing) {
+        await supabase.from("holerites").update({ pdf_path: path, enviado: false, enviado_em: null }).eq("id", existing.id);
+      } else {
+        await supabase.from("holerites").insert({
+          empresa_id: func.empresa_id,
+          funcionario_id: func.id,
+          mes_referencia: holeriteMes,
+          pdf_path: path,
+        });
+      }
+      toast({ title: "Holerite anexado" });
+      await loadAll();
+    } catch (err: any) {
+      toast({ title: "Erro no upload", description: err.message, variant: "destructive" });
+    } finally {
+      setUploadingHolerite(false);
+    }
+  };
+
   const handleDownloadHolerite = async (h: Holerite) => {
     const { data, error } = await supabase.storage.from("holerites").createSignedUrl(h.pdf_path, 60);
     if (error || !data) {
@@ -154,11 +227,124 @@ export default function FuncionarioDetalhe() {
     else { toast({ title: "Holerite enviado!" }); await loadAll(); }
   };
 
-  // Férias
+  const handleDeleteHolerite = async (h: Holerite) => {
+    if (!confirm(`Excluir holerite de ${formatMes(h.mes_referencia)}?`)) return;
+    try {
+      await supabase.storage.from("holerites").remove([h.pdf_path]);
+      const { error } = await supabase.from("holerites").delete().eq("id", h.id);
+      if (error) throw error;
+      toast({ title: "Holerite excluído" });
+      await loadAll();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
+  };
+
+  // ==== Folhas ====
+  const handleNovaFolha = async () => {
+    if (!func) return;
+    if (!folhaMes) { toast({ title: "Selecione o mês", variant: "destructive" }); return; }
+    const existing = folhas.find((f) => f.mes_referencia === folhaMes);
+    if (existing) {
+      navigate(`/ponto/${existing.id}`);
+      return;
+    }
+    setCreatingFolha(true);
+    try {
+      const { data, error } = await supabase.from("folhas_ponto").insert({
+        empresa_id: func.empresa_id,
+        funcionario_id: func.id,
+        funcionario: func.nome_completo,
+        mes_referencia: folhaMes,
+        status: "rascunho",
+      }).select("id").single();
+      if (error) throw error;
+      navigate(`/ponto/${data.id}`);
+    } catch (err: any) {
+      toast({ title: "Erro ao criar folha", description: err.message, variant: "destructive" });
+    } finally {
+      setCreatingFolha(false);
+    }
+  };
+
+  const handleDeleteFolha = async (f: Folha) => {
+    if (!confirm(`Excluir folha de ${formatMes(f.mes_referencia)}? Todos os registros serão removidos.`)) return;
+    try {
+      await supabase.from("registros_ponto").delete().eq("folha_id", f.id);
+      const { error } = await supabase.from("folhas_ponto").delete().eq("id", f.id);
+      if (error) throw error;
+      toast({ title: "Folha excluída" });
+      await loadAll();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    }
+  };
+
+  // ==== Editar funcionário ====
+  const openEdit = () => {
+    if (!func) return;
+    setEditForm({
+      nome_completo: func.nome_completo || "",
+      cpf: func.cpf || "",
+      email: func.email || "",
+      cargo: func.cargo || "",
+      data_nascimento: func.data_nascimento || "",
+      horario_entrada: func.horario_entrada || "08:00",
+      horario_saida: func.horario_saida || "17:00",
+      intervalo: func.intervalo || "01:00",
+    });
+    setEditOpen(true);
+  };
+
+  const handleSaveEdit = async () => {
+    if (!func) return;
+    if (!editForm.nome_completo.trim() || !editForm.cpf.trim()) {
+      toast({ title: "Nome e CPF obrigatórios", variant: "destructive" });
+      return;
+    }
+    setSavingEdit(true);
+    const { error } = await supabase.from("funcionarios").update({
+      nome_completo: editForm.nome_completo.trim(),
+      cpf: editForm.cpf.replace(/\D/g, ""),
+      email: editForm.email.trim() || null,
+      cargo: editForm.cargo.trim() || null,
+      data_nascimento: editForm.data_nascimento || null,
+      horario_entrada: editForm.horario_entrada,
+      horario_saida: editForm.horario_saida,
+      intervalo: editForm.intervalo,
+    }).eq("id", func.id);
+    setSavingEdit(false);
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Dados atualizados" });
+      setEditOpen(false);
+      await loadAll();
+    }
+  };
+
+  // ==== Férias ====
   const calcDias = (ini: string, fim: string) => {
     if (!ini || !fim) return 0;
     const a = new Date(ini); const b = new Date(fim);
     return Math.max(0, Math.round((b.getTime() - a.getTime()) / 86400000) + 1);
+  };
+
+  const openNewFerias = () => {
+    setEditingFeriasId(null);
+    setFeriasForm({ data_inicio: "", data_fim: "", status: "planejada", observacao: "" });
+    setShowFeriasForm(true);
+  };
+
+  const openEditFerias = (fr: FuncionarioFerias) => {
+    setEditingFeriasId(fr.id);
+    setFeriasForm({
+      data_inicio: fr.data_inicio,
+      data_fim: fr.data_fim,
+      status: fr.status as StatusFerias,
+      observacao: fr.observacao || "",
+    });
+    setShowFeriasForm(true);
   };
 
   const handleSaveFerias = async () => {
@@ -169,27 +355,35 @@ export default function FuncionarioDetalhe() {
     const dias = calcDias(feriasForm.data_inicio, feriasForm.data_fim);
     if (dias <= 0) { toast({ title: "Período inválido", variant: "destructive" }); return; }
 
-    const { error } = await supabase.from("funcionario_ferias").insert({
-      funcionario_id: func.id,
-      empresa_id: func.empresa_id,
+    const payload = {
       data_inicio: feriasForm.data_inicio,
       data_fim: feriasForm.data_fim,
       dias,
       status: feriasForm.status,
       observacao: feriasForm.observacao || null,
-    });
+    };
+
+    const { error } = editingFeriasId
+      ? await supabase.from("funcionario_ferias").update(payload).eq("id", editingFeriasId)
+      : await supabase.from("funcionario_ferias").insert({
+          ...payload,
+          funcionario_id: func.id,
+          empresa_id: func.empresa_id,
+        });
+
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
     else {
-      toast({ title: "Férias registradas" });
+      toast({ title: editingFeriasId ? "Férias atualizadas" : "Férias registradas" });
       setShowFeriasForm(false);
+      setEditingFeriasId(null);
       setFeriasForm({ data_inicio: "", data_fim: "", status: "planejada", observacao: "" });
       await loadAll();
     }
   };
 
-  const handleDeleteFerias = async (id: string) => {
+  const handleDeleteFerias = async (fid: string) => {
     if (!confirm("Excluir este período de férias?")) return;
-    const { error } = await supabase.from("funcionario_ferias").delete().eq("id", id);
+    const { error } = await supabase.from("funcionario_ferias").delete().eq("id", fid);
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
     else { toast({ title: "Excluído" }); await loadAll(); }
   };
@@ -245,6 +439,9 @@ export default function FuncionarioDetalhe() {
                   </Badge>
                 )}
               </div>
+              <Button variant="outline" size="sm" onClick={openEdit} className="gap-1.5 shrink-0">
+                <Pencil className="h-3.5 w-3.5" /> Editar
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -272,28 +469,70 @@ export default function FuncionarioDetalhe() {
           </TabsContent>
 
           {/* FOLHAS */}
-          <TabsContent value="folhas" className="space-y-2 mt-4">
+          <TabsContent value="folhas" className="space-y-3 mt-4">
+            <Card className="border-border/50">
+              <CardContent className="py-3 px-4 flex flex-wrap items-end gap-2">
+                <div className="flex-1 min-w-[140px]">
+                  <Label className="text-xs">Mês de referência</Label>
+                  <Input type="month" value={folhaMes} onChange={(e) => setFolhaMes(e.target.value)} />
+                </div>
+                <Button onClick={handleNovaFolha} disabled={creatingFolha} className="gap-1.5">
+                  {creatingFolha ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />}
+                  Nova folha
+                </Button>
+              </CardContent>
+            </Card>
+
             {folhas.length === 0 ? (
               <EmptyState icon={FileText} text="Nenhuma folha de ponto registrada." />
             ) : folhas.map((f) => (
-              <Link key={f.id} to={`/ponto/${f.id}`}>
-                <Card className="border-border/50 hover:bg-muted/20 transition-colors cursor-pointer">
-                  <CardContent className="py-3 px-4 flex items-center justify-between">
-                    <div>
-                      <p className="font-medium text-sm text-foreground">{formatMes(f.mes_referencia)}</p>
-                      <p className="text-xs text-muted-foreground capitalize">{f.status}</p>
-                    </div>
-                    <Badge variant={f.status === "finalizada" ? "default" : "secondary"} className="text-xs">
-                      {f.status}
-                    </Badge>
-                  </CardContent>
-                </Card>
-              </Link>
+              <Card key={f.id} className="border-border/50">
+                <CardContent className="py-3 px-4 flex items-center justify-between gap-2">
+                  <Link to={`/ponto/${f.id}`} className="flex-1 min-w-0">
+                    <p className="font-medium text-sm text-foreground">{formatMes(f.mes_referencia)}</p>
+                    <p className="text-xs text-muted-foreground capitalize">{f.status}</p>
+                  </Link>
+                  <Badge variant={f.status === "finalizada" ? "default" : "secondary"} className="text-xs">
+                    {f.status}
+                  </Badge>
+                  <Button variant="ghost" size="icon" onClick={() => handleDeleteFolha(f)} className="h-8 w-8 text-destructive">
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </CardContent>
+              </Card>
             ))}
           </TabsContent>
 
           {/* HOLERITES */}
-          <TabsContent value="holerites" className="space-y-2 mt-4">
+          <TabsContent value="holerites" className="space-y-3 mt-4">
+            <Card className="border-border/50">
+              <CardContent className="py-3 px-4 flex flex-wrap items-end gap-2">
+                <div className="flex-1 min-w-[140px]">
+                  <Label className="text-xs">Mês de referência</Label>
+                  <Input type="month" value={holeriteMes} onChange={(e) => setHoleriteMes(e.target.value)} />
+                </div>
+                <input
+                  ref={holeriteInputRef}
+                  type="file"
+                  accept="application/pdf"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) handleUploadHolerite(file);
+                    e.target.value = "";
+                  }}
+                />
+                <Button
+                  onClick={() => holeriteInputRef.current?.click()}
+                  disabled={uploadingHolerite}
+                  className="gap-1.5"
+                >
+                  {uploadingHolerite ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  Anexar PDF
+                </Button>
+              </CardContent>
+            </Card>
+
             {holerites.length === 0 ? (
               <EmptyState icon={FileText} text="Nenhum holerite anexado." />
             ) : holerites.map((h) => (
@@ -316,6 +555,9 @@ export default function FuncionarioDetalhe() {
                         <Send className="h-3.5 w-3.5" /> Enviar
                       </Button>
                     )}
+                    <Button variant="ghost" size="icon" onClick={() => handleDeleteHolerite(h)} className="h-8 w-8 text-destructive">
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -384,14 +626,16 @@ export default function FuncionarioDetalhe() {
           {/* FÉRIAS */}
           <TabsContent value="ferias" className="space-y-3 mt-4">
             {!showFeriasForm && (
-              <Button size="sm" onClick={() => setShowFeriasForm(true)} className="gap-1.5">
+              <Button size="sm" onClick={openNewFerias} className="gap-1.5">
                 <Plus className="h-4 w-4" /> Novo período
               </Button>
             )}
 
             {showFeriasForm && (
               <Card className="border-border/50">
-                <CardHeader className="pb-3"><CardTitle className="text-base">Novo período de férias</CardTitle></CardHeader>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">{editingFeriasId ? "Editar férias" : "Novo período de férias"}</CardTitle>
+                </CardHeader>
                 <CardContent className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <Label className="text-xs">Início</Label>
@@ -419,7 +663,7 @@ export default function FuncionarioDetalhe() {
                     <Textarea value={feriasForm.observacao} onChange={(e) => setFeriasForm({ ...feriasForm, observacao: e.target.value })} rows={2} />
                   </div>
                   <div className="sm:col-span-2 flex justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={() => setShowFeriasForm(false)}>Cancelar</Button>
+                    <Button variant="outline" size="sm" onClick={() => { setShowFeriasForm(false); setEditingFeriasId(null); }}>Cancelar</Button>
                     <Button size="sm" onClick={handleSaveFerias}>Salvar</Button>
                   </div>
                 </CardContent>
@@ -442,6 +686,9 @@ export default function FuncionarioDetalhe() {
                     </div>
                     <div className="flex items-center gap-2">
                       {st && <Badge className={`text-xs ${st.color}`} variant="outline">{st.label}</Badge>}
+                      <Button variant="ghost" size="icon" onClick={() => openEditFerias(fr)} className="h-7 w-7">
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDeleteFerias(fr.id)} className="h-7 w-7 text-destructive">
                         <Trash2 className="h-3.5 w-3.5" />
                       </Button>
@@ -453,6 +700,56 @@ export default function FuncionarioDetalhe() {
           </TabsContent>
         </Tabs>
       </div>
+
+      {/* Edit Funcionário Dialog */}
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar informações do colaborador</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="sm:col-span-2">
+              <Label className="text-xs">Nome completo *</Label>
+              <Input value={editForm.nome_completo} onChange={(e) => setEditForm({ ...editForm, nome_completo: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">CPF *</Label>
+              <Input value={maskCPF(editForm.cpf)} onChange={(e) => setEditForm({ ...editForm, cpf: e.target.value.replace(/\D/g, "").slice(0, 11) })} />
+            </div>
+            <div>
+              <Label className="text-xs">E-mail</Label>
+              <Input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Cargo</Label>
+              <Input value={editForm.cargo} onChange={(e) => setEditForm({ ...editForm, cargo: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Nascimento</Label>
+              <Input type="date" value={editForm.data_nascimento} onChange={(e) => setEditForm({ ...editForm, data_nascimento: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Entrada</Label>
+              <Input type="time" value={editForm.horario_entrada} onChange={(e) => setEditForm({ ...editForm, horario_entrada: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Saída</Label>
+              <Input type="time" value={editForm.horario_saida} onChange={(e) => setEditForm({ ...editForm, horario_saida: e.target.value })} />
+            </div>
+            <div>
+              <Label className="text-xs">Intervalo (HH:MM)</Label>
+              <Input value={editForm.intervalo} onChange={(e) => setEditForm({ ...editForm, intervalo: e.target.value })} placeholder="01:00" />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={savingEdit}>Cancelar</Button>
+            <Button onClick={handleSaveEdit} disabled={savingEdit} className="gap-1.5">
+              {savingEdit && <Loader2 className="h-4 w-4 animate-spin" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
