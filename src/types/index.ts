@@ -49,3 +49,31 @@ export interface Relatorio {
   pdf_path: string;
   created_at: string;
 }
+
+export type CategoriaDocumento = "contrato" | "epi" | "aso" | "outros";
+
+export interface FuncionarioDocumento {
+  id: string;
+  funcionario_id: string;
+  empresa_id: string;
+  categoria: CategoriaDocumento;
+  nome_arquivo: string;
+  storage_path: string;
+  mime_type: string | null;
+  tamanho_bytes: number | null;
+  created_at: string;
+}
+
+export type StatusFerias = "planejada" | "em_andamento" | "concluida";
+
+export interface FuncionarioFerias {
+  id: string;
+  funcionario_id: string;
+  empresa_id: string;
+  data_inicio: string;
+  data_fim: string;
+  dias: number;
+  status: StatusFerias;
+  observacao: string | null;
+  created_at: string;
+}

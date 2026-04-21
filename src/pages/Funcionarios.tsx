@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import NavBar from "@/components/NavBar";
@@ -32,6 +33,12 @@ export default function Funcionarios() {
   const [showForm, setShowForm] = useState(false);
   const [loading, setLoading] = useState(false);
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
+
+  const sortAlfabetico = (arr: Funcionario[]) =>
+    [...arr].sort((a, b) =>
+      a.nome_completo.localeCompare(b.nome_completo, "pt-BR", { sensitivity: "base" })
+    );
 
   useEffect(() => {
     if (!empresa) { setFuncionarios([]); return; }
@@ -42,7 +49,7 @@ export default function Funcionarios() {
       .order("nome_completo")
       .then(({ data, error }) => {
         if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
-        else setFuncionarios((data as Funcionario[]) || []);
+        else setFuncionarios(sortAlfabetico((data as Funcionario[]) || []));
       });
   }, [empresa]);
 
@@ -79,7 +86,7 @@ export default function Funcionarios() {
       toast({ title: editId ? "Atualizado!" : "Cadastrado!" });
       resetForm();
       const { data } = await supabase.from("funcionarios").select("*").eq("empresa_id", empresa.id).order("nome_completo");
-      setFuncionarios((data as Funcionario[]) || []);
+      setFuncionarios(sortAlfabetico((data as Funcionario[]) || []));
     }
     setLoading(false);
   };
