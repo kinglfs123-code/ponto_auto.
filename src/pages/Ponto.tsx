@@ -14,7 +14,6 @@ import { currentMonth, toBrMonth, fromBrMonth } from "@/lib/utils";
 import {
   formatHours,
   formatMinutes,
-  maskHM,
   applyToleranceAndDetect,
   calcularResumo,
   matchFuncionario,

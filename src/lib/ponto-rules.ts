@@ -173,20 +173,12 @@ function calcNightMinutes(entrada: number | null, saida: number | null): number 
   return Math.max(0, nightMinutes);
 }
 
-/** Calculate shift duration in minutes. Handles overnight shifts. */
-function shiftDuration(entry: number | null, exit: number | null): number {
-  if (entry === null || exit === null) return 0;
-  // Overnight shift: exit <= entry means it crossed midnight
-  if (exit <= entry) return exit + 24 * 60 - entry;
-  return exit - entry;
-}
-
 export function applyToleranceAndDetect(
   registro: Partial<RegistroPonto>,
   jornadaPadraoStr: string,
   horarioEntradaPadrao: string = "08:00",
   horarioSaidaPadrao: string = "17:00",
-  intervaloStr: string = "01:00",
+  _intervaloStr: string = "01:00",
 ): RegistroPonto {
   const dia = typeof registro.dia === "number" ? registro.dia : parseInt(String(registro.dia)) || 0;
 
