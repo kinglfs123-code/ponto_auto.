@@ -6,15 +6,34 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-function decodeState(state: string): { uid: string; rt: string } | null {
+function decodeState(state: string): { uid: string; rt: string; og?: string } | null {
   try {
     const padded = state.replace(/-/g, "+").replace(/_/g, "/");
     const json = atob(padded + "===".slice(0, (4 - padded.length % 4) % 4));
     const obj = JSON.parse(json);
     if (typeof obj.uid !== "string") return null;
-    return { uid: obj.uid, rt: typeof obj.rt === "string" ? obj.rt : "/funcionarios" };
+    return {
+      uid: obj.uid,
+      rt: typeof obj.rt === "string" ? obj.rt : "/funcionarios",
+      og: typeof obj.og === "string" ? obj.og : undefined,
+    };
   } catch {
     return null;
+  }
+}
+
+function isAllowedOrigin(origin: string): boolean {
+  try {
+    const u = new URL(origin);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    // permite *.lovable.app, *.lovableproject.com, localhost
+    if (u.hostname === "localhost" || u.hostname === "127.0.0.1") return true;
+    if (u.hostname.endsWith(".lovable.app")) return true;
+    if (u.hostname.endsWith(".lovableproject.com")) return true;
+    if (u.hostname.endsWith(".lovable.dev")) return true;
+    return false;
+  } catch {
+    return false;
   }
 }
 
