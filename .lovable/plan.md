@@ -1,63 +1,116 @@
 
 
-## Plano: Padronização do português, novo layout da folha de ponto e melhor visualização
+## Plano: Análise automática de contrato + alertas no Google Agenda
 
-Três frentes claras:
+Vamos criar uma base que, ao anexar o contrato de trabalho de um colaborador, lê o PDF/imagem com IA (Lovable AI / Gemini), extrai datas-chave e gera lembretes automaticamente — incluindo no Google Agenda.
 
-### 1. Padronização de escrita e ortografia (PT-BR)
+### 1. Nova tabela `contratos_analise` (banco)
 
-Vou varrer todos os textos visíveis ao usuário (`.tsx` em `src/pages` e `src/components`) e padronizar:
+Para cada contrato anexado, salvar o que a IA extraiu:
 
-- Adicionar acentos onde faltam: "Funcionário", "Salário", "Férias", "Horário", "Mês ref.", "Exceção", "Atestado", "Próximo", "Última".
-- Padronizar termos: usar **"Colaborador"** em todos os lugares onde hoje aparece "Funcionário" na UI (mantendo `funcionario_id` no banco, sem mexer em schema).
-- Padronizar abreviações de cabeçalhos da tabela de ponto: `Ent M / Saí M / Ent T / Saí T` → `Manhã / Almoço / Volta / Saída` (mais claro, em linha com a planilha enviada).
-- Capitalização consistente em títulos e botões (Title Case em títulos, Sentence case em botões).
-- Mensagens de toast em tom uniforme e impessoal ("Folha salva com sucesso", "Não foi possível excluir").
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| `id` | uuid | PK |
+| `funcionario_id` | uuid | vínculo com colaborador |
+| `empresa_id` | uuid | dono do dado (RLS) |
+| `documento_id` | uuid | referência ao arquivo em `funcionario_documentos` |
+| `data_admissao` | date | início do vínculo |
+| `tipo_contrato` | text | "experiência 45+45", "experiência 90", "indeterminado", "prazo determinado" |
+| `data_vencimento` | date | quando vence (se houver) |
+| `data_prorrogacao` | date | data prevista de prorrogação (se houver) |
+| `data_proximas_ferias` | date | calculada: admissão + 12 meses |
+| `confianca` | int | 0–100, vinda da IA |
+| `dados_brutos` | jsonb | resposta completa da IA para auditoria |
+| `created_at` | timestamptz | |
 
-Lista exata de termos corrigidos será aplicada em: `Ponto.tsx`, `FolhaDetalhe.tsx`, `Funcionarios.tsx`, `FuncionarioDetalhe.tsx`, `Holerites.tsx`, `Relatorios.tsx`, `Empresas.tsx`, `Dashboard.tsx`, `NavBar.tsx`.
+Tabela auxiliar `contrato_alertas` para guardar os lembretes gerados:
 
-### 2. Novo layout da folha de ponto (estilo planilha enviada)
+| Coluna | Tipo |
+|---|---|
+| `id`, `funcionario_id`, `empresa_id`, `contrato_id` | identificação |
+| `tipo` | "vencimento_contrato", "prorrogacao", "ferias_5_meses" |
+| `data_evento` | data do evento real |
+| `data_lembrete` | data em que o alerta dispara (evento − 2 dias / férias − 5 meses) |
+| `google_event_id` | id retornado pelo Google Agenda (null se não sincronizado) |
+| `status` | "pendente", "sincronizado", "erro" |
 
-A imagem mostra um modelo limpo de **Folha de Ponto Mensal** com cabeçalho fixo e tabela de 5 colunas. Vou aplicar isso em **dois lugares**:
+RLS em ambas: `user_owns_empresa(empresa_id)` (mesmo padrão das outras).
 
-**a) `FolhaDetalhe.tsx` (visualização da folha já salva):**
-- Cabeçalho no topo (fora da tabela): Empresa, Nome do colaborador, Cargo/Função, Horário de entrada, Horário de saída, Mês, Ano.
-- Tabela com 5 colunas apenas: **Dia | Entrada | Saída para intervalo | Volta do intervalo | Saída**
-- **Remover** as colunas: Ent E / Saí E (extra), Normal, Extra, Not., Exceção, **Obs**.
-- Os totais (Normais, Extras, Noturnas) ficam em cards **acima** da tabela (não dentro).
-- Bordas pretas finas, fundo branco, texto preto no tema claro.
-- No tema escuro: fundo do card preto, bordas brancas, texto branco — sem inversões de cor por status (mantém apenas preto/branco como pediu).
+### 2. Nova edge function `analyze-contract`
 
-**b) `Ponto.tsx` (importação/edição via OCR):**
-- Mantém a coluna Exceção (necessária para marcar Folga/Falta/Atestado) e os campos editáveis, **mas remove a coluna Obs**.
-- Renomeia cabeçalhos para `Manhã / Almoço / Volta / Saída` (e mantém Extra E/S num grupo recolhível ou remove se não for usado — vou remover por padrão; se precisar reativar é trivial).
-- Esquema preto/branco no tema claro/escuro nas células e bordas (cores semânticas só em totais e badges de exceção).
+Recebe `{ documento_id }`, baixa o arquivo do bucket `colaborador-arquivos`, envia para Lovable AI (`google/gemini-2.5-flash` — multimodal, gratuito) com tool calling estruturado:
 
-### 3. Enquadramento e visualização
+```
+{ data_admissao, tipo_contrato, data_vencimento,
+  data_prorrogacao, observacoes, confianca }
+```
 
-- **Largura útil**: aumentar `max-w-5xl` → `max-w-6xl` em `FolhaDetalhe` e `Ponto` para a folha caber melhor.
-- **Tabela responsiva**: a tabela atual tem `min-w-[600px]` com scroll horizontal forçado em mobile. Vou:
-  - Manter scroll horizontal em telas estreitas.
-  - Em desktop (≥768px) usar `w-full table-fixed` com larguras proporcionais por coluna (Dia 8%, demais 23%) para ocupar toda a largura sem espaços vazios.
-  - Aumentar o tamanho da fonte da tabela de `text-xs` para `text-sm` e padding `py-2` para leitura confortável.
-- **Cabeçalho fixo (sticky)** no topo da tabela quando rolar dentro dela.
-- **Zebra striping** sutil (`even:bg-muted/30`) só no tema claro, removido no escuro para manter o preto puro.
-- Imprimir/exportar continua usando o gerador de relatório existente (sem mudança).
+Depois calcula:
+- `data_proximas_ferias = data_admissao + 12 meses`
+- Cria 3 entradas em `contrato_alertas`:
+  - Vencimento: `data_lembrete = data_vencimento − 2 dias`
+  - Prorrogação: `data_lembrete = data_prorrogacao − 2 dias`
+  - Férias: `data_lembrete = data_proximas_ferias − 5 meses`
+
+Retorna o registro de `contratos_analise` para a UI.
+
+### 3. Integração com Google Agenda
+
+Como **não há conector Google Calendar disponível** no workspace ainda, vou:
+
+- Criar a edge function `sync-calendar-alerts` que aceita um `alerta_id` e cria o evento no Google Calendar via API REST.
+- Na **primeira execução**, vou pedir para você conectar a conta Google (OAuth) por meio do conector padrão do Lovable. Isso aparece como um botão na UI ("Conectar Google Agenda").
+- Cada alerta criado fica como `pendente` até a sincronização ser disparada (botão "Sincronizar com Google Agenda" no perfil + automático ao analisar).
+- Eventos criados:
+  - **2 dias antes do vencimento do contrato** — título: "⚠️ Vence contrato — {Nome}"
+  - **2 dias antes da prorrogação** — título: "📝 Prorrogar contrato — {Nome}"
+  - **5 meses antes das férias** — título: "🌴 Férias se aproximam — {Nome}"
+  - Cada evento com lembrete pop-up 1 dia antes + descrição com link de volta para o perfil.
+
+### 4. Mudanças na UI (`src/pages/FuncionarioDetalhe.tsx`)
+
+**Aba Documentos — categoria "Contrato de Trabalho":**
+- Após upload, aparece automaticamente um botão **"Analisar contrato com IA"** (ou roda automaticamente). Mostra spinner.
+- Quando termina: card "Análise do contrato" mostra:
+  - Admissão · Tipo · Vencimento · Prorrogação · Próximas férias
+  - Badge de confiança (verde/amarelo/vermelho seguindo `ocr-utils`)
+  - Botões: **"Editar dados"** (caso a IA tenha errado) e **"Reanalisar"**
+- Card "Alertas programados" lista os 3 alertas com status (pendente/sincronizado) e botão **"Sincronizar no Google Agenda"**.
+
+**Aba Férias:**
+- Quando há `data_proximas_ferias` calculada, mostra card no topo: "Próximas férias previstas: DD/MM/AAAA · alerta em DD/MM/AAAA".
+
+### 5. Fluxo do usuário
+
+```text
+1. Anexa contrato (PDF/imagem) na aba Documentos
+2. IA lê → preenche admissão, vencimento, prorrogação
+3. Sistema calcula próximas férias e cria 3 alertas
+4. Usuário clica "Conectar Google Agenda" (1ª vez)
+5. Sistema cria os 3 eventos no Google Agenda
+6. Usuário pode editar/reanalisar a qualquer momento
+```
 
 ### Resumo Técnico
 
-| Arquivo | Mudança |
+| Item | Mudança |
 |---|---|
-| `src/pages/FolhaDetalhe.tsx` | Novo layout em 5 colunas, cabeçalho com dados do colaborador, cores neutras, tabela larga |
-| `src/pages/Ponto.tsx` | Remover coluna Obs, renomear cabeçalhos, neutralizar cores das células, ampliar largura |
-| `src/pages/Funcionarios.tsx`, `FuncionarioDetalhe.tsx`, `Holerites.tsx`, `Relatorios.tsx`, `Empresas.tsx`, `Dashboard.tsx`, `NavBar.tsx` | Padronização ortográfica e de termos (Colaborador/Funcionário, acentos, Title Case) |
-| `src/index.css` | Se necessário, classe utilitária `.folha-ponto-table` para garantir bordas pretas no claro / brancas no escuro |
-| Banco de dados | **Sem mudanças** — campo `obs` continua existindo no schema, só não é exibido |
+| **Migration** | criar `contratos_analise` + `contrato_alertas` + RLS |
+| **Edge function nova** | `analyze-contract` (Lovable AI, Gemini multimodal) |
+| **Edge function nova** | `sync-calendar-alerts` (Google Calendar API) |
+| **Conector** | solicitar conexão Google Calendar via `standard_connectors` na 1ª sincronização |
+| **Frontend** | seção "Análise do contrato" + "Alertas" na aba Documentos de `FuncionarioDetalhe.tsx`; aviso na aba Férias |
+| **Tipos** | adicionar `ContratoAnalise` e `ContratoAlerta` em `src/types/index.ts` |
 
 ### O que NÃO muda
 
-- Lógica de cálculo de horas (`ponto-rules.ts`).
-- Schema do banco (mantém `obs` como campo opcional).
-- Pipeline de OCR (continua salvando `obs` para uso interno, só não mostra na UI).
-- Funcionalidades de excluir / anexar / editar já implementadas.
+- Estrutura de upload de documentos já existente.
+- Tabela `funcionario_ferias` (continua para férias **executadas**; a previsão fica em `contratos_analise.data_proximas_ferias`).
+- Lógica de OCR de folha de ponto.
+
+### Pontos de atenção (assuma que vou seguir o padrão a menos que diga o contrário)
+
+- IA: usaremos **Lovable AI Gateway** (sem chave extra) com Gemini 2.5 Flash — gratuito até set/2025 e suporta PDF/imagem direto.
+- Google Agenda: na primeira sincronização vou abrir o fluxo de conexão; se preferir adiar a integração com Google e só guardar os alertas no banco por enquanto, é só me avisar.
+- Editar manualmente: sempre que você corrigir um campo extraído, o alerta correspondente é recalculado.
 
