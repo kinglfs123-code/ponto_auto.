@@ -100,7 +100,7 @@ Deno.serve(async (req) => {
     if (!tokenResp.ok) {
       const txt = await tokenResp.text();
       console.error("Token exchange failed:", txt);
-      return htmlRedirect(buildAppUrl(decoded.rt, { google: "error" }), "Falha ao obter token");
+      return htmlRedirect(buildAppUrl(decoded.rt, { google: "error" }, decoded.og), "Falha ao obter token");
     }
 
     const tok = await tokenResp.json() as {
@@ -129,7 +129,7 @@ Deno.serve(async (req) => {
 
     if (!refreshToken) {
       return htmlRedirect(
-        buildAppUrl(decoded.rt, { google: "error", reason: "no_refresh_token" }),
+        buildAppUrl(decoded.rt, { google: "error", reason: "no_refresh_token" }, decoded.og),
         "Faltou refresh_token — revogue o acesso em myaccount.google.com e tente de novo",
       );
     }
@@ -147,10 +147,10 @@ Deno.serve(async (req) => {
 
     if (upErr) {
       console.error("Upsert error:", upErr);
-      return htmlRedirect(buildAppUrl(decoded.rt, { google: "error" }), "Erro ao salvar token");
+      return htmlRedirect(buildAppUrl(decoded.rt, { google: "error" }, decoded.og), "Erro ao salvar token");
     }
 
-    return htmlRedirect(buildAppUrl(decoded.rt, { google: "ok" }), "Google Agenda conectado!");
+    return htmlRedirect(buildAppUrl(decoded.rt, { google: "ok" }, decoded.og), "Google Agenda conectado!");
   } catch (e) {
     console.error("google-oauth-callback error:", e);
     return new Response(`Erro: ${e instanceof Error ? e.message : "desconhecido"}`, { status: 500 });
