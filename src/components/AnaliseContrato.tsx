@@ -112,7 +112,7 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
     setConnecting(true);
     try {
       const { data, error } = await supabase.functions.invoke("google-oauth-start", {
-        body: { return_to: window.location.pathname },
+        body: { return_to: window.location.pathname, origin: window.location.origin },
       });
       if (error) throw error;
       if (!data?.url) throw new Error("URL não retornada");
