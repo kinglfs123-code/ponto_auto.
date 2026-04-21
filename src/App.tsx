@@ -13,7 +13,7 @@ import Ponto from "@/pages/Ponto";
 import FolhaDetalhe from "@/pages/FolhaDetalhe";
 import Relatorios from "@/pages/Relatorios";
 import Funcionarios from "@/pages/Funcionarios";
-import RHControl from "@/pages/RHControl";
+
 import Holerites from "@/pages/Holerites";
 import Unsubscribe from "@/pages/Unsubscribe";
 import NotFound from "@/pages/NotFound";
