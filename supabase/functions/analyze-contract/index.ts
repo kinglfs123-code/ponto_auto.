@@ -20,6 +20,19 @@ function addDays(dateStr: string, days: number): string {
   return dt.toISOString().slice(0, 10);
 }
 
+function arrayBufferToBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let binary = "";
+  const chunk = 0x8000; // 32 KB por iteração — evita estouro de pilha
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(
+      null,
+      bytes.subarray(i, i + chunk) as unknown as number[],
+    );
+  }
+  return btoa(binary);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -88,7 +101,7 @@ Deno.serve(async (req) => {
     if (dlErr || !fileData) throw new Error("Erro ao baixar arquivo: " + dlErr?.message);
 
     const buf = await fileData.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+    const base64 = arrayBufferToBase64(buf);
     const mime = doc.mime_type || "application/pdf";
 
     // Chamada à Lovable AI com tool calling
