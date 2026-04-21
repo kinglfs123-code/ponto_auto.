@@ -109,22 +109,36 @@ Deno.serve(async (req) => {
 
     const { data: alertas, error: aErr } = await admin
       .from("contrato_alertas")
-      .select("*, funcionarios:funcionario_id(nome_completo), empresas:empresa_id(owner_id)")
+      .select("*")
       .in("id", alerta_ids);
 
-    if (aErr || !alertas) throw new Error("Erro ao carregar alertas");
+    if (aErr || !alertas) {
+      throw new Error(`Erro ao carregar alertas: ${aErr?.message ?? "sem dados"}`);
+    }
+
+    const funcionarioIds = [...new Set(alertas.map((a: any) => a.funcionario_id).filter(Boolean))];
+    const empresaIds = [...new Set(alertas.map((a: any) => a.empresa_id).filter(Boolean))];
+
+    const [funcRes, empRes] = await Promise.all([
+      admin.from("funcionarios").select("id, nome_completo").in("id", funcionarioIds),
+      admin.from("empresas").select("id, owner_id").in("id", empresaIds),
+    ]);
+
+    if (funcRes.error) throw new Error(`Erro ao carregar funcionarios: ${funcRes.error.message}`);
+    if (empRes.error) throw new Error(`Erro ao carregar empresas: ${empRes.error.message}`);
+
+    const funcMap = new Map((funcRes.data ?? []).map((f: any) => [f.id, f.nome_completo]));
+    const empMap = new Map((empRes.data ?? []).map((e: any) => [e.id, e.owner_id]));
 
     const results: Array<{ id: string; status: string; error?: string }> = [];
 
     for (const al of alertas) {
-      // @ts-ignore embedded relation
-      const ownerId = al.empresas?.owner_id;
+      const ownerId = empMap.get(al.empresa_id);
       if (ownerId !== userData.user.id) {
         results.push({ id: al.id, status: "erro", error: "sem permissão" });
         continue;
       }
-      // @ts-ignore
-      const nome = al.funcionarios?.nome_completo || "colaborador";
+      const nome = funcMap.get(al.funcionario_id) || "colaborador";
       const titulo = `${TITULOS[al.tipo] || "Alerta"} — ${nome}`;
 
       try {
