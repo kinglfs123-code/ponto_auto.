@@ -109,7 +109,7 @@ export default function Holerites() {
 
     setSending((p) => ({ ...p, [funcId]: true }));
     try {
-      const { data, error } = await supabase.functions.invoke("send-holerite", {
+      const { error } = await supabase.functions.invoke("send-holerite", {
         body: { holerite_id: holerite.id },
       });
       if (error) throw error;

@@ -35,7 +35,7 @@ export default function Relatorios() {
     if (!empresaId) return;
     setGenerating(true);
     try {
-      const { data, error } = await supabase.functions.invoke("generate-report", {
+      const { error } = await supabase.functions.invoke("generate-report", {
         body: { empresa_id: empresaId, mes_referencia: mesRef },
       });
       if (error) throw error;
