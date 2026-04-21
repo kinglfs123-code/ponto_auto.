@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { maskCPF } from "@/lib/ponto-rules";
 import type { Funcionario, Folha, Holerite, FuncionarioDocumento, CategoriaDocumento, FuncionarioFerias, StatusFerias } from "@/types";
+import { AnaliseContrato } from "@/components/AnaliseContrato";
 
 const CATEGORIAS: { value: CategoriaDocumento; label: string }[] = [
   { value: "contrato", label: "Contrato de Trabalho" },
@@ -570,54 +571,60 @@ export default function FuncionarioDetalhe() {
               const docs = docsByCategoria(cat.value);
               const isUp = uploadingCat === cat.value;
               return (
-                <Card key={cat.value} className="border-border/50">
-                  <CardHeader className="pb-2">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-sm">{cat.label}</CardTitle>
-                      <label>
-                        <input
-                          type="file"
-                          accept=".pdf,.docx,.jpeg,.jpg,.png,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png"
-                          className="hidden"
-                          disabled={isUp}
-                          onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) handleUploadDoc(cat.value, file);
-                            e.target.value = "";
-                          }}
-                        />
-                        <Button variant="outline" size="sm" className="gap-1.5 pointer-events-none" tabIndex={-1} asChild>
-                          <span>
-                            {isUp ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-                            Anexar
-                          </span>
-                        </Button>
-                      </label>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="pt-0">
-                    {docs.length === 0 ? (
-                      <p className="text-xs text-muted-foreground py-2">Nenhum arquivo.</p>
-                    ) : (
-                      <div className="space-y-1.5">
-                        {docs.map((d) => (
-                          <div key={d.id} className="flex items-center justify-between bg-muted/20 rounded-lg px-3 py-2">
-                            <div className="min-w-0 flex-1">
-                              <p className="text-sm text-foreground truncate">{d.nome_arquivo}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatDate(d.created_at.split("T")[0])} {d.tamanho_bytes ? `· ${(d.tamanho_bytes / 1024).toFixed(0)} KB` : ""}
-                              </p>
-                            </div>
-                            <div className="flex gap-1">
-                              <Button variant="ghost" size="icon" onClick={() => handleDownloadDoc(d)} className="h-7 w-7"><Download className="h-3.5 w-3.5" /></Button>
-                              <Button variant="ghost" size="icon" onClick={() => handleDeleteDoc(d)} className="h-7 w-7 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
-                            </div>
-                          </div>
-                        ))}
+                <div key={cat.value} className="space-y-2">
+                  <Card className="border-border/50">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm">{cat.label}</CardTitle>
+                        <label>
+                          <input
+                            type="file"
+                            accept=".pdf,.docx,.jpeg,.jpg,.png,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png"
+                            className="hidden"
+                            disabled={isUp}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleUploadDoc(cat.value, file);
+                              e.target.value = "";
+                            }}
+                          />
+                          <Button variant="outline" size="sm" className="gap-1.5 pointer-events-none" tabIndex={-1} asChild>
+                            <span>
+                              {isUp ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                              Anexar
+                            </span>
+                          </Button>
+                        </label>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+                    </CardHeader>
+                    <CardContent className="pt-0">
+                      {docs.length === 0 ? (
+                        <p className="text-xs text-muted-foreground py-2">Nenhum arquivo.</p>
+                      ) : (
+                        <div className="space-y-1.5">
+                          {docs.map((d) => (
+                            <div key={d.id} className="flex items-center justify-between bg-muted/20 rounded-lg px-3 py-2">
+                              <div className="min-w-0 flex-1">
+                                <p className="text-sm text-foreground truncate">{d.nome_arquivo}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {formatDate(d.created_at.split("T")[0])} {d.tamanho_bytes ? `· ${(d.tamanho_bytes / 1024).toFixed(0)} KB` : ""}
+                                </p>
+                              </div>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => handleDownloadDoc(d)} className="h-7 w-7"><Download className="h-3.5 w-3.5" /></Button>
+                                <Button variant="ghost" size="icon" onClick={() => handleDeleteDoc(d)} className="h-7 w-7 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {cat.value === "contrato" && func && (
+                    <AnaliseContrato funcionarioId={func.id} contratos={docs} />
+                  )}
+                </div>
               );
             })}
             <p className="text-xs text-muted-foreground text-center">PDF, DOCX, JPEG, PNG (máx 10MB)</p>

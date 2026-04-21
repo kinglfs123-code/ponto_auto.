@@ -14,6 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
+      contrato_alertas: {
+        Row: {
+          contrato_id: string
+          created_at: string
+          data_evento: string
+          data_lembrete: string
+          empresa_id: string
+          erro_mensagem: string | null
+          funcionario_id: string
+          google_event_id: string | null
+          id: string
+          status: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          contrato_id: string
+          created_at?: string
+          data_evento: string
+          data_lembrete: string
+          empresa_id: string
+          erro_mensagem?: string | null
+          funcionario_id: string
+          google_event_id?: string | null
+          id?: string
+          status?: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          contrato_id?: string
+          created_at?: string
+          data_evento?: string
+          data_lembrete?: string
+          empresa_id?: string
+          erro_mensagem?: string | null
+          funcionario_id?: string
+          google_event_id?: string | null
+          id?: string
+          status?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "contrato_alertas_contrato_id_fkey"
+            columns: ["contrato_id"]
+            isOneToOne: false
+            referencedRelation: "contratos_analise"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      contratos_analise: {
+        Row: {
+          confianca: number | null
+          created_at: string
+          dados_brutos: Json | null
+          data_admissao: string | null
+          data_prorrogacao: string | null
+          data_proximas_ferias: string | null
+          data_vencimento: string | null
+          documento_id: string | null
+          empresa_id: string
+          funcionario_id: string
+          id: string
+          observacoes: string | null
+          tipo_contrato: string | null
+          updated_at: string
+        }
+        Insert: {
+          confianca?: number | null
+          created_at?: string
+          dados_brutos?: Json | null
+          data_admissao?: string | null
+          data_prorrogacao?: string | null
+          data_proximas_ferias?: string | null
+          data_vencimento?: string | null
+          documento_id?: string | null
+          empresa_id: string
+          funcionario_id: string
+          id?: string
+          observacoes?: string | null
+          tipo_contrato?: string | null
+          updated_at?: string
+        }
+        Update: {
+          confianca?: number | null
+          created_at?: string
+          dados_brutos?: Json | null
+          data_admissao?: string | null
+          data_prorrogacao?: string | null
+          data_proximas_ferias?: string | null
+          data_vencimento?: string | null
+          documento_id?: string | null
+          empresa_id?: string
+          funcionario_id?: string
+          id?: string
+          observacoes?: string | null
+          tipo_contrato?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       correcoes_ia: {
         Row: {
           campo: string
