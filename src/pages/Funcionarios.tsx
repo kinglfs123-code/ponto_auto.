@@ -206,12 +206,16 @@ export default function Funcionarios() {
               </thead>
               <tbody>
                 {funcionarios.map((f) => (
-                  <tr key={f.id} className="border-t border-border/30 hover:bg-muted/20 transition-colors">
+                  <tr
+                    key={f.id}
+                    onClick={() => navigate(`/funcionarios/${f.id}`)}
+                    className="border-t border-border/30 hover:bg-muted/20 transition-colors cursor-pointer"
+                  >
                     <td className="p-2.5 text-foreground text-sm">{f.nome_completo}</td>
                     <td className="p-2.5 text-muted-foreground text-sm font-mono">{maskCPF(f.cpf)}</td>
                     <td className="p-2.5 text-muted-foreground text-sm hidden sm:table-cell">{f.cargo || "—"}</td>
                     <td className="p-2.5 text-muted-foreground text-sm hidden md:table-cell">{f.horario_entrada} – {f.horario_saida} <span className="text-xs opacity-60">(int: {f.intervalo || "01:00"})</span></td>
-                    <td className="p-2.5 flex gap-1 justify-end">
+                    <td className="p-2.5 flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(f)} className="h-7 w-7"><Pencil className="h-3.5 w-3.5" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(f.id)} className="h-7 w-7 text-destructive hover:text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
                     </td>
@@ -226,7 +230,11 @@ export default function Funcionarios() {
         {funcionarios.length > 0 && isMobile && (
           <div className="space-y-2 animate-fade-in">
             {funcionarios.map((f) => (
-              <Card key={f.id} className="border-border/50">
+              <Card
+                key={f.id}
+                onClick={() => navigate(`/funcionarios/${f.id}`)}
+                className="border-border/50 cursor-pointer hover:bg-muted/20 transition-colors"
+              >
                 <CardContent className="py-3 px-4">
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
@@ -238,7 +246,7 @@ export default function Funcionarios() {
                         {f.horario_entrada} – {f.horario_saida} <span className="opacity-60">(int: {f.intervalo || "01:00"})</span>
                       </div>
                     </div>
-                    <div className="flex gap-1">
+                    <div className="flex gap-1" onClick={(e) => e.stopPropagation()}>
                       <Button variant="ghost" size="icon" onClick={() => handleEdit(f)} className="h-7 w-7"><Pencil className="h-3.5 w-3.5" /></Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(f.id)} className="h-7 w-7 text-destructive"><Trash2 className="h-3.5 w-3.5" /></Button>
                     </div>
