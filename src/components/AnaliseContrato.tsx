@@ -250,15 +250,34 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
 
       {alertas.length > 0 && (
         <Card className="border-border/50">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-primary" /> Alertas programados
               </CardTitle>
-              <Button size="sm" onClick={handleSincronizar} disabled={syncing} className="gap-1.5">
-                {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Calendar className="h-3.5 w-3.5" />}
-                Sincronizar no Google Agenda
-              </Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                {googleConectado === false && (
+                  <Button size="sm" variant="outline" onClick={handleConectarGoogle} disabled={connecting} className="gap-1.5">
+                    {connecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LinkIcon className="h-3.5 w-3.5" />}
+                    Conectar Google Agenda
+                  </Button>
+                )}
+                <Button size="sm" onClick={handleSincronizar} disabled={syncing} className="gap-1.5">
+                  {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Calendar className="h-3.5 w-3.5" />}
+                  Sincronizar no Google Agenda
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs">
+              {googleConectado ? (
+                <Badge variant="outline" className="gap-1 bg-green-500/15 text-green-600 border-green-500/30">
+                  <CheckCircle2 className="h-3 w-3" /> Google Agenda conectado
+                </Badge>
+              ) : googleConectado === false ? (
+                <Badge variant="outline" className="gap-1 text-muted-foreground">
+                  <Link2 className="h-3 w-3" /> Não conectado
+                </Badge>
+              ) : null}
             </div>
           </CardHeader>
           <CardContent className="space-y-2">
