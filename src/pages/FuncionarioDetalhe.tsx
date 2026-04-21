@@ -650,7 +650,7 @@ export default function FuncionarioDetalhe() {
                 </div>
               );
             })}
-            <p className="text-xs text-muted-foreground text-center">PDF, DOCX, JPEG, PNG (máx 10MB)</p>
+            
           </TabsContent>
 
           {/* FÉRIAS */}
