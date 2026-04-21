@@ -487,11 +487,19 @@ export default function Ponto() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full text-xs min-w-[700px]">
-                  <thead>
-                    <tr className="border-b border-border text-muted-foreground">
-                      {["Dia", "Ent M", "Saí M", "Ent T", "Saí T", "Ent E", "Saí E", "Normal", "Extra", "Not.", "Exceção", "Obs"].map((h) => (
-                        <th key={h} className="px-2 py-2 text-center font-medium">{h}</th>
+                <table className="w-full md:table-fixed text-sm border-collapse min-w-[640px]">
+                  <colgroup>
+                    <col className="md:w-[8%]" />
+                    <col className="md:w-[18%]" />
+                    <col className="md:w-[18%]" />
+                    <col className="md:w-[18%]" />
+                    <col className="md:w-[18%]" />
+                    <col className="md:w-[20%]" />
+                  </colgroup>
+                  <thead className="sticky top-0 bg-card">
+                    <tr>
+                      {["Dia", "Entrada", "Saída p/ intervalo", "Volta do intervalo", "Saída", "Exceção"].map((h) => (
+                        <th key={h} className="px-2 py-2 text-center font-semibold text-foreground border border-foreground/80">{h}</th>
                       ))}
                     </tr>
                   </thead>
@@ -500,21 +508,22 @@ export default function Ponto() {
                       const confLevel = confidenceMap[typeof r.dia === 'number' ? r.dia : parseInt(String(r.dia))];
                       const isLowConf = confLevel === "baixa";
                       const isMedConf = confLevel === "media";
-                      const rowBg = isLowConf ? "bg-destructive/5" : isMedConf ? "bg-[hsl(var(--warning)/0.08)]" : "";
                       return (
-                        <tr key={i} className={`border-b border-border/50 hover:bg-muted/30 ${rowBg}`}>
-                          <td className="px-2 py-1.5 text-center font-semibold text-primary flex items-center justify-center gap-1">
-                            {r.dia}
-                            {isLowConf && <AlertTriangle className="h-3 w-3 text-destructive" />}
-                            {isMedConf && <AlertTriangle className="h-3 w-3 text-[hsl(var(--warning))]" />}
+                        <tr key={i}>
+                          <td className="px-2 py-1.5 text-center font-semibold text-foreground border border-foreground/80">
+                            <div className="flex items-center justify-center gap-1">
+                              {String(r.dia).padStart(2, "0")}
+                              {isLowConf && <AlertTriangle className="h-3 w-3 text-destructive" />}
+                              {isMedConf && <AlertTriangle className="h-3 w-3 text-[hsl(var(--warning))]" />}
+                            </div>
                           </td>
-                          {(["hora_entrada", "hora_saida", "hora_entrada_tarde", "hora_saida_tarde", "hora_entrada_extra", "hora_saida_extra"] as const).map((f) => (
-                            <td key={f} className="px-1 py-1 text-center">
+                          {(["hora_entrada", "hora_saida", "hora_entrada_tarde", "hora_saida_tarde"] as const).map((f) => (
+                            <td key={f} className="px-1 py-1 text-center text-foreground border border-foreground/80">
                               {editMode ? (
                                 <Input
                                   value={r[f] || ""}
                                   onChange={(e) => updateReg(i, f, e.target.value)}
-                                  className="h-6 w-14 text-[10px] text-center p-0.5"
+                                  className="h-7 w-full text-xs text-center p-0.5"
                                   placeholder="--:--"
                                 />
                               ) : (
@@ -522,19 +531,12 @@ export default function Ponto() {
                               )}
                             </td>
                           ))}
-                          <td className="px-2 py-1 text-center">{formatHours(r.horas_normais)}</td>
-                          <td className="px-2 py-1 text-center text-[hsl(var(--success))]">
-                            {r.horas_extras > 0 ? formatHours(r.horas_extras) : "—"}
-                          </td>
-                          <td className="px-2 py-1 text-center text-[hsl(var(--warning))]">
-                            {r.horas_noturnas > 0 ? formatHours(r.horas_noturnas) : "—"}
-                          </td>
-                          <td className="px-1 py-1 text-center">
+                          <td className="px-1 py-1 text-center border border-foreground/80">
                             {editMode ? (
                               <Popover>
                                 <PopoverTrigger asChild>
                                   <button className="min-w-[3rem] cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5">
-                                    {excecaoBadge(r.tipo_excecao) || <span className="text-[10px] text-muted-foreground">—</span>}
+                                    {excecaoBadge(r.tipo_excecao) || <span className="text-xs text-muted-foreground">—</span>}
                                   </button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-36 p-1.5" align="center">
@@ -564,18 +566,7 @@ export default function Ponto() {
                                 </PopoverContent>
                               </Popover>
                             ) : (
-                              excecaoBadge(r.tipo_excecao) || <span className="text-[10px] text-muted-foreground">—</span>
-                            )}
-                          </td>
-                          <td className="px-1 py-1 text-center">
-                            {editMode ? (
-                              <Input
-                                value={r.obs || ""}
-                                onChange={(e) => updateReg(i, "obs", e.target.value)}
-                                className="h-6 w-16 text-[10px] p-0.5"
-                              />
-                            ) : (
-                              <span className="text-[10px] text-muted-foreground">{r.obs || "—"}</span>
+                              excecaoBadge(r.tipo_excecao) || <span className="text-xs text-muted-foreground">—</span>
                             )}
                           </td>
                         </tr>
