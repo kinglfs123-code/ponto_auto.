@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { maskCPF } from "@/lib/ponto-rules";
 import type { Funcionario, Folha, Holerite, FuncionarioDocumento, CategoriaDocumento, FuncionarioFerias, StatusFerias } from "@/types";
+import { AnaliseContrato } from "@/components/AnaliseContrato";
 
 const CATEGORIAS: { value: CategoriaDocumento; label: string }[] = [
   { value: "contrato", label: "Contrato de Trabalho" },
