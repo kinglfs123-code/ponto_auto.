@@ -381,8 +381,8 @@ export default function Ponto() {
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
       <NavBar />
-      <div className="max-w-5xl mx-auto p-4 space-y-4">
-        <h1 className="text-xl font-bold text-primary animate-fade-in">Importar Ponto</h1>
+      <div className="max-w-6xl mx-auto p-4 space-y-4">
+        <h1 className="text-xl font-bold text-primary animate-fade-in">Importar Folha de Ponto</h1>
 
         {/* Company selector + info */}
         <Card>
@@ -396,7 +396,7 @@ export default function Ponto() {
                 />
               </div>
               <div className="flex-1 min-w-[200px]">
-                <label className="text-xs text-muted-foreground mb-1 block">Funcionário</label>
+                <label className="text-xs text-muted-foreground mb-1 block">Colaborador</label>
                 <FuncionarioSelector
                   empresaId={empresa?.id || null}
                   value={funcionarioSel}
@@ -410,7 +410,7 @@ export default function Ponto() {
                 />
               </div>
               <div className="w-28">
-                <label className="text-xs text-muted-foreground mb-1 block">Mês ref.</label>
+                <label className="text-xs text-muted-foreground mb-1 block">Mês de referência</label>
                 <Input value={toBrMonth(mesRef)} onChange={(e) => setMesRef(fromBrMonth(e.target.value))} placeholder="04/2026" />
               </div>
             </div>
@@ -436,7 +436,7 @@ export default function Ponto() {
           )}
           {image && empresa && (
             <Button onClick={runOCR} disabled={loading} className="gap-2">
-              {loading ? step || "Processando..." : "Ler Folha de Ponto"}
+              {loading ? step || "Processando..." : "Ler folha de ponto"}
             </Button>
           )}
         </div>
