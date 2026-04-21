@@ -129,7 +129,7 @@ export default function Relatorios() {
             <Card className="animate-fade-in">
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <ClipboardList className="h-4 w-4" /> Folhas de Ponto
+                  <ClipboardList className="h-4 w-4" /> Folhas de ponto
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -202,7 +202,7 @@ export default function Relatorios() {
             <Card className="animate-fade-in" style={{ animationDelay: "100ms" }}>
               <CardHeader>
                 <CardTitle className="text-sm flex items-center gap-2">
-                  <FileText className="h-4 w-4" /> Relatórios Gerados
+                  <FileText className="h-4 w-4" /> Relatórios gerados
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-2">
