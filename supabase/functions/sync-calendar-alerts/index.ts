@@ -12,6 +12,57 @@ const TITULOS: Record<string, string> = {
   ferias_5_meses: "🌴 Férias se aproximam",
 };
 
+async function getValidAccessToken(admin: ReturnType<typeof createClient>, userId: string) {
+  const { data, error } = await admin
+    .from("google_calendar_tokens")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) throw new Error(`Erro ao ler tokens: ${error.message}`);
+  if (!data) return null;
+
+  const expiresAt = new Date(data.expires_at as string).getTime();
+  if (expiresAt > Date.now() + 30_000) return data.access_token as string;
+
+  // refresh
+  const CLIENT_ID = Deno.env.get("GOOGLE_OAUTH_CLIENT_ID");
+  const CLIENT_SECRET = Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET");
+  if (!CLIENT_ID || !CLIENT_SECRET) {
+    throw new Error("GOOGLE_OAUTH_CLIENT_ID/SECRET não configurados");
+  }
+
+  const resp = await fetch("https://oauth2.googleapis.com/token", {
+    method: "POST",
+    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    body: new URLSearchParams({
+      client_id: CLIENT_ID,
+      client_secret: CLIENT_SECRET,
+      refresh_token: data.refresh_token as string,
+      grant_type: "refresh_token",
+    }),
+  });
+
+  if (!resp.ok) {
+    const txt = await resp.text();
+    console.error("Refresh failed:", txt);
+    // token revogado: apaga o registro para forçar reconexão
+    await admin.from("google_calendar_tokens").delete().eq("user_id", userId);
+    return null;
+  }
+
+  const tok = await resp.json() as { access_token: string; expires_in: number; scope?: string };
+  const newExpiresAt = new Date(Date.now() + (tok.expires_in - 60) * 1000).toISOString();
+
+  await admin.from("google_calendar_tokens").update({
+    access_token: tok.access_token,
+    expires_at: newExpiresAt,
+    updated_at: new Date().toISOString(),
+  }).eq("user_id", userId);
+
+  return tok.access_token;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -26,16 +77,6 @@ Deno.serve(async (req) => {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
     const SERVICE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
-    const GOOGLE_TOKEN = Deno.env.get("GOOGLE_CALENDAR_ACCESS_TOKEN");
-
-    if (!GOOGLE_TOKEN) {
-      return new Response(JSON.stringify({
-        error: "Google Agenda não conectado",
-        needs_connection: true,
-      }), {
-        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
 
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
@@ -56,6 +97,16 @@ Deno.serve(async (req) => {
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
+    const accessToken = await getValidAccessToken(admin, userData.user.id);
+    if (!accessToken) {
+      return new Response(JSON.stringify({
+        needs_connection: true,
+        error: "Google Agenda não conectado",
+      }), {
+        status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { data: alertas, error: aErr } = await admin
       .from("contrato_alertas")
       .select("*, funcionarios:funcionario_id(nome_completo), empresas:empresa_id(owner_id)")
@@ -66,7 +117,6 @@ Deno.serve(async (req) => {
     const results: Array<{ id: string; status: string; error?: string }> = [];
 
     for (const al of alertas) {
-      // valida ownership
       // @ts-ignore embedded relation
       const ownerId = al.empresas?.owner_id;
       if (ownerId !== userData.user.id) {
@@ -99,7 +149,7 @@ Deno.serve(async (req) => {
         const resp = await fetch(url, {
           method,
           headers: {
-            Authorization: `Bearer ${GOOGLE_TOKEN}`,
+            Authorization: `Bearer ${accessToken}`,
             "Content-Type": "application/json",
           },
           body: JSON.stringify(event),

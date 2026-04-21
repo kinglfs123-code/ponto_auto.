@@ -4,7 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, Calendar, RefreshCw, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Loader2, Sparkles, Calendar, RefreshCw, AlertCircle, CheckCircle2, Link2, LinkIcon } from "lucide-react";
 import type { ContratoAnalise, ContratoAlerta, FuncionarioDocumento } from "@/types";
 
 const TIPO_LABEL: Record<string, string> = {
@@ -43,6 +43,19 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
   const [loading, setLoading] = useState(true);
   const [analyzing, setAnalyzing] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [googleConectado, setGoogleConectado] = useState<boolean | null>(null);
+  const [connecting, setConnecting] = useState(false);
+
+  const checkGoogle = async () => {
+    const { data: u } = await supabase.auth.getUser();
+    if (!u.user) return;
+    const { data } = await supabase
+      .from("google_calendar_tokens")
+      .select("user_id")
+      .eq("user_id", u.user.id)
+      .maybeSingle();
+    setGoogleConectado(!!data);
+  };
 
   const load = async () => {
     setLoading(true);
@@ -71,8 +84,48 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
 
   useEffect(() => {
     load();
+    checkGoogle();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [funcionarioId]);
+
+  // trata retorno do OAuth (?google=ok|error)
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const g = params.get("google");
+    if (!g) return;
+    if (g === "ok") {
+      toast({ title: "Google Agenda conectado", description: "Você já pode sincronizar os alertas." });
+      checkGoogle();
+    } else {
+      const reason = params.get("reason");
+      toast({
+        title: "Falha ao conectar Google Agenda",
+        description: reason || "Tente novamente.",
+        variant: "destructive",
+      });
+    }
+    // limpa query
+    const url = new URL(window.location.href);
+    url.searchParams.delete("google");
+    url.searchParams.delete("reason");
+    window.history.replaceState({}, "", url.toString());
+  }, []);
+
+  const handleConectarGoogle = async () => {
+    setConnecting(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("google-oauth-start", {
+        body: { return_to: window.location.pathname },
+      });
+      if (error) throw error;
+      if (!data?.url) throw new Error("URL não retornada");
+      window.location.href = data.url as string;
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Falha ao iniciar conexão";
+      toast({ title: "Erro", description: msg, variant: "destructive" });
+      setConnecting(false);
+    }
+  };
 
   const ultimoContrato = contratos[0];
 
@@ -111,9 +164,10 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
       });
       if (error) throw error;
       if (data?.needs_connection) {
+        setGoogleConectado(false);
         toast({
           title: "Conecte o Google Agenda",
-          description: "A integração com o Google Agenda ainda não foi configurada neste projeto.",
+          description: "Clique em Conectar Google Agenda para autorizar e tente sincronizar de novo.",
           variant: "destructive",
         });
         return;
@@ -196,15 +250,34 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
 
       {alertas.length > 0 && (
         <Card className="border-border/50">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-primary" /> Alertas programados
               </CardTitle>
-              <Button size="sm" onClick={handleSincronizar} disabled={syncing} className="gap-1.5">
-                {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Calendar className="h-3.5 w-3.5" />}
-                Sincronizar no Google Agenda
-              </Button>
+              <div className="flex items-center gap-2 flex-wrap">
+                {googleConectado === false && (
+                  <Button size="sm" variant="outline" onClick={handleConectarGoogle} disabled={connecting} className="gap-1.5">
+                    {connecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LinkIcon className="h-3.5 w-3.5" />}
+                    Conectar Google Agenda
+                  </Button>
+                )}
+                <Button size="sm" onClick={handleSincronizar} disabled={syncing} className="gap-1.5">
+                  {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Calendar className="h-3.5 w-3.5" />}
+                  Sincronizar no Google Agenda
+                </Button>
+              </div>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs">
+              {googleConectado ? (
+                <Badge variant="outline" className="gap-1 bg-green-500/15 text-green-600 border-green-500/30">
+                  <CheckCircle2 className="h-3 w-3" /> Google Agenda conectado
+                </Badge>
+              ) : googleConectado === false ? (
+                <Badge variant="outline" className="gap-1 text-muted-foreground">
+                  <Link2 className="h-3 w-3" /> Não conectado
+                </Badge>
+              ) : null}
             </div>
           </CardHeader>
           <CardContent className="space-y-2">
