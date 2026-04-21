@@ -69,6 +69,37 @@ export default function Relatorios() {
     }
   };
 
+  const handleDeleteFolha = async (folha: Folha) => {
+    if (!confirm(`Excluir a folha de ${folha.funcionario} (${folha.mes_referencia})?`)) return;
+    try {
+      const { error: regErr } = await supabase.from("registros_ponto").delete().eq("folha_id", folha.id);
+      if (regErr) throw regErr;
+      const { error: folhaErr } = await supabase.from("folhas_ponto").delete().eq("id", folha.id);
+      if (folhaErr) throw folhaErr;
+      toast({ title: "Folha excluída" });
+      setFolhas((prev) => prev.filter((f) => f.id !== folha.id));
+    } catch (err: unknown) {
+      toast({ title: "Erro ao excluir", description: err instanceof Error ? err.message : "Erro", variant: "destructive" });
+    }
+  };
+
+  const handleDeleteMes = async (mes: string) => {
+    const mesfolhas = folhas.filter((f) => f.mes_referencia === mes);
+    if (mesfolhas.length === 0) return;
+    if (!confirm(`Excluir todas as ${mesfolhas.length} folha(s) de ${mes}?`)) return;
+    try {
+      const ids = mesfolhas.map((f) => f.id);
+      const { error: regErr } = await supabase.from("registros_ponto").delete().in("folha_id", ids);
+      if (regErr) throw regErr;
+      const { error: folhaErr } = await supabase.from("folhas_ponto").delete().in("id", ids);
+      if (folhaErr) throw folhaErr;
+      toast({ title: `Folhas de ${mes} excluídas` });
+      setFolhas((prev) => prev.filter((f) => f.mes_referencia !== mes));
+    } catch (err: unknown) {
+      toast({ title: "Erro ao excluir", description: err instanceof Error ? err.message : "Erro", variant: "destructive" });
+    }
+  };
+
   const deleteRelatorio = async (r: Relatorio) => {
     if (!confirm("Excluir este relatório?")) return;
     try {
