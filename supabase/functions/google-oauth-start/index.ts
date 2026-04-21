@@ -45,11 +45,13 @@ Deno.serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const returnTo: string = body.return_to || "/funcionarios";
+    const origin: string | undefined = typeof body.origin === "string" ? body.origin : undefined;
 
-    // state inclui user_id + return_to + nonce; codificado em base64url
+    // state inclui user_id + return_to + origin + nonce; codificado em base64url
     const stateObj = {
       uid: userData.user.id,
       rt: returnTo,
+      og: origin,
       n: crypto.randomUUID(),
     };
     const state = btoa(JSON.stringify(stateObj))

@@ -6,15 +6,34 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-function decodeState(state: string): { uid: string; rt: string } | null {
+function decodeState(state: string): { uid: string; rt: string; og?: string } | null {
   try {
     const padded = state.replace(/-/g, "+").replace(/_/g, "/");
     const json = atob(padded + "===".slice(0, (4 - padded.length % 4) % 4));
     const obj = JSON.parse(json);
     if (typeof obj.uid !== "string") return null;
-    return { uid: obj.uid, rt: typeof obj.rt === "string" ? obj.rt : "/funcionarios" };
+    return {
+      uid: obj.uid,
+      rt: typeof obj.rt === "string" ? obj.rt : "/funcionarios",
+      og: typeof obj.og === "string" ? obj.og : undefined,
+    };
   } catch {
     return null;
+  }
+}
+
+function isAllowedOrigin(origin: string): boolean {
+  try {
+    const u = new URL(origin);
+    if (u.protocol !== "https:" && u.protocol !== "http:") return false;
+    // permite *.lovable.app, *.lovableproject.com, localhost
+    if (u.hostname === "localhost" || u.hostname === "127.0.0.1") return true;
+    if (u.hostname.endsWith(".lovable.app")) return true;
+    if (u.hostname.endsWith(".lovableproject.com")) return true;
+    if (u.hostname.endsWith(".lovable.dev")) return true;
+    return false;
+  } catch {
+    return false;
   }
 }
 
@@ -40,8 +59,9 @@ Deno.serve(async (req) => {
     const CLIENT_SECRET = Deno.env.get("GOOGLE_OAUTH_CLIENT_SECRET");
     const APP_ORIGIN = Deno.env.get("APP_ORIGIN") || "";
 
-    const buildAppUrl = (path: string, params: Record<string, string>) => {
-      const base = APP_ORIGIN || "/";
+    const buildAppUrl = (path: string, params: Record<string, string>, originOverride?: string) => {
+      const candidate = originOverride && isAllowedOrigin(originOverride) ? originOverride : APP_ORIGIN;
+      const base = candidate || "/";
       const u = new URL(path, base.endsWith("/") ? base : base + "/");
       Object.entries(params).forEach(([k, v]) => u.searchParams.set(k, v));
       return u.toString();
@@ -51,8 +71,9 @@ Deno.serve(async (req) => {
       return new Response("OAuth não configurado", { status: 500 });
     }
     if (error) {
-      const back = state ? decodeState(state)?.rt || "/funcionarios" : "/funcionarios";
-      return htmlRedirect(buildAppUrl(back, { google: "error", reason: error }), "Erro na autorização");
+      const dec = state ? decodeState(state) : null;
+      const back = dec?.rt || "/funcionarios";
+      return htmlRedirect(buildAppUrl(back, { google: "error", reason: error }, dec?.og), "Erro na autorização");
     }
     if (!code || !state) {
       return new Response("Parâmetros inválidos", { status: 400 });
@@ -79,7 +100,7 @@ Deno.serve(async (req) => {
     if (!tokenResp.ok) {
       const txt = await tokenResp.text();
       console.error("Token exchange failed:", txt);
-      return htmlRedirect(buildAppUrl(decoded.rt, { google: "error" }), "Falha ao obter token");
+      return htmlRedirect(buildAppUrl(decoded.rt, { google: "error" }, decoded.og), "Falha ao obter token");
     }
 
     const tok = await tokenResp.json() as {
@@ -108,7 +129,7 @@ Deno.serve(async (req) => {
 
     if (!refreshToken) {
       return htmlRedirect(
-        buildAppUrl(decoded.rt, { google: "error", reason: "no_refresh_token" }),
+        buildAppUrl(decoded.rt, { google: "error", reason: "no_refresh_token" }, decoded.og),
         "Faltou refresh_token — revogue o acesso em myaccount.google.com e tente de novo",
       );
     }
@@ -126,10 +147,10 @@ Deno.serve(async (req) => {
 
     if (upErr) {
       console.error("Upsert error:", upErr);
-      return htmlRedirect(buildAppUrl(decoded.rt, { google: "error" }), "Erro ao salvar token");
+      return htmlRedirect(buildAppUrl(decoded.rt, { google: "error" }, decoded.og), "Erro ao salvar token");
     }
 
-    return htmlRedirect(buildAppUrl(decoded.rt, { google: "ok" }), "Google Agenda conectado!");
+    return htmlRedirect(buildAppUrl(decoded.rt, { google: "ok" }, decoded.og), "Google Agenda conectado!");
   } catch (e) {
     console.error("google-oauth-callback error:", e);
     return new Response(`Erro: ${e instanceof Error ? e.message : "desconhecido"}`, { status: 500 });
