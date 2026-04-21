@@ -10,13 +10,6 @@ Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
-      return new Response(JSON.stringify({ error: "Não autenticado" }), {
-        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
     const CLIENT_ID = Deno.env.get("GOOGLE_OAUTH_CLIENT_ID");
@@ -26,6 +19,17 @@ Deno.serve(async (req) => {
         error: "GOOGLE_OAUTH_CLIENT_ID não configurado",
       }), {
         status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validação de usuário feita no código (verify_jwt=false no gateway porque
+    // o gateway não aceita JWT ES256 — fazemos a validação aqui via getUser).
+    // É obrigatório identificar o usuário para que o callback saiba em qual
+    // conta salvar o token do Google Agenda.
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "Não autenticado" }), {
+        status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
