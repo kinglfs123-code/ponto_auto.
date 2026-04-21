@@ -1,116 +1,83 @@
 
 
-## Plano: Análise automática de contrato + alertas no Google Agenda
+## Plano: Vincular Google Agenda via OAuth próprio (por usuário)
 
-Vamos criar uma base que, ao anexar o contrato de trabalho de um colaborador, lê o PDF/imagem com IA (Lovable AI / Gemini), extrai datas-chave e gera lembretes automaticamente — incluindo no Google Agenda.
+Hoje a edge `sync-calendar-alerts` depende de um secret estático `GOOGLE_CALENDAR_ACCESS_TOKEN` — isso não funciona em produção (token expira em 1h e não é por usuário). Vou substituir por OAuth real com Google, usando credenciais que você vai criar no Google Cloud Console.
 
-### 1. Nova tabela `contratos_analise` (banco)
+### 1. O que você precisa fazer no Google Cloud (passo a passo na hora da implementação)
 
-Para cada contrato anexado, salvar o que a IA extraiu:
+1. Acessar https://console.cloud.google.com/ → criar projeto (ou usar existente).
+2. APIs & Services → **Library** → ativar **Google Calendar API**.
+3. APIs & Services → **OAuth consent screen** → tipo "External" → preencher nome do app, email de suporte, e adicionar o escopo `https://www.googleapis.com/auth/calendar.events`.
+4. APIs & Services → **Credentials** → Create Credentials → **OAuth client ID** → tipo "Web application".
+5. **Authorized redirect URI**: vou te dar a URL exata da edge function de callback (algo como `https://tqzxjuszojskbpackqyr.supabase.co/functions/v1/google-oauth-callback`).
+6. Copiar **Client ID** e **Client Secret**.
 
-| Coluna | Tipo | Descrição |
-|---|---|---|
-| `id` | uuid | PK |
-| `funcionario_id` | uuid | vínculo com colaborador |
-| `empresa_id` | uuid | dono do dado (RLS) |
-| `documento_id` | uuid | referência ao arquivo em `funcionario_documentos` |
-| `data_admissao` | date | início do vínculo |
-| `tipo_contrato` | text | "experiência 45+45", "experiência 90", "indeterminado", "prazo determinado" |
-| `data_vencimento` | date | quando vence (se houver) |
-| `data_prorrogacao` | date | data prevista de prorrogação (se houver) |
-| `data_proximas_ferias` | date | calculada: admissão + 12 meses |
-| `confianca` | int | 0–100, vinda da IA |
-| `dados_brutos` | jsonb | resposta completa da IA para auditoria |
-| `created_at` | timestamptz | |
+Depois você cola esses 2 valores em secrets que eu vou pedir: `GOOGLE_OAUTH_CLIENT_ID` e `GOOGLE_OAUTH_CLIENT_SECRET`.
 
-Tabela auxiliar `contrato_alertas` para guardar os lembretes gerados:
+### 2. Banco — nova tabela `google_calendar_tokens`
 
 | Coluna | Tipo |
 |---|---|
-| `id`, `funcionario_id`, `empresa_id`, `contrato_id` | identificação |
-| `tipo` | "vencimento_contrato", "prorrogacao", "ferias_5_meses" |
-| `data_evento` | data do evento real |
-| `data_lembrete` | data em que o alerta dispara (evento − 2 dias / férias − 5 meses) |
-| `google_event_id` | id retornado pelo Google Agenda (null se não sincronizado) |
-| `status` | "pendente", "sincronizado", "erro" |
+| `user_id` | uuid PK (`auth.users.id`) |
+| `access_token` | text |
+| `refresh_token` | text |
+| `expires_at` | timestamptz |
+| `scope` | text |
+| `created_at`, `updated_at` | timestamptz |
 
-RLS em ambas: `user_owns_empresa(empresa_id)` (mesmo padrão das outras).
+RLS: cada usuário só lê/escreve a própria linha (`user_id = auth.uid()`).
 
-### 2. Nova edge function `analyze-contract`
+### 3. Duas novas edge functions
 
-Recebe `{ documento_id }`, baixa o arquivo do bucket `colaborador-arquivos`, envia para Lovable AI (`google/gemini-2.5-flash` — multimodal, gratuito) com tool calling estruturado:
+**a) `google-oauth-start`** (chamada pelo frontend)
+- Gera URL de autorização do Google com `client_id`, `redirect_uri`, `scope=calendar.events`, `access_type=offline`, `prompt=consent` (garante refresh_token).
+- Inclui `state` = id do usuário assinado para evitar CSRF.
+- Retorna `{ url }` para o frontend redirecionar.
 
-```
-{ data_admissao, tipo_contrato, data_vencimento,
-  data_prorrogacao, observacoes, confianca }
-```
+**b) `google-oauth-callback`** (chamada pelo Google após login)
+- Recebe `code` + `state`.
+- Troca `code` por `access_token` + `refresh_token` em `https://oauth2.googleapis.com/token`.
+- Salva (upsert) em `google_calendar_tokens` para o `user_id` do `state`.
+- Redireciona o usuário de volta para `/funcionarios/<id>` com `?google=ok`.
 
-Depois calcula:
-- `data_proximas_ferias = data_admissao + 12 meses`
-- Cria 3 entradas em `contrato_alertas`:
-  - Vencimento: `data_lembrete = data_vencimento − 2 dias`
-  - Prorrogação: `data_lembrete = data_prorrogacao − 2 dias`
-  - Férias: `data_lembrete = data_proximas_ferias − 5 meses`
+### 4. Refatorar `sync-calendar-alerts`
 
-Retorna o registro de `contratos_analise` para a UI.
+- Remover uso de `GOOGLE_CALENDAR_ACCESS_TOKEN`.
+- Buscar token do usuário em `google_calendar_tokens`.
+- Se `expires_at < now()`, usar o `refresh_token` para pegar novo `access_token` e atualizar a tabela.
+- Se não houver registro, retornar `{ needs_connection: true }` (já tratado pelo frontend).
+- Continuar criando os eventos (vencimento, prorrogação, férias) com a mesma lógica atual.
 
-### 3. Integração com Google Agenda
+### 5. UI — `AnaliseContrato.tsx`
 
-Como **não há conector Google Calendar disponível** no workspace ainda, vou:
+- Adicionar botão "**Conectar Google Agenda**" que aparece quando o backend retorna `needs_connection: true` ou nunca foi conectado.
+- Esse botão chama `google-oauth-start` e faz `window.location.href = url`.
+- Após retorno (`?google=ok`), mostra toast "Google Agenda conectado" e dispara sincronização automaticamente.
+- Pequeno indicador no topo do card: "✅ Google Agenda conectado" / "⚠️ Não conectado".
 
-- Criar a edge function `sync-calendar-alerts` que aceita um `alerta_id` e cria o evento no Google Calendar via API REST.
-- Na **primeira execução**, vou pedir para você conectar a conta Google (OAuth) por meio do conector padrão do Lovable. Isso aparece como um botão na UI ("Conectar Google Agenda").
-- Cada alerta criado fica como `pendente` até a sincronização ser disparada (botão "Sincronizar com Google Agenda" no perfil + automático ao analisar).
-- Eventos criados:
-  - **2 dias antes do vencimento do contrato** — título: "⚠️ Vence contrato — {Nome}"
-  - **2 dias antes da prorrogação** — título: "📝 Prorrogar contrato — {Nome}"
-  - **5 meses antes das férias** — título: "🌴 Férias se aproximam — {Nome}"
-  - Cada evento com lembrete pop-up 1 dia antes + descrição com link de volta para o perfil.
-
-### 4. Mudanças na UI (`src/pages/FuncionarioDetalhe.tsx`)
-
-**Aba Documentos — categoria "Contrato de Trabalho":**
-- Após upload, aparece automaticamente um botão **"Analisar contrato com IA"** (ou roda automaticamente). Mostra spinner.
-- Quando termina: card "Análise do contrato" mostra:
-  - Admissão · Tipo · Vencimento · Prorrogação · Próximas férias
-  - Badge de confiança (verde/amarelo/vermelho seguindo `ocr-utils`)
-  - Botões: **"Editar dados"** (caso a IA tenha errado) e **"Reanalisar"**
-- Card "Alertas programados" lista os 3 alertas com status (pendente/sincronizado) e botão **"Sincronizar no Google Agenda"**.
-
-**Aba Férias:**
-- Quando há `data_proximas_ferias` calculada, mostra card no topo: "Próximas férias previstas: DD/MM/AAAA · alerta em DD/MM/AAAA".
-
-### 5. Fluxo do usuário
-
-```text
-1. Anexa contrato (PDF/imagem) na aba Documentos
-2. IA lê → preenche admissão, vencimento, prorrogação
-3. Sistema calcula próximas férias e cria 3 alertas
-4. Usuário clica "Conectar Google Agenda" (1ª vez)
-5. Sistema cria os 3 eventos no Google Agenda
-6. Usuário pode editar/reanalisar a qualquer momento
-```
-
-### Resumo Técnico
+### 6. Resumo Técnico
 
 | Item | Mudança |
 |---|---|
-| **Migration** | criar `contratos_analise` + `contrato_alertas` + RLS |
-| **Edge function nova** | `analyze-contract` (Lovable AI, Gemini multimodal) |
-| **Edge function nova** | `sync-calendar-alerts` (Google Calendar API) |
-| **Conector** | solicitar conexão Google Calendar via `standard_connectors` na 1ª sincronização |
-| **Frontend** | seção "Análise do contrato" + "Alertas" na aba Documentos de `FuncionarioDetalhe.tsx`; aviso na aba Férias |
-| **Tipos** | adicionar `ContratoAnalise` e `ContratoAlerta` em `src/types/index.ts` |
+| **Migration** | criar `google_calendar_tokens` + RLS |
+| **Edge nova** | `google-oauth-start` (verify_jwt = true) |
+| **Edge nova** | `google-oauth-callback` (verify_jwt = false — Google não envia JWT) |
+| **Edge editada** | `sync-calendar-alerts` — usa token do usuário + refresh automático |
+| **Secrets novos** | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` |
+| **Frontend** | botão Conectar + tratamento do retorno em `AnaliseContrato.tsx` |
+| **config.toml** | bloco `[functions.google-oauth-callback]` com `verify_jwt = false` |
+
+### Ordem de execução quando você aprovar
+
+1. Criar tabela + edge functions + UI (sem secrets ainda — vou marcar TODO).
+2. Te mostrar a **redirect URI exata** da edge `google-oauth-callback`.
+3. Você configura no Google Cloud Console e me envia Client ID + Secret pelo prompt de secret.
+4. Testamos: você clica "Conectar Google Agenda" → autoriza → sincroniza → eventos aparecem na sua agenda.
 
 ### O que NÃO muda
 
-- Estrutura de upload de documentos já existente.
-- Tabela `funcionario_ferias` (continua para férias **executadas**; a previsão fica em `contratos_analise.data_proximas_ferias`).
-- Lógica de OCR de folha de ponto.
-
-### Pontos de atenção (assuma que vou seguir o padrão a menos que diga o contrário)
-
-- IA: usaremos **Lovable AI Gateway** (sem chave extra) com Gemini 2.5 Flash — gratuito até set/2025 e suporta PDF/imagem direto.
-- Google Agenda: na primeira sincronização vou abrir o fluxo de conexão; se preferir adiar a integração com Google e só guardar os alertas no banco por enquanto, é só me avisar.
-- Editar manualmente: sempre que você corrigir um campo extraído, o alerta correspondente é recalculado.
+- Lógica de análise do contrato (`analyze-contract`).
+- Tabelas `contratos_analise` e `contrato_alertas`.
+- Cálculo de datas dos lembretes.
 
