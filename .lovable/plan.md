@@ -1,83 +1,65 @@
 
 
-## Plano: Vincular Google Agenda via OAuth próprio (por usuário)
+## Plano: Corrigir bug do `analyze-contract` e executar o teste completo
 
-Hoje a edge `sync-calendar-alerts` depende de um secret estático `GOOGLE_CALENDAR_ACCESS_TOKEN` — isso não funciona em produção (token expira em 1h e não é por usuário). Vou substituir por OAuth real com Google, usando credenciais que você vai criar no Google Cloud Console.
+### Diagnóstico
 
-### 1. O que você precisa fazer no Google Cloud (passo a passo na hora da implementação)
+O contrato de Ludimila (`Admissão - LUDIMILA DOS SANTOS ÂNGELO.pdf`, 179 KB) já foi anexado, mas a função `analyze-contract` falha com **"Maximum call stack size exceeded"** na linha 91:
 
-1. Acessar https://console.cloud.google.com/ → criar projeto (ou usar existente).
-2. APIs & Services → **Library** → ativar **Google Calendar API**.
-3. APIs & Services → **OAuth consent screen** → tipo "External" → preencher nome do app, email de suporte, e adicionar o escopo `https://www.googleapis.com/auth/calendar.events`.
-4. APIs & Services → **Credentials** → Create Credentials → **OAuth client ID** → tipo "Web application".
-5. **Authorized redirect URI**: vou te dar a URL exata da edge function de callback (algo como `https://tqzxjuszojskbpackqyr.supabase.co/functions/v1/google-oauth-callback`).
-6. Copiar **Client ID** e **Client Secret**.
+```ts
+const base64 = btoa(String.fromCharCode(...new Uint8Array(buf)));
+```
 
-Depois você cola esses 2 valores em secrets que eu vou pedir: `GOOGLE_OAUTH_CLIENT_ID` e `GOOGLE_OAUTH_CLIENT_SECRET`.
+O spread `...` em arrays grandes estoura a pilha de chamadas. Bug clássico de conversão base64 em Deno.
 
-### 2. Banco — nova tabela `google_calendar_tokens`
+### O que será feito
 
-| Coluna | Tipo |
-|---|---|
-| `user_id` | uuid PK (`auth.users.id`) |
-| `access_token` | text |
-| `refresh_token` | text |
-| `expires_at` | timestamptz |
-| `scope` | text |
-| `created_at`, `updated_at` | timestamptz |
+**1. Corrigir `supabase/functions/analyze-contract/index.ts`**
 
-RLS: cada usuário só lê/escreve a própria linha (`user_id = auth.uid()`).
+Substituir a conversão por uma versão segura em chunks:
 
-### 3. Duas novas edge functions
+```ts
+function arrayBufferToBase64(buf: ArrayBuffer): string {
+  const bytes = new Uint8Array(buf);
+  let binary = "";
+  const chunk = 0x8000; // 32 KB
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk) as unknown as number[]);
+  }
+  return btoa(binary);
+}
+```
 
-**a) `google-oauth-start`** (chamada pelo frontend)
-- Gera URL de autorização do Google com `client_id`, `redirect_uri`, `scope=calendar.events`, `access_type=offline`, `prompt=consent` (garante refresh_token).
-- Inclui `state` = id do usuário assinado para evitar CSRF.
-- Retorna `{ url }` para o frontend redirecionar.
+Também trocar `image_url` por `file` quando o mime for `application/pdf` (Gemini aceita PDFs nativamente via `data:application/pdf;base64,...` no campo `image_url`, mas deixar explícito o tipo aumenta a confiabilidade).
 
-**b) `google-oauth-callback`** (chamada pelo Google após login)
-- Recebe `code` + `state`.
-- Troca `code` por `access_token` + `refresh_token` em `https://oauth2.googleapis.com/token`.
-- Salva (upsert) em `google_calendar_tokens` para o `user_id` do `state`.
-- Redireciona o usuário de volta para `/funcionarios/<id>` com `?google=ok`.
+**2. Redeploy** da função `analyze-contract`.
 
-### 4. Refatorar `sync-calendar-alerts`
+**3. Disparar a análise** chamando a edge function via `supabase--curl_edge_functions` para o documento `c3e058af-7c06-41e3-928b-50edd0e43775` da Ludimila.
 
-- Remover uso de `GOOGLE_CALENDAR_ACCESS_TOKEN`.
-- Buscar token do usuário em `google_calendar_tokens`.
-- Se `expires_at < now()`, usar o `refresh_token` para pegar novo `access_token` e atualizar a tabela.
-- Se não houver registro, retornar `{ needs_connection: true }` (já tratado pelo frontend).
-- Continuar criando os eventos (vencimento, prorrogação, férias) com a mesma lógica atual.
+**4. Validar resultado** lendo `contratos_analise` e `contrato_alertas` no banco — confirmar:
+- `data_admissao`, `tipo_contrato`, `data_vencimento`, `data_prorrogacao` extraídos
+- `data_proximas_ferias` calculada (admissão + 12 meses)
+- 1 a 3 alertas criados (vencimento −2d, prorrogação −2d, férias −5m)
 
-### 5. UI — `AnaliseContrato.tsx`
+**5. Sincronizar com Google Agenda** chamando `sync-calendar-alerts`. Como a integração depende de OAuth feito no navegador pelo usuário, vou:
+- Verificar se já existe token em `google_calendar_tokens` para o usuário
+- Se sim: disparar a sincronização e validar `google_event_id` preenchido
+- Se não: reportar que falta o passo manual de "Conectar Google Agenda" na UI (clicar no botão na aba Documentos), e deixar a análise pronta para ser sincronizada
 
-- Adicionar botão "**Conectar Google Agenda**" que aparece quando o backend retorna `needs_connection: true` ou nunca foi conectado.
-- Esse botão chama `google-oauth-start` e faz `window.location.href = url`.
-- Após retorno (`?google=ok`), mostra toast "Google Agenda conectado" e dispara sincronização automaticamente.
-- Pequeno indicador no topo do card: "✅ Google Agenda conectado" / "⚠️ Não conectado".
-
-### 6. Resumo Técnico
+### Resumo Técnico
 
 | Item | Mudança |
 |---|---|
-| **Migration** | criar `google_calendar_tokens` + RLS |
-| **Edge nova** | `google-oauth-start` (verify_jwt = true) |
-| **Edge nova** | `google-oauth-callback` (verify_jwt = false — Google não envia JWT) |
-| **Edge editada** | `sync-calendar-alerts` — usa token do usuário + refresh automático |
-| **Secrets novos** | `GOOGLE_OAUTH_CLIENT_ID`, `GOOGLE_OAUTH_CLIENT_SECRET` |
-| **Frontend** | botão Conectar + tratamento do retorno em `AnaliseContrato.tsx` |
-| **config.toml** | bloco `[functions.google-oauth-callback]` com `verify_jwt = false` |
-
-### Ordem de execução quando você aprovar
-
-1. Criar tabela + edge functions + UI (sem secrets ainda — vou marcar TODO).
-2. Te mostrar a **redirect URI exata** da edge `google-oauth-callback`.
-3. Você configura no Google Cloud Console e me envia Client ID + Secret pelo prompt de secret.
-4. Testamos: você clica "Conectar Google Agenda" → autoriza → sincroniza → eventos aparecem na sua agenda.
+| `analyze-contract/index.ts` | função `arrayBufferToBase64` em chunks de 32 KB |
+| Deploy | redeploy de `analyze-contract` |
+| Teste 1 | `curl_edge_functions` → `analyze-contract` com `documento_id` da Ludimila |
+| Teste 2 | `read_query` em `contratos_analise` + `contrato_alertas` |
+| Teste 3 | `curl_edge_functions` → `sync-calendar-alerts` (se token Google existir) |
 
 ### O que NÃO muda
 
-- Lógica de análise do contrato (`analyze-contract`).
-- Tabelas `contratos_analise` e `contrato_alertas`.
-- Cálculo de datas dos lembretes.
+- Schema do banco
+- Lógica de cálculo de datas
+- UI de `AnaliseContrato.tsx`
+- Função `sync-calendar-alerts` (já está correta)
 
