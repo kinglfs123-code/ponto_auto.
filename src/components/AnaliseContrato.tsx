@@ -1,10 +1,10 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Sparkles, Calendar, RefreshCw, AlertCircle, CheckCircle2, Link2, LinkIcon } from "lucide-react";
+import { Loader2, Sparkles, Calendar, AlertCircle, CheckCircle2, Link2, LinkIcon } from "lucide-react";
 import type { ContratoAnalise, ContratoAlerta, FuncionarioDocumento } from "@/types";
 
 const TIPO_LABEL: Record<string, string> = {
@@ -26,12 +26,6 @@ const formatDate = (d?: string | null) => {
   return `${day}/${m}/${y}`;
 };
 
-const confiancaBadge = (c: number) => {
-  if (c >= 80) return { label: "Alta confiança", cls: "bg-green-500/15 text-green-600 border-green-500/30" };
-  if (c >= 50) return { label: "Confiança média", cls: "bg-amber-500/15 text-amber-600 border-amber-500/30" };
-  return { label: "Baixa confiança", cls: "bg-destructive/15 text-destructive border-destructive/30" };
-};
-
 interface Props {
   funcionarioId: string;
   contratos: FuncionarioDocumento[];
@@ -45,6 +39,10 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
   const [syncing, setSyncing] = useState(false);
   const [googleConectado, setGoogleConectado] = useState<boolean | null>(null);
   const [connecting, setConnecting] = useState(false);
+
+  // refs para garantir disparo único por contexto
+  const autoAnalyzedRef = useRef<string | null>(null);
+  const autoSyncedRef = useRef<string | null>(null);
 
   const checkGoogle = async () => {
     const { data: u } = await supabase.auth.getUser();
@@ -94,7 +92,7 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
     const g = params.get("google");
     if (!g) return;
     if (g === "ok") {
-      toast({ title: "Google Agenda conectado", description: "Você já pode sincronizar os alertas." });
+      toast({ title: "Google Agenda conectado", description: "Sincronizando alertas automaticamente…" });
       checkGoogle();
     } else {
       const reason = params.get("reason");
@@ -104,7 +102,6 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
         variant: "destructive",
       });
     }
-    // limpa query
     const url = new URL(window.location.href);
     url.searchParams.delete("google");
     url.searchParams.delete("reason");
@@ -130,10 +127,7 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
   const ultimoContrato = contratos[0];
 
   const handleAnalisar = async () => {
-    if (!ultimoContrato) {
-      toast({ title: "Anexe um contrato primeiro", variant: "destructive" });
-      return;
-    }
+    if (!ultimoContrato) return;
     setAnalyzing(true);
     try {
       const { data, error } = await supabase.functions.invoke("analyze-contract", {
@@ -153,10 +147,7 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
 
   const handleSincronizar = async () => {
     const pendentes = alertas.filter((a) => a.status !== "sincronizado");
-    if (pendentes.length === 0) {
-      toast({ title: "Nada para sincronizar" });
-      return;
-    }
+    if (pendentes.length === 0) return;
     setSyncing(true);
     try {
       const { data, error } = await supabase.functions.invoke("sync-calendar-alerts", {
@@ -165,15 +156,10 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
       if (error) throw error;
       if (data?.needs_connection) {
         setGoogleConectado(false);
-        toast({
-          title: "Conecte o Google Agenda",
-          description: "Clique em Conectar Google Agenda para autorizar e tente sincronizar de novo.",
-          variant: "destructive",
-        });
         return;
       }
       if (data?.error) throw new Error(data.error);
-      toast({ title: "Alertas sincronizados" });
+      toast({ title: "Alertas sincronizados no Google Agenda" });
       await load();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Falha ao sincronizar";
@@ -182,6 +168,32 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
       setSyncing(false);
     }
   };
+
+  // Auto-análise quando há contrato anexado mas sem análise ainda
+  useEffect(() => {
+    if (loading) return;
+    if (!ultimoContrato) return;
+    if (analise) return;
+    if (analyzing) return;
+    if (autoAnalyzedRef.current === ultimoContrato.id) return;
+    autoAnalyzedRef.current = ultimoContrato.id;
+    handleAnalisar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, ultimoContrato?.id, analise, analyzing]);
+
+  // Auto-sync quando há alertas pendentes e Google conectado
+  useEffect(() => {
+    if (loading) return;
+    if (googleConectado !== true) return;
+    if (syncing) return;
+    const pendentes = alertas.filter((a) => a.status !== "sincronizado");
+    if (pendentes.length === 0) return;
+    const key = pendentes.map((a) => a.id).sort().join(",");
+    if (autoSyncedRef.current === key) return;
+    autoSyncedRef.current = key;
+    handleSincronizar();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, googleConectado, alertas, syncing]);
 
   if (loading) {
     return (
@@ -194,51 +206,25 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
   }
 
   if (!analise) {
-    return (
-      <Card className="border-border/50 border-dashed">
-        <CardContent className="py-5 px-4 flex items-center justify-between flex-wrap gap-3">
-          <div className="flex items-start gap-3 min-w-0">
-            <Sparkles className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-sm font-medium text-foreground">Análise inteligente do contrato</p>
-              <p className="text-xs text-muted-foreground">
-                {ultimoContrato
-                  ? "A IA vai ler o contrato anexado e extrair admissão, vencimento e prorrogação."
-                  : "Anexe um contrato para liberar a análise automática."}
-              </p>
-            </div>
-          </div>
-          <Button onClick={handleAnalisar} disabled={!ultimoContrato || analyzing} className="gap-1.5">
-            {analyzing ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="h-4 w-4" />}
-            Analisar com IA
-          </Button>
-        </CardContent>
-      </Card>
-    );
+    if (analyzing) {
+      return (
+        <Card className="border-border/50 border-dashed">
+          <CardContent className="py-5 px-4 flex items-center gap-3">
+            <Loader2 className="h-4 w-4 animate-spin text-primary" />
+            <p className="text-sm text-muted-foreground">Analisando contrato com IA…</p>
+          </CardContent>
+        </Card>
+      );
+    }
+    return null;
   }
 
-  const conf = confiancaBadge(analise.confianca);
+  const pendentes = alertas.filter((a) => a.status !== "sincronizado");
 
   return (
     <div className="space-y-3">
       <Card className="border-border/50">
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <CardTitle className="text-sm flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-primary" /> Análise do contrato
-            </CardTitle>
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className={`text-xs ${conf.cls}`}>
-                {conf.label} · {analise.confianca}%
-              </Badge>
-              <Button variant="ghost" size="sm" onClick={handleAnalisar} disabled={analyzing} className="gap-1.5">
-                {analyzing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-                Reanalisar
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+        <CardContent className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm pt-5">
           <Field label="Admissão" value={formatDate(analise.data_admissao)} />
           <Field label="Tipo" value={analise.tipo_contrato ? TIPO_LABEL[analise.tipo_contrato] || analise.tipo_contrato : "—"} />
           <Field label="Vencimento" value={formatDate(analise.data_vencimento)} />
@@ -254,19 +240,14 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
             <div className="flex items-center justify-between flex-wrap gap-2">
               <CardTitle className="text-sm flex items-center gap-2">
                 <Calendar className="h-4 w-4 text-primary" /> Alertas programados
+                {syncing && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />}
               </CardTitle>
-              <div className="flex items-center gap-2 flex-wrap">
-                {googleConectado === false && (
-                  <Button size="sm" variant="outline" onClick={handleConectarGoogle} disabled={connecting} className="gap-1.5">
-                    {connecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LinkIcon className="h-3.5 w-3.5" />}
-                    Conectar Google Agenda
-                  </Button>
-                )}
-                <Button size="sm" onClick={handleSincronizar} disabled={syncing} className="gap-1.5">
-                  {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Calendar className="h-3.5 w-3.5" />}
-                  Sincronizar no Google Agenda
+              {googleConectado === false && pendentes.length > 0 && (
+                <Button size="sm" variant="outline" onClick={handleConectarGoogle} disabled={connecting} className="gap-1.5">
+                  {connecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LinkIcon className="h-3.5 w-3.5" />}
+                  Conectar Google Agenda
                 </Button>
-              </div>
+              )}
             </div>
             <div className="flex items-center gap-1.5 text-xs">
               {googleConectado ? (
@@ -298,7 +279,9 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
                     <AlertCircle className="h-3 w-3" /> Erro
                   </Badge>
                 ) : (
-                  <Badge variant="outline" className="text-xs">Pendente</Badge>
+                  <Badge variant="outline" className="text-xs gap-1">
+                    <Loader2 className="h-3 w-3 animate-spin" /> Sincronizando
+                  </Badge>
                 )}
               </div>
             ))}
