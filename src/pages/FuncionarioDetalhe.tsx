@@ -1115,51 +1115,78 @@ export default function FuncionarioDetalhe() {
       </div>
 
       {/* Edit Funcionário Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={editOpen} onOpenChange={(o) => !savingEdit && setEditOpen(o)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar informações do colaborador</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="sm:col-span-2">
-              <Label className="text-xs">Nome completo *</Label>
-              <Input value={editForm.nome_completo} onChange={(e) => setEditForm({ ...editForm, nome_completo: e.target.value })} />
+              <Label htmlFor="ed-nome" className="text-xs">Nome completo *</Label>
+              <Input
+                id="ed-nome"
+                value={editForm.nome_completo}
+                onChange={(e) => setEditForm({ ...editForm, nome_completo: e.target.value })}
+                onBlur={() => setEditTouched((t) => ({ ...t, nome_completo: true }))}
+                aria-invalid={editTouched.nome_completo && !!editErrors.nome_completo}
+                className={cn(editTouched.nome_completo && editErrors.nome_completo && "border-destructive focus-visible:ring-destructive/40")}
+              />
+              {editTouched.nome_completo && editErrors.nome_completo && <p className="text-xs text-destructive mt-1">{editErrors.nome_completo}</p>}
             </div>
             <div>
-              <Label className="text-xs">CPF *</Label>
-              <Input value={maskCPF(editForm.cpf)} onChange={(e) => setEditForm({ ...editForm, cpf: e.target.value.replace(/\D/g, "").slice(0, 11) })} />
+              <Label htmlFor="ed-cpf" className="text-xs">CPF *</Label>
+              <Input
+                id="ed-cpf"
+                value={maskCPF(editForm.cpf)}
+                onChange={(e) => setEditForm({ ...editForm, cpf: e.target.value.replace(/\D/g, "").slice(0, 11) })}
+                onBlur={() => setEditTouched((t) => ({ ...t, cpf: true }))}
+                placeholder="000.000.000-00"
+                inputMode="numeric"
+                aria-invalid={editTouched.cpf && !!editErrors.cpf}
+                className={cn(editTouched.cpf && editErrors.cpf && "border-destructive focus-visible:ring-destructive/40")}
+              />
+              {editTouched.cpf && editErrors.cpf && <p className="text-xs text-destructive mt-1">{editErrors.cpf}</p>}
             </div>
             <div>
-              <Label className="text-xs">E-mail</Label>
-              <Input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+              <Label htmlFor="ed-email" className="text-xs">E-mail</Label>
+              <Input
+                id="ed-email"
+                type="email"
+                placeholder="joao@empresa.com.br"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                onBlur={() => setEditTouched((t) => ({ ...t, email: true }))}
+                aria-invalid={editTouched.email && !!editErrors.email}
+                className={cn(editTouched.email && editErrors.email && "border-destructive focus-visible:ring-destructive/40")}
+              />
+              {editTouched.email && editErrors.email && <p className="text-xs text-destructive mt-1">{editErrors.email}</p>}
             </div>
             <div>
-              <Label className="text-xs">Cargo</Label>
-              <Input value={editForm.cargo} onChange={(e) => setEditForm({ ...editForm, cargo: e.target.value })} />
+              <Label htmlFor="ed-cargo" className="text-xs">Cargo</Label>
+              <Input id="ed-cargo" value={editForm.cargo} onChange={(e) => setEditForm({ ...editForm, cargo: e.target.value })} />
             </div>
             <div>
-              <Label className="text-xs">Nascimento</Label>
-              <Input type="date" value={editForm.data_nascimento} onChange={(e) => setEditForm({ ...editForm, data_nascimento: e.target.value })} />
+              <Label htmlFor="ed-nasc" className="text-xs">Nascimento</Label>
+              <Input id="ed-nasc" type="date" max={new Date().toISOString().split("T")[0]} value={editForm.data_nascimento} onChange={(e) => setEditForm({ ...editForm, data_nascimento: e.target.value })} />
             </div>
             <div>
-              <Label className="text-xs">Entrada</Label>
-              <Input type="time" value={editForm.horario_entrada} onChange={(e) => setEditForm({ ...editForm, horario_entrada: e.target.value })} />
+              <Label htmlFor="ed-ent" className="text-xs">Entrada</Label>
+              <Input id="ed-ent" type="time" value={editForm.horario_entrada} onChange={(e) => setEditForm({ ...editForm, horario_entrada: e.target.value })} />
             </div>
             <div>
-              <Label className="text-xs">Saída</Label>
-              <Input type="time" value={editForm.horario_saida} onChange={(e) => setEditForm({ ...editForm, horario_saida: e.target.value })} />
+              <Label htmlFor="ed-sai" className="text-xs">Saída</Label>
+              <Input id="ed-sai" type="time" value={editForm.horario_saida} onChange={(e) => setEditForm({ ...editForm, horario_saida: e.target.value })} />
             </div>
             <div>
-              <Label className="text-xs">Intervalo (HH:MM)</Label>
-              <Input value={editForm.intervalo} onChange={(e) => setEditForm({ ...editForm, intervalo: e.target.value })} placeholder="01:00" />
+              <Label htmlFor="ed-int" className="text-xs">Intervalo (HH:MM)</Label>
+              <Input id="ed-int" value={editForm.intervalo} onChange={(e) => setEditForm({ ...editForm, intervalo: e.target.value })} placeholder="01:00" />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={savingEdit}>Cancelar</Button>
-            <Button onClick={handleSaveEdit} disabled={savingEdit} className="gap-1.5">
-              {savingEdit && <Loader2 className="h-4 w-4 animate-spin" />}
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={savingEdit} className="min-h-[44px] sm:min-h-0">Cancelar</Button>
+            <SpinnerButton onClick={handleSaveEdit} loading={savingEdit} loadingText="Salvando…" className="min-h-[44px] sm:min-h-0">
               Salvar
-            </Button>
+            </SpinnerButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>
