@@ -232,6 +232,11 @@ async function sendGmail(accessToken: string, rawMime: string): Promise<{ ok: bo
   });
   let body: any = null;
   try { body = await resp.json(); } catch { body = await resp.text(); }
+  if (!resp.ok) {
+    console.error("[send-via-gmail] gmail send failed", { status: resp.status, body });
+  } else {
+    console.log("[send-via-gmail] gmail send ok", { status: resp.status, message_id: (body as any)?.id });
+  }
   return { ok: resp.ok, status: resp.status, body };
 }
 
