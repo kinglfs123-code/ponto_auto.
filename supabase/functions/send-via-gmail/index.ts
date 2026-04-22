@@ -126,38 +126,24 @@ async function getValidAccessToken(
   return { token: tok.access_token, scope: newScope };
 }
 
-class GmailScopeError extends Error {
-  constructor(public httpStatus: number, message: string) {
-    super(message);
-    this.name = "GmailScopeError";
-  }
-}
+// Note: We intentionally do NOT call gmail/v1/users/me/profile here.
+// That endpoint requires the gmail.readonly/metadata scope, which we do not request.
+// With only the `gmail.send` scope, Gmail still:
+//   - sends the message as the authenticated account
+//   - overrides the From header with the real Gmail display name + address
+// So we build the MIME with a placeholder From (the auth user's email when available),
+// and Gmail rewrites it server-side.
 
-async function getGoogleProfile(accessToken: string): Promise<{ email: string; name: string }> {
-  // Use Gmail's own profile endpoint — already authorized by the gmail.send scope.
-  // Avoids dependency on userinfo.email / userinfo.profile scopes.
-  const resp = await fetch("https://gmail.googleapis.com/gmail/v1/users/me/profile", {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
-  if (!resp.ok) {
-    const txt = await resp.text().catch(() => "");
-    console.error("[send-via-gmail] gmail profile failed:", resp.status, txt);
-    if (resp.status === 401 || resp.status === 403) {
-      throw new GmailScopeError(resp.status, `Falha ao ler perfil Google: ${resp.status}`);
-    }
-    throw new Error(`Falha ao ler perfil Google: ${resp.status}`);
-  }
-  const json = await resp.json() as { emailAddress?: string };
-  const email = json.emailAddress ?? "";
-  // Fallback display name from local part (e.g. "joao.vitor" -> "Joao Vitor").
-  // Gmail still overrides the From header with the account's real display name on send.
-  const localPart = email.split("@")[0] ?? "";
-  const name = localPart
-    .split(/[._-]+/)
-    .filter(Boolean)
-    .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
-    .join(" ") || email;
-  return { email, name };
+function deriveDisplayName(email: string): string {
+  const localPart = (email.split("@")[0] ?? "").trim();
+  if (!localPart) return email;
+  return (
+    localPart
+      .split(/[._-]+/)
+      .filter(Boolean)
+      .map((p) => p.charAt(0).toUpperCase() + p.slice(1))
+      .join(" ") || email
+  );
 }
 
 function buildHolerieMime(opts: {
