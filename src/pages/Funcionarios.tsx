@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -72,7 +72,7 @@ export default function Funcionarios() {
   const [listLoading, setListLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [touched, setTouched] = useState<Record<string, boolean>>({});
-  const errors = validateFuncionario(form);
+  const errors = useMemo(() => validateFuncionario(form), [form]);
   const isMobile = useIsMobile();
   const navigate = useNavigate();
 
