@@ -461,6 +461,8 @@ export default function FuncionarioDetalhe() {
   const openNewFerias = () => {
     setEditingFeriasId(null);
     setFeriasForm({ data_inicio: "", data_fim: "", status: "planejada", observacao: "" });
+    setFeriasFile(null);
+    setFeriasRemoveDoc(false);
     setShowFeriasForm(true);
   };
 
@@ -472,7 +474,35 @@ export default function FuncionarioDetalhe() {
       status: fr.status as StatusFerias,
       observacao: fr.observacao || "",
     });
+    setFeriasFile(null);
+    setFeriasRemoveDoc(false);
     setShowFeriasForm(true);
+  };
+
+  const trySyncFeriasCalendar = async (ferias_id: string, silent = false) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-ferias-calendar", {
+        body: { ferias_id },
+      });
+      if (error) throw error;
+      if (data?.needs_connection) {
+        if (!silent) {
+          toast({
+            title: "Conecte o Google Agenda",
+            description: "Necessário para criar o evento de férias.",
+            variant: "destructive",
+          });
+          startGoogleConnect();
+        }
+        return false;
+      }
+      if (data?.error) throw new Error(data.error);
+      if (!silent) toast({ title: "Evento criado no Google Agenda" });
+      return true;
+    } catch (err: any) {
+      if (!silent) toast({ title: "Erro ao sincronizar agenda", description: err?.message, variant: "destructive" });
+      return false;
+    }
   };
 
   const handleSaveFerias = async () => {
@@ -482,35 +512,99 @@ export default function FuncionarioDetalhe() {
     }
     const dias = calcDias(feriasForm.data_inicio, feriasForm.data_fim);
     if (dias <= 0) { toast({ title: "Período inválido", variant: "destructive" }); return; }
+    if (feriasFile && feriasFile.size > 10 * 1024 * 1024) {
+      toast({ title: "Arquivo muito grande", description: "Máximo 10MB", variant: "destructive" });
+      return;
+    }
 
-    const payload = {
-      data_inicio: feriasForm.data_inicio,
-      data_fim: feriasForm.data_fim,
-      dias,
-      status: feriasForm.status,
-      observacao: feriasForm.observacao || null,
-    };
+    setSavingFerias(true);
+    try {
+      const ferias_id = editingFeriasId || crypto.randomUUID();
+      const existing = editingFeriasId ? ferias.find((f) => f.id === editingFeriasId) : null;
 
-    const { error } = editingFeriasId
-      ? await supabase.from("funcionario_ferias").update(payload).eq("id", editingFeriasId)
-      : await supabase.from("funcionario_ferias").insert({
+      let documento_storage_path: string | null = existing?.documento_storage_path ?? null;
+      let documento_nome: string | null = existing?.documento_nome ?? null;
+
+      // Remoção solicitada
+      if (feriasRemoveDoc && existing?.documento_storage_path) {
+        await supabase.storage.from("colaborador-arquivos").remove([existing.documento_storage_path]);
+        documento_storage_path = null;
+        documento_nome = null;
+      }
+
+      // Upload novo arquivo
+      if (feriasFile) {
+        // Remove antigo se houver
+        if (existing?.documento_storage_path && !feriasRemoveDoc) {
+          await supabase.storage.from("colaborador-arquivos").remove([existing.documento_storage_path]);
+        }
+        const safeName = feriasFile.name.replace(/[^\w.\-]/g, "_");
+        const path = `${func.empresa_id}/${func.id}/ferias/${ferias_id}-${safeName}`;
+        const { error: upErr } = await supabase.storage.from("colaborador-arquivos").upload(path, feriasFile, { upsert: true });
+        if (upErr) throw upErr;
+        documento_storage_path = path;
+        documento_nome = feriasFile.name;
+      }
+
+      const payload = {
+        data_inicio: feriasForm.data_inicio,
+        data_fim: feriasForm.data_fim,
+        dias,
+        status: feriasForm.status,
+        observacao: feriasForm.observacao || null,
+        documento_storage_path,
+        documento_nome,
+      };
+
+      if (editingFeriasId) {
+        const { error } = await supabase.from("funcionario_ferias").update(payload).eq("id", editingFeriasId);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from("funcionario_ferias").insert({
+          id: ferias_id,
           ...payload,
           funcionario_id: func.id,
           empresa_id: func.empresa_id,
         });
+        if (error) throw error;
+      }
 
-    if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
-    else {
       toast({ title: editingFeriasId ? "Férias atualizadas" : "Férias registradas" });
       setShowFeriasForm(false);
       setEditingFeriasId(null);
       setFeriasForm({ data_inicio: "", data_fim: "", status: "planejada", observacao: "" });
+      setFeriasFile(null);
+      setFeriasRemoveDoc(false);
+      if (feriasFileInputRef.current) feriasFileInputRef.current.value = "";
+
+      // Sincroniza com Google Agenda automaticamente se conectado
+      if (googleConnected) {
+        await trySyncFeriasCalendar(ferias_id, true);
+      }
       await loadAll();
+    } catch (err: any) {
+      toast({ title: "Erro", description: err?.message, variant: "destructive" });
+    } finally {
+      setSavingFerias(false);
     }
+  };
+
+  const handleDownloadFeriasDoc = async (fr: FuncionarioFerias) => {
+    if (!fr.documento_storage_path) return;
+    const { data, error } = await supabase.storage.from("colaborador-arquivos").createSignedUrl(fr.documento_storage_path, 3600);
+    if (error || !data) {
+      toast({ title: "Erro", description: error?.message, variant: "destructive" });
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
   };
 
   const handleDeleteFerias = async (fid: string) => {
     if (!confirm("Excluir este período de férias?")) return;
+    const fr = ferias.find((f) => f.id === fid);
+    if (fr?.documento_storage_path) {
+      await supabase.storage.from("colaborador-arquivos").remove([fr.documento_storage_path]);
+    }
     const { error } = await supabase.from("funcionario_ferias").delete().eq("id", fid);
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
     else { toast({ title: "Excluído" }); await loadAll(); }
