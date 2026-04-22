@@ -248,12 +248,12 @@ export default function Holerites() {
           <CardContent className="pt-5 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-muted-foreground">Empresa</label>
+                <Label htmlFor="hol-empresa" className="text-sm font-medium text-muted-foreground">Empresa</Label>
                 <EmpresaSelector value={empresaId} onChange={handleEmpresaChange} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-muted-foreground">Mês de Referência</label>
-                <Input type="month" value={mesRef} onChange={(e) => setMesRef(e.target.value)} />
+                <Label htmlFor="hol-mes" className="text-sm font-medium text-muted-foreground">Mês de Referência</Label>
+                <Input id="hol-mes" type="month" value={mesRef} onChange={(e) => setMesRef(e.target.value)} />
               </div>
             </div>
           </CardContent>
@@ -285,10 +285,10 @@ export default function Holerites() {
 
         {/* Send All */}
         {totalUploaded > totalSent && (
-          <Button onClick={handleSendAll} disabled={sendingAll} className="w-full gap-2" size="lg">
+          <SpinnerButton onClick={handleSendAll} loading={sendingAll} loadingText="Enviando…" className="w-full gap-2" size="lg">
             <Send className="h-4 w-4" />
-            {sendingAll ? "Enviando..." : `Enviar todos (${totalUploaded - totalSent} pendentes)`}
-          </Button>
+            Enviar todos ({totalUploaded - totalSent} pendentes)
+          </SpinnerButton>
         )}
 
         {/* Loading */}
