@@ -1,66 +1,136 @@
 
-## Plano: botão "Configurações" no dock + popover com tema/sair + refinar tema light
 
-### 1. Dock: substituir as 2 pílulas separadas por 1 botão "Configurações"
+## Plano: melhorias finais de UX antes de publicar
 
-Em `src/components/NavBar.tsx`:
-- Remover as duas pílulas separadas (tema e sair) que estão logo abaixo do dock principal.
-- Acrescentar um **7º item** ao dock principal: **Configurações** (ícone `Settings` do lucide), no mesmo padrão visual dos outros (24px, label de 11px, `liquid-hover`).
-- Esse item abre um **Popover** (`@/components/ui/popover`) ancorado nele, posicionado **acima** do dock (`side="top"`, `sideOffset=12`, `align="end"`).
-- Conteúdo do popover (também em estilo liquid glass, largura ~240px):
-  - Cabeçalho discreto "Configurações".
-  - Linha **Tema**: rótulo à esquerda + toggle à direita (Sol/Lua) que chama `toggleTheme()`. Mostra "Claro / Escuro".
-  - Separador fino.
-  - Botão **Sair** (ícone `LogOut`, texto vermelho/destructive) que chama `supabase.auth.signOut()` e navega para `/login`.
-- O popover usa as classes `liquid-glass` + `rounded-2xl`, com `p-2` e itens em `rounded-xl px-3 py-2 gap-3` (grid 8pt).
+Foco em 5 áreas — **confirmação visual**, **validações fortes**, **estados de loading**, **mensagens de erro amigáveis** e **acessibilidade/touch**. Mantém todo comportamento atual.
 
-### 2. Refinar a aparência do tema Light
+---
 
-Em `src/index.css`, ajustes apenas no bloco `.light` e nas regras `liquid-*` para o modo claro:
+### 1. Componentes utilitários (novos)
 
-- **Fundo geral mais suave** (off‑white com leve azul, em vez de cinza chapado):
-  - `--background: 220 25% 98%;`
-  - `--card: 0 0% 100%;`
-  - `--muted: 220 14% 96%;`
-  - `--secondary: 220 14% 95%;`
-  - `--border: 220 13% 90%;`
-  - `--input: 220 13% 90%;`
-  - `--muted-foreground: 220 9% 46%;`
-- **Glass do tema light** (mais "vidro fosco" estilo iOS, hoje fica meio leitoso demais):
-  - `--glass-bg: rgba(255, 255, 255, 0.55);`
-  - `--glass-border: rgba(15, 23, 42, 0.08);`
-  - `--glass-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);`
-- **Liquid glass no light** (override dentro de `.light .liquid-glass`):
-  - Gradiente top→bottom de `rgba(255,255,255,0.85)` para `rgba(255,255,255,0.55)`.
-  - `box-shadow`: sombra externa suave + brilho interno branco no topo + linha fina escura embaixo.
-  - `backdrop-filter: blur(32px) saturate(1.6)`.
-- **Pílula ativa no light**: já existe override; ajustar para usar `hsl(var(--primary)/0.10)` no fundo para destacar mais o item ativo (azul tênue) em vez do branco puro atual, melhorando contraste com a pílula clara.
-- **Hover no light**: leve fundo `rgba(15,23,42,0.04)` ao passar (acrescentar `.light .liquid-hover:hover` com background sutil), além do `translateY` já existente.
+**`src/components/ui/confirm-dialog.tsx`** — modal reutilizável (baseado em `Dialog` que já existe), substitui todos os `confirm()` do navegador:
+- Props: `open`, `title`, `description`, `confirmLabel`, `cancelLabel`, `variant ('danger' | 'default')`, `loading`, `onConfirm`, `onOpenChange`.
+- Botão de confirmar fica vermelho (`variant="destructive"`) quando `variant="danger"`, com spinner + `disabled` durante `loading`.
+- Mensagem padrão para deleção: *"Tem certeza que deseja excluir [item]? Esta ação não pode ser desfeita."*
 
-### 3. Detalhes de UX
+**`src/hooks/use-confirm.tsx`** — hook que expõe `confirm({...})` retornando `Promise<boolean>`. Renderiza um único `<ConfirmDialog>` controlado por estado interno via Provider em `App.tsx`. Permite chamar `await confirm({...})` em vez do `window.confirm`.
 
-- O ícone "Configurações" usa o mesmo tratamento de "ativo" quando o popover está aberto (estado controlado: `const [openSettings, setOpenSettings] = useState(false)` aplicando `liquid-pill-active` quando aberto).
-- Acessibilidade: `aria-label="Configurações"` no trigger; itens do menu como `<button>` com `aria-label`.
-- Mantém safe-area atual do dock; agora há **uma única linha** flutuante embaixo (mais limpo).
+**`src/components/ui/spinner-button.tsx`** (opcional) — wrapper fino sobre `Button` que aceita `loading: boolean` e renderiza `<Loader2 className="animate-spin" />` + texto, e força `disabled` enquanto carrega. Reaproveitado em todas as ações.
 
-### Diagrama do dock final
+**`src/lib/error-messages.ts`** — função `friendlyError(err)` que traduz erros técnicos:
+| Padrão detectado | Mensagem amigável |
+|---|---|
+| `Failed to fetch` / `Network` | "Não foi possível conectar. Verifique sua internet." |
+| `JWT expired` / `not authenticated` | "Sua sessão expirou. Faça login novamente." |
+| `permission denied` / `42501` / `Unauthorized` | "Você não tem permissão para esta ação." |
+| `duplicate key` / `23505` | "Este registro já existe." |
+| `violates foreign key` / `23503` | "Não é possível excluir: existem itens vinculados." |
+| `value too long` / `22001` | "Algum campo ultrapassou o limite de caracteres." |
+| validação Zod | concatena `issues[].message` |
+| fallback | "Algo deu errado. Tente novamente em instantes." |
 
-```text
-┌──────────────────────────────────────────────────────────┐
-│  Início  Empresas  Colab.  Ponto  Holerites  Relat.  ⚙  │
-└──────────────────────────────────────────────────────────┘
-                                                        │
-                                                ┌───────▼────────┐
-                                                │ Configurações  │
-                                                │ Tema     ☀/🌙 │
-                                                │ ──────────────│
-                                                │ ⎋ Sair         │
-                                                └────────────────┘
-```
+Todos os `toast({ description: error.message })` passam a usar `friendlyError(err)`.
+
+---
+
+### 2. Validações reforçadas em `src/lib/ponto-rules.ts`
+
+- `validateCPF`: implementar **dígitos verificadores** completos (algoritmo módulo 11), além de rejeitar sequências como `111.111.111-11`.
+- `validateCNPJ`: idem com módulo 11 (pesos 5,4,3,2,9,8,7,6,5,4,3,2 / 6,5,4,3,2,9,8,7,6,5,4,3,2).
+- Novas funções:
+  - `validateEmail(v)` — regex RFC simplificada + `.includes('@')` + domínio com TLD ≥ 2.
+  - `maskTelefoneBR(v)` — `(11) 91234-5678` ou `(11) 1234-5678`.
+  - `validateTelefoneBR(v)` — 10 ou 11 dígitos, DDD válido (11–99).
+
+Todas retornam `{ valid: boolean, message?: string }` para alimentar erros inline.
+
+---
+
+### 3. Validação inline (em tempo real, ao perder foco)
+
+**Padrão aplicado a todos os formulários** (`Funcionarios`, `Empresas`, `FuncionarioDetalhe → editar`, holerite, férias):
+
+- Estado local `errors: Record<string, string>` e `touched: Record<string, boolean>`.
+- `onBlur` marca `touched[campo] = true` e roda validação do campo.
+- `onChange` limpa o erro se o valor virou válido (UX positiva).
+- Render: abaixo do `<Input>`, mostrar `<p class="text-xs text-destructive mt-1">{errors.campo}</p>` quando `touched && errors[campo]`.
+- Borda do `Input` ganha `aria-invalid` + classe `border-destructive` quando tem erro.
+- Botão Salvar fica `disabled` se há **qualquer** erro ou campo obrigatório vazio.
+
+Campos validados:
+- **Empresa**: nome (obrigatório, ≥ 2 chars), CNPJ (14 dígitos + DV), jornada (HH:MM válido).
+- **Colaborador**: nome (obrigatório), CPF (11 dígitos + DV), e-mail (formato), data nascimento (não futura), entrada/saída/intervalo (HH:MM).
+- **Holerite/upload**: tipo MIME PDF + tamanho ≤ 10MB.
+
+---
+
+### 4. Substituir todos os `window.confirm(...)`
+
+Trocar por `await confirm({...})` do novo hook nos arquivos:
+
+| Arquivo | Ações |
+|---|---|
+| `Empresas.tsx` | excluir empresa |
+| `Funcionarios.tsx` | excluir colaborador |
+| `FuncionarioDetalhe.tsx` | excluir documento, holerite, folha, férias |
+| `Holerites.tsx` | excluir PDF; **NOVO**: confirmação de "Enviar todos por e-mail" mostrando contagem (*"Enviar holerite para 12 colaboradores?"*) |
+| `Relatorios.tsx` | excluir folha, excluir folhas do mês, excluir relatório |
+
+Botão de confirmar sempre vermelho quando for deleção.
+
+---
+
+### 5. Loading states + botões anti-duplo-clique
+
+Padronizar em **todos** os botões de ação (Salvar, Excluir confirmado, Enviar, Anexar, Gerar relatório, Conectar Google, Sincronizar férias, Analisar contrato):
+
+- Estado `loading: boolean` local (já existe na maioria — completar onde falta).
+- Botão usa o novo `SpinnerButton` ou padrão: `disabled={loading}` + `<Loader2 className="h-4 w-4 animate-spin" />` + texto "Salvando…", "Excluindo…", "Enviando…".
+- Toast de sucesso após cada ação (já existe na maior parte — completar onde falta, ex: `Empresas.remove`, `Relatorios.deleteRelatorio`).
+- Toast de erro sempre via `friendlyError()`.
+
+---
+
+### 6. Skeletons em listas
+
+Onde hoje só aparece "carregando" implícito ou tela vazia, adicionar skeletons enquanto `loading === true`:
+
+- `Funcionarios.tsx` — 5 skeleton cards/linhas.
+- `Empresas.tsx` — 3 skeleton cards.
+- `FuncionarioDetalhe.tsx` — header + 3 sections de skeleton.
+- `Relatorios.tsx` — skeleton da tabela.
+- `Holerites.tsx` já tem.
+
+---
+
+### 7. Acessibilidade básica + mobile touch
+
+Aplicado de forma global:
+
+- Todo `<Input>` recebe `<Label htmlFor>` correspondente + `id` (alguns hoje têm `<Label>` solto).
+- Foco visível: `Input` já tem `focus-visible:ring-2`. Garantir o mesmo em `button[size="icon"]` aumentando `ring-offset-2`.
+- Botões de ícone (`Pencil`/`Trash2`) hoje são `h-7 w-7` (28px) — em mobile (`useIsMobile`) usar `h-11 w-11` (44px) atendendo touch target mínimo. Em desktop manter compacto.
+- Em `ConfirmDialog`, o `DialogContent` já é centralizado; adicionar `max-h-[90vh] overflow-y-auto` para garantir scroll em telas pequenas.
+- Tabelas (`Funcionarios`, `Relatorios`) wrappadas em `<div className="overflow-x-auto">` para scroll horizontal em mobile (já há fallback de cards, mas reforço).
+- `placeholder` descritivo onde falta (ex: e-mail "joao@empresa.com.br", telefone "(11) 91234-5678").
+
+---
 
 ### Arquivos afetados
 
 | Arquivo | Mudança |
 |---|---|
-| `src/components/NavBar.tsx` | Remove as 2 pílulas; adiciona item "Configurações" com Popover (tema + sair) |
-| `src/index.css` | Refina variáveis e `liquid-*` do tema light (fundo, glass, pílula ativa, hover) |
+| `src/components/ui/confirm-dialog.tsx` | **NOVO** — modal de confirmação reutilizável |
+| `src/hooks/use-confirm.tsx` | **NOVO** — provider + hook `useConfirm()` |
+| `src/components/ui/spinner-button.tsx` | **NOVO** — botão com spinner integrado |
+| `src/lib/error-messages.ts` | **NOVO** — `friendlyError()` |
+| `src/lib/ponto-rules.ts` | DV de CPF/CNPJ + `validateEmail`, `maskTelefoneBR`, `validateTelefoneBR` |
+| `src/App.tsx` | Envolver app no `ConfirmProvider` |
+| `src/pages/Empresas.tsx` | Validação inline, ConfirmDialog, friendlyError, skeleton |
+| `src/pages/Funcionarios.tsx` | Validação inline, ConfirmDialog, friendlyError, skeleton, touch targets mobile |
+| `src/pages/FuncionarioDetalhe.tsx` | Substituir 4× `confirm()`, validação inline no editar, friendlyError nos uploads |
+| `src/pages/Holerites.tsx` | Confirmação de envio em massa, ConfirmDialog para excluir |
+| `src/pages/Relatorios.tsx` | 3× ConfirmDialog, toast de sucesso onde falta, skeleton |
+
+Sem mudanças em backend, RLS ou edge functions. Sem novas dependências.
+
