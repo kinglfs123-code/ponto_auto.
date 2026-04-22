@@ -1,72 +1,79 @@
 
 
-## Plano: 2 eventos por alerta (lembrete azul + vencimento vermelho) e férias 2 meses antes
+## Plano: aplicar visual "Liquid Glass" (estilo dock do macOS) nas barras de navegação
 
-### Comportamento atual
-- Cada alerta de contrato cria **um único evento** no Google Agenda, no dia do `data_lembrete`, sem cor definida (cor padrão da agenda).
-- Alerta de férias é gerado com lembrete **5 meses antes** (`addMonths(data_proximas_ferias, -5)`).
+### Onde
+1. **`src/components/NavBar.tsx`** — barra superior (desktop) e barra inferior (mobile), além do header mobile.
+2. **`src/components/ui/tabs.tsx`** — `TabsList` / `TabsTrigger` (usado nas abas de Colaborador: Resumo, Folhas, Documentos, Férias…).
+3. **`src/index.css`** — novas utilidades `.liquid-glass` e `.liquid-pill` para reproduzir o efeito do dock.
 
-### Novo comportamento
-Para cada alerta (vencimento, prorrogação, férias), criar **2 eventos** no Google Agenda:
-1. **Lembrete antecipado** (azul, `colorId: "9"` Blueberry) na data `data_lembrete`. Título prefixado com `🔔 Lembrete:`.
-2. **Evento no dia do vencimento/evento real** (vermelho, `colorId: "11"` Tomato) na data `data_evento`, caso o lembrete passe despercebido. Título prefixado com `⚠️` (vencimento) / `📝` (prorrogação) / `🌴` (férias).
+Não mexo em outras telas: o app já usa `glass`/`glass-subtle` por toda parte; a mudança é centralizada nos botões de navegação.
 
-Antecedência do lembrete de **férias** muda de 5 meses para **2 meses** (`addMonths(data_proximas_ferias, -2)`). Vencimento e prorrogação continuam com 2 dias de antecedência.
+### Visual de referência (macOS dock)
+- Cápsula com bordas bem arredondadas (~24–28px), fundo translúcido com forte blur + saturação.
+- Borda interna fina clara + sombra externa difusa pra "flutuar".
+- Highlight sutil no topo (gradiente branco→transparente) que dá a sensação de vidro.
+- Item ativo: pílula clara com leve ampliação e sombrinha; hover: leve "pop" (scale-105) com brilho.
+- Ícones coloridos preservam contraste; rótulo só aparece em ativo (mobile) ou em todos (desktop, como hoje).
 
-### Mudanças
+### Mudanças no CSS (`src/index.css`)
+Adicionar ao bloco `@layer utilities`:
 
-**1. Migração de banco — `contrato_alertas`**
-Adicionar duas colunas para guardar os dois `event_id`s do Google. Manter `google_event_id` como legado/migração (deixa de ser usado para escrita nova):
-```sql
-ALTER TABLE public.contrato_alertas
-  ADD COLUMN IF NOT EXISTS google_event_id_lembrete text,
-  ADD COLUMN IF NOT EXISTS google_event_id_vencimento text;
+```css
+.liquid-glass {
+  background: linear-gradient(180deg,
+    color-mix(in srgb, var(--glass-bg) 70%, white 12%) 0%,
+    var(--glass-bg) 100%);
+  border: 1px solid var(--glass-border);
+  box-shadow:
+    0 10px 30px rgba(0,0,0,0.25),
+    0 1px 0 rgba(255,255,255,0.18) inset,
+    0 -1px 0 rgba(0,0,0,0.15) inset;
+  backdrop-filter: blur(28px) saturate(1.9);
+  -webkit-backdrop-filter: blur(28px) saturate(1.9);
+  border-radius: 22px;
+}
+
+.liquid-pill-active {
+  background: linear-gradient(180deg,
+    rgba(255,255,255,0.18),
+    rgba(255,255,255,0.06));
+  box-shadow:
+    0 4px 14px rgba(0,0,0,0.22),
+    0 1px 0 rgba(255,255,255,0.35) inset;
+  border-radius: 16px;
+}
+
+.liquid-hover { transition: transform .25s cubic-bezier(.2,.8,.2,1), background-color .2s; }
+.liquid-hover:hover { transform: translateY(-2px) scale(1.05); }
 ```
 
-**2. `supabase/functions/analyze-contract/index.ts`**
-- Trocar antecedência de férias: `addMonths(data_proximas_ferias, -2)` em vez de `-5`.
-- Atualizar label do tipo `ferias_5_meses` segue valendo (string interna) — ajuste só visual no front.
+(Usa as variáveis `--glass-bg` / `--glass-border` que já existem nos temas light e dark.)
 
-**3. `supabase/functions/sync-calendar-alerts/index.ts`**
-- Para cada alerta, montar e enviar **dois eventos**:
-  - Lembrete: `summary: "🔔 Lembrete: <titulo> — <nome>"`, `start/end.date = data_lembrete`, `colorId: "9"`.
-  - Vencimento: `summary: "<emoji> <titulo> — <nome>"`, `start/end.date = data_evento`, `colorId: "11"`, popup no próprio dia (override 0–60 min).
-- Fazer POST se o respectivo `google_event_id_*` ainda não existir, PUT se existir (idempotente).
-- Salvar `google_event_id_lembrete` e `google_event_id_vencimento` na tabela.
-- Marcar `status = "sincronizado"` apenas quando ambos os eventos forem criados/atualizados com sucesso.
+### Mudanças no `NavBar.tsx`
+- **Mobile bottom nav**: trocar `glass border-t` por **dock flutuante**: container `fixed bottom-3 left-1/2 -translate-x-1/2` com `liquid-glass` (cápsula que não ocupa toda a largura). Itens ganham `liquid-hover`; ativo recebe `liquid-pill-active` + ícone com `drop-shadow` colorido.
+- **Mobile header**: mantém `sticky` mas usa `liquid-glass` com cantos inferiores arredondados.
+- **Desktop top nav**: o `<div>` com os links vira uma **pílula** independente (`liquid-glass` + `px-2 py-1.5 rounded-full`), centralizada; cada link com `liquid-hover` e ativo usando `liquid-pill-active` no lugar do atual `bg-primary/12`.
+- Botões de tema/sair também ficam dentro de uma pílula `liquid-glass` no canto direito (desktop) e no header (mobile).
+- Mantém toda a lógica existente (`workflow`, `enabled`, `Lock`, `handleNavClick`).
 
-**4. `supabase/functions/delete-calendar-alerts/index.ts`**
-- Hoje recebe `event_ids: string[]`. Continuar aceitando esse formato (já é genérico). No `FuncionarioDetalhe.tsx` e `AnaliseContrato.tsx`, ao montar a lista para deletar, juntar `google_event_id`, `google_event_id_lembrete` e `google_event_id_vencimento` de cada alerta antes de chamar a função.
+### Mudanças no `tabs.tsx`
+- `TabsList`: remover `bg-muted`, aplicar `liquid-glass rounded-2xl p-1.5`.
+- `TabsTrigger`: ativo passa de `bg-background` para `liquid-pill-active text-foreground`; inativo `text-muted-foreground hover:text-foreground`. Adicionar `liquid-hover`.
+- Reflete automaticamente nas abas de `FuncionarioDetalhe` (Resumo/Folhas/Documentos/Férias) sem alterar a página.
 
-**5. `src/pages/FuncionarioDetalhe.tsx → handleDeleteDoc`**
-- Ao excluir o último contrato, buscar os 3 campos (`google_event_id`, `google_event_id_lembrete`, `google_event_id_vencimento`) de `contrato_alertas` e enviar todos para `delete-calendar-alerts`.
-
-**6. `src/components/AnaliseContrato.tsx`**
-- Auto-limpeza: mesma alteração — coletar os 3 campos.
-- Label visual `TIPO_ALERTA_LABEL.ferias_5_meses` passa a "Férias (2 meses antes)".
-- Texto exibido por alerta passa a indicar os dois eventos: `Lembrete em DD/MM/YYYY (azul) · Vencimento em DD/MM/YYYY (vermelho)`.
-
-**7. `src/types/index.ts`**
-- Adicionar `google_event_id_lembrete?: string | null` e `google_event_id_vencimento?: string | null` em `ContratoAlerta`.
-
-**8. Re-sincronização dos alertas existentes**
-- O auto-sync do `AnaliseContrato` já roda quando há pendentes. Para forçar a recriação dos eventos na nova estrutura sem duplicar, na primeira execução com os novos campos vazios:
-  - se `google_event_id` (legado) existir e `google_event_id_lembrete`/`vencimento` estiverem vazios → criar os dois eventos novos via POST e, em seguida, deletar o evento legado (`google_event_id`) do Google Agenda; limpar a coluna legada.
-  - Senão, comportamento normal (POST quando vazio, PUT quando preenchido).
-
-### Resultado esperado
-- Cada alerta passa a ter **2 marcações no Google Agenda**: uma azul de lembrete e uma vermelha no dia do vencimento.
-- Lembrete de férias passa a sair **2 meses antes** (em vez de 5).
-- Excluir contrato continua limpando tudo: ambos os eventos por alerta são removidos do Google Agenda junto com os registros locais.
+### Compatibilidade
+- Funciona em dark e light (usa as variáveis CSS já tematizadas).
+- `backdrop-filter` tem fallback automático: navegadores sem suporte caem para o `background` translúcido — visual aceitável.
+- Sem mudança de comportamento, apenas estética. Sem novos pacotes.
 
 ### Arquivos
 | Arquivo | Mudança |
 |---|---|
-| `supabase/migrations/<novo>.sql` | Adiciona `google_event_id_lembrete` e `google_event_id_vencimento` em `contrato_alertas` |
-| `supabase/functions/analyze-contract/index.ts` | Férias: 2 meses antes em vez de 5 |
-| `supabase/functions/sync-calendar-alerts/index.ts` | Cria/atualiza 2 eventos por alerta com `colorId` 9 (azul) e 11 (vermelho); migra eventos legados |
-| `supabase/functions/delete-calendar-alerts/index.ts` | Sem mudança de contrato; segue deletando lista de IDs |
-| `src/pages/FuncionarioDetalhe.tsx` | Coletar os 3 campos de event_id ao limpar |
-| `src/components/AnaliseContrato.tsx` | Coletar os 3 campos na auto-limpeza; ajustar labels e descrição |
-| `src/types/index.ts` | Novos campos em `ContratoAlerta` |
+| `src/index.css` | Adiciona utilidades `.liquid-glass`, `.liquid-pill-active`, `.liquid-hover` |
+| `src/components/NavBar.tsx` | Top bar desktop e bottom bar mobile viram pílulas dock; header mobile com liquid glass |
+| `src/components/ui/tabs.tsx` | `TabsList`/`TabsTrigger` com visual dock liquid glass |
+
+### Resultado esperado
+Navegação principal (topo no desktop, dock inferior no mobile) e abas internas com a mesma cara de cápsula de vidro do dock do macOS mostrado na referência: translúcido, com brilho no topo, item ativo destacado como pílula clara e leve animação de "pop" no hover.
 
