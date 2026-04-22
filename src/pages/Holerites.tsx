@@ -47,6 +47,26 @@ export default function Holerites() {
     if (empresaId && mesRef) loadData();
   }, [empresaId, mesRef, loadData]);
 
+  // Detecta retorno do OAuth com erro de escopo faltando
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("google") === "error" && params.get("reason") === "missing_scopes") {
+      const missing = params.get("missing") || "";
+      toast({
+        title: "Permissões do Google faltando",
+        description: missing.includes("gmail.send")
+          ? "O escopo de envio de e-mail (gmail.send) não foi concedido. Habilite a Gmail API no Google Cloud Console e reconecte."
+          : `Escopos faltando: ${missing}. Reconecte e autorize todas as permissões.`,
+        variant: "destructive",
+      });
+      // limpa querystring
+      window.history.replaceState({}, "", window.location.pathname);
+    } else if (params.get("google") === "ok") {
+      toast({ title: "Google conectado!" });
+      window.history.replaceState({}, "", window.location.pathname);
+    }
+  }, []);
+
   const handleEmpresaChange = (emp: { id: string; cnpj: string; nome: string; jornada_padrao: string } | null) => {
     setEmpresa(emp);
   };
