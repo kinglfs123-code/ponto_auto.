@@ -373,8 +373,10 @@ export default function Holerites() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="gap-1.5 text-muted-foreground hover:text-destructive"
+                            className="gap-1.5 text-muted-foreground hover:text-destructive min-h-[44px] sm:min-h-0"
                             onClick={() => handleDeletePdf(func.id)}
+                            disabled={deletingId === hol.id}
+                            aria-label={`Excluir holerite de ${func.nome_completo}`}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                             Excluir PDF
