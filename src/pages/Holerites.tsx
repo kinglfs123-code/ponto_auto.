@@ -98,6 +98,19 @@ export default function Holerites() {
     }
   };
 
+  const startGoogleConnect = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("google-oauth-start", {
+        body: { return_to: window.location.pathname, origin: window.location.origin },
+      });
+      if (error) throw error;
+      if (!data?.url) throw new Error("URL não retornada");
+      window.location.href = data.url as string;
+    } catch (err: any) {
+      toast({ title: "Erro", description: err?.message || "Falha ao iniciar conexão", variant: "destructive" });
+    }
+  };
+
   const handleSend = async (funcId: string) => {
     const holerite = getHolerite(funcId);
     if (!holerite) return;
@@ -109,10 +122,33 @@ export default function Holerites() {
 
     setSending((p) => ({ ...p, [funcId]: true }));
     try {
-      const { error } = await supabase.functions.invoke("send-holerite", {
-        body: { holerite_id: holerite.id },
+      const { data, error } = await supabase.functions.invoke("send-via-gmail", {
+        body: { kind: "holerite", holerite_id: holerite.id },
       });
       if (error) throw error;
+      if (data?.needs_connection) {
+        toast({
+          title: "Conecte sua conta Google",
+          description: "Para enviar e-mails do seu Gmail, conecte sua conta Google.",
+          variant: "destructive",
+        });
+        startGoogleConnect();
+        return;
+      }
+      if (data?.needs_reconnect) {
+        toast({
+          title: "Reconecte o Google",
+          description: "É necessário autorizar o envio de e-mail (Gmail).",
+          variant: "destructive",
+        });
+        startGoogleConnect();
+        return;
+      }
+      if (data?.rate_limited) {
+        toast({ title: "Limite atingido", description: data.error || "Tente novamente em alguns minutos.", variant: "destructive" });
+        return;
+      }
+      if (data?.error) throw new Error(data.error);
 
       toast({ title: "Holerite enviado!", description: `E-mail enviado para ${func.email}` });
       await loadData();

@@ -260,14 +260,86 @@ export default function FuncionarioDetalhe() {
     window.open(data.signedUrl, "_blank");
   };
 
+  const startGoogleConnect = async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("google-oauth-start", {
+        body: { return_to: window.location.pathname, origin: window.location.origin },
+      });
+      if (error) throw error;
+      if (!data?.url) throw new Error("URL não retornada");
+      window.location.href = data.url as string;
+    } catch (err: any) {
+      toast({ title: "Erro", description: err?.message || "Falha ao iniciar conexão", variant: "destructive" });
+    }
+  };
+
+  const [sendingDocsEmail, setSendingDocsEmail] = useState(false);
+
+  const handleSendDocumentosEmail = async () => {
+    if (!func) return;
+    if (!func.email) {
+      toast({ title: "Sem e-mail cadastrado", variant: "destructive" });
+      return;
+    }
+    setSendingDocsEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("send-via-gmail", {
+        body: { kind: "documentos", funcionario_id: func.id },
+      });
+      if (error) throw error;
+      if (data?.needs_connection || data?.needs_reconnect) {
+        toast({
+          title: data.needs_reconnect ? "Reconecte o Google" : "Conecte sua conta Google",
+          description: "Necessário autorizar envio de e-mail pelo seu Gmail.",
+          variant: "destructive",
+        });
+        startGoogleConnect();
+        return;
+      }
+      if (data?.rate_limited) {
+        toast({ title: "Limite atingido", description: data.error, variant: "destructive" });
+        return;
+      }
+      if (data?.error) throw new Error(data.error);
+      toast({ title: "Documentos enviados!", description: `${data?.documentos_enviados ?? ""} arquivo(s) para ${func.email}` });
+    } catch (err: any) {
+      toast({ title: "Erro ao enviar", description: err?.message || "Falha no envio", variant: "destructive" });
+    } finally {
+      setSendingDocsEmail(false);
+    }
+  };
+
   const handleSendHolerite = async (h: Holerite) => {
     if (!func?.email) {
       toast({ title: "Sem e-mail cadastrado", variant: "destructive" });
       return;
     }
-    const { error } = await supabase.functions.invoke("send-holerite", { body: { holerite_id: h.id } });
-    if (error) toast({ title: "Erro ao enviar", description: error.message, variant: "destructive" });
-    else { toast({ title: "Holerite enviado!" }); await loadAll(); }
+    const { data, error } = await supabase.functions.invoke("send-via-gmail", {
+      body: { kind: "holerite", holerite_id: h.id },
+    });
+    if (error) {
+      toast({ title: "Erro ao enviar", description: error.message, variant: "destructive" });
+      return;
+    }
+    if (data?.needs_connection || data?.needs_reconnect) {
+      toast({
+        title: data.needs_reconnect ? "Reconecte o Google" : "Conecte sua conta Google",
+        description: "Necessário autorizar envio de e-mail pelo seu Gmail.",
+        variant: "destructive",
+      });
+      startGoogleConnect();
+      return;
+    }
+    if (data?.rate_limited) {
+      toast({ title: "Limite atingido", description: data.error, variant: "destructive" });
+      return;
+    }
+    if (data?.error) {
+      toast({ title: "Erro ao enviar", description: data.error, variant: "destructive" });
+      return;
+    }
+    toast({ title: "Holerite enviado!" });
+    await loadAll();
   };
 
   const handleDeleteHolerite = async (h: Holerite) => {
