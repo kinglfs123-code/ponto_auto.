@@ -33,6 +33,7 @@ export default function NavBar() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
   const workflow = useWorkflowStatus();
+  const [settingsOpen, setSettingsOpen] = useState(false);
 
   const logout = async () => {
     await supabase.auth.signOut();
