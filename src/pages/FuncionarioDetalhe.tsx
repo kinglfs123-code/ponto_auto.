@@ -71,12 +71,14 @@ type EditForm = {
 export default function FuncionarioDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [func, setFunc] = useState<Funcionario | null>(null);
   const [folhas, setFolhas] = useState<Folha[]>([]);
   const [holerites, setHolerites] = useState<Holerite[]>([]);
   const [documentos, setDocumentos] = useState<FuncionarioDocumento[]>([]);
   const [ferias, setFerias] = useState<FuncionarioFerias[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editTouched, setEditTouched] = useState<{ nome_completo?: boolean; cpf?: boolean; email?: boolean }>({});
   const [uploadingCat, setUploadingCat] = useState<CategoriaDocumento | null>(null);
 
   // Holerite upload
