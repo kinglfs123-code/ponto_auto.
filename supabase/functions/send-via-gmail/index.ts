@@ -126,6 +126,13 @@ async function getValidAccessToken(
   return { token: tok.access_token, scope: newScope };
 }
 
+class GmailScopeError extends Error {
+  constructor(public httpStatus: number, message: string) {
+    super(message);
+    this.name = "GmailScopeError";
+  }
+}
+
 async function getGoogleProfile(accessToken: string): Promise<{ email: string; name: string }> {
   // Use Gmail's own profile endpoint — already authorized by the gmail.send scope.
   // Avoids dependency on userinfo.email / userinfo.profile scopes.
@@ -135,6 +142,9 @@ async function getGoogleProfile(accessToken: string): Promise<{ email: string; n
   if (!resp.ok) {
     const txt = await resp.text().catch(() => "");
     console.error("[send-via-gmail] gmail profile failed:", resp.status, txt);
+    if (resp.status === 401 || resp.status === 403) {
+      throw new GmailScopeError(resp.status, `Falha ao ler perfil Google: ${resp.status}`);
+    }
     throw new Error(`Falha ao ler perfil Google: ${resp.status}`);
   }
   const json = await resp.json() as { emailAddress?: string };
