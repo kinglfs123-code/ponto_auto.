@@ -436,8 +436,8 @@ export default function Ponto() {
                 e.target.value = "";
               }}
             />
-            <Button variant="outline" onClick={() => fileRef.current?.click()} className="gap-2">
-              <Camera className="h-4 w-4" /> Anexar Foto
+            <Button variant="outline" onClick={() => fileRef.current?.click()} className="gap-2 btn-press relative">
+              <span className="attach-bounce"><Camera className="h-4 w-4" /></span> Anexar Foto
             </Button>
           </div>
           {image && !empresa && <p className="text-xs text-destructive">Selecione uma empresa para ler a folha.</p>}

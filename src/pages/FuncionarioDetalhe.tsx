@@ -802,9 +802,13 @@ export default function FuncionarioDetalhe() {
                 <Button
                   onClick={() => holeriteInputRef.current?.click()}
                   disabled={uploadingHolerite}
-                  className="gap-1.5"
+                  className="gap-1.5 btn-press relative"
                 >
-                  {uploadingHolerite ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
+                  {uploadingHolerite ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <span className="attach-bounce"><Upload className="h-4 w-4" /></span>
+                  )}
                   Anexar PDF
                 </Button>
               </CardContent>
@@ -870,9 +874,13 @@ export default function FuncionarioDetalhe() {
                               e.target.value = "";
                             }}
                           />
-                          <Button variant="outline" size="sm" className="gap-1.5 pointer-events-none" tabIndex={-1} asChild>
+                          <Button variant="outline" size="sm" className="gap-1.5 pointer-events-none btn-press relative" tabIndex={-1} asChild>
                             <span>
-                              {isUp ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+                              {isUp ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                              ) : (
+                                <span className="attach-bounce"><Upload className="h-3.5 w-3.5" /></span>
+                              )}
                               Anexar
                             </span>
                           </Button>
