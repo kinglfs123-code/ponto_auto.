@@ -62,7 +62,7 @@ function formatMes(m: string): string {
 async function getValidAccessToken(
   admin: ReturnType<typeof createClient>,
   userId: string,
-): Promise<{ token: string | null; scope: string | null }> {
+): Promise<{ token: string | null; scope: string | null; reason?: "no_token" | "refresh_revoked" }> {
   const { data, error } = await admin
     .from("google_calendar_tokens")
     .select("*")
@@ -70,7 +70,7 @@ async function getValidAccessToken(
     .maybeSingle();
 
   if (error) throw new Error(`Erro ao ler tokens: ${error.message}`);
-  if (!data) return { token: null, scope: null };
+  if (!data) return { token: null, scope: null, reason: "no_token" };
 
   const expiresAt = new Date(data.expires_at as string).getTime();
   const scope = (data.scope as string | null) ?? null;
@@ -99,7 +99,7 @@ async function getValidAccessToken(
     const txt = await resp.text();
     console.error("[send-via-gmail] refresh failed:", txt);
     await admin.from("google_calendar_tokens").delete().eq("user_id", userId);
-    return { token: null, scope: null };
+    return { token: null, scope: null, reason: "refresh_revoked" };
   }
 
   const tok = await resp.json() as {
@@ -126,6 +126,13 @@ async function getValidAccessToken(
   return { token: tok.access_token, scope: newScope };
 }
 
+class GmailScopeError extends Error {
+  constructor(public httpStatus: number, message: string) {
+    super(message);
+    this.name = "GmailScopeError";
+  }
+}
+
 async function getGoogleProfile(accessToken: string): Promise<{ email: string; name: string }> {
   // Use Gmail's own profile endpoint — already authorized by the gmail.send scope.
   // Avoids dependency on userinfo.email / userinfo.profile scopes.
@@ -135,6 +142,9 @@ async function getGoogleProfile(accessToken: string): Promise<{ email: string; n
   if (!resp.ok) {
     const txt = await resp.text().catch(() => "");
     console.error("[send-via-gmail] gmail profile failed:", resp.status, txt);
+    if (resp.status === 401 || resp.status === 403) {
+      throw new GmailScopeError(resp.status, `Falha ao ler perfil Google: ${resp.status}`);
+    }
     throw new Error(`Falha ao ler perfil Google: ${resp.status}`);
   }
   const json = await resp.json() as { emailAddress?: string };
@@ -289,19 +299,38 @@ Deno.serve(async (req) => {
     }
 
     // Carrega token
-    const { token: accessToken, scope } = await getValidAccessToken(admin, userId);
+    const { token: accessToken, scope, reason: tokenReason } = await getValidAccessToken(admin, userId);
     if (!accessToken) {
-      return jsonResponse({ needs_connection: true, error: "Google não conectado" });
+      return jsonResponse({
+        needs_reconnect: true,
+        reason: tokenReason ?? "no_token",
+        error: tokenReason === "refresh_revoked"
+          ? "Sua autorização Google expirou. Reconecte para continuar."
+          : "Conecte sua conta Google para enviar e-mails.",
+      });
     }
     if (!scope || !scope.includes("https://www.googleapis.com/auth/gmail.send")) {
       return jsonResponse({
         needs_reconnect: true,
-        reason: "missing_gmail_scope",
-        error: "É necessário reconectar o Google para autorizar o envio de e-mail.",
+        reason: "missing_scope",
+        missing_scope: "gmail.send",
+        error: "Permissão de envio de e-mail não concedida. Reconecte e autorize 'Enviar e-mails'.",
       });
     }
 
-    const profile = await getGoogleProfile(accessToken);
+    let profile: { email: string; name: string };
+    try {
+      profile = await getGoogleProfile(accessToken);
+    } catch (e) {
+      if (e instanceof GmailScopeError) {
+        return jsonResponse({
+          needs_reconnect: true,
+          reason: "scope_insufficient",
+          error: "Permissão de envio de e-mail não concedida. Reconecte e autorize 'Enviar e-mails'.",
+        });
+      }
+      throw e;
+    }
     if (!profile.email) {
       return jsonResponse({ error: "Não foi possível obter e-mail do Google" }, 500);
     }
@@ -371,7 +400,7 @@ Deno.serve(async (req) => {
           { mode: "holerite", holerite_id, status: result.status }, errBody);
 
         if (result.status === 403 && lower.includes("insufficient")) {
-          return jsonResponse({ needs_reconnect: true, reason: "missing_gmail_scope", error: "Reconecte o Google para autorizar envio de e-mail." });
+          return jsonResponse({ needs_reconnect: true, reason: "scope_insufficient", error: "Reconecte o Google para autorizar envio de e-mail." });
         }
         if (result.status === 403 && lower.includes("has not been used") && lower.includes("gmail")) {
           return jsonResponse({ error: "Habilite a Gmail API no Google Cloud Console e tente novamente." }, 400);
@@ -488,7 +517,7 @@ Deno.serve(async (req) => {
         { mode: "documentos", funcionario_id, status: result.status }, errBody);
 
       if (result.status === 403 && lower.includes("insufficient")) {
-        return jsonResponse({ needs_reconnect: true, reason: "missing_gmail_scope", error: "Reconecte o Google para autorizar envio de e-mail." });
+        return jsonResponse({ needs_reconnect: true, reason: "scope_insufficient", error: "Reconecte o Google para autorizar envio de e-mail." });
       }
       if (result.status === 403 && lower.includes("has not been used") && lower.includes("gmail")) {
         return jsonResponse({ error: "Habilite a Gmail API no Google Cloud Console e tente novamente." }, 400);

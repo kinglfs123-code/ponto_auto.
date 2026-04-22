@@ -146,19 +146,20 @@ export default function Holerites() {
         body: { kind: "holerite", holerite_id: holerite.id },
       });
       if (error) throw error;
-      if (data?.needs_connection) {
+      if (data?.needs_reconnect || data?.needs_connection) {
+        const reason = data.reason as string | undefined;
+        const description =
+          data?.error ||
+          (reason === "no_token"
+            ? "Conecte sua conta Google para enviar e-mails."
+            : reason === "refresh_revoked"
+            ? "Sua autorização Google expirou. Reconecte para continuar."
+            : reason === "missing_scope" || reason === "scope_insufficient"
+            ? "Permissão de envio de e-mail não concedida. Reconecte e autorize 'Enviar e-mails'."
+            : "É necessário reconectar o Google para autorizar o envio de e-mail.");
         toast({
-          title: "Conecte sua conta Google",
-          description: "Para enviar e-mails do seu Gmail, conecte sua conta Google.",
-          variant: "destructive",
-        });
-        startGoogleConnect();
-        return;
-      }
-      if (data?.needs_reconnect) {
-        toast({
-          title: "Reconecte o Google",
-          description: "É necessário autorizar o envio de e-mail (Gmail).",
+          title: reason === "no_token" ? "Conecte o Google" : "Reconecte o Google",
+          description,
           variant: "destructive",
         });
         startGoogleConnect();
