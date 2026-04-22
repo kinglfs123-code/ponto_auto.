@@ -148,29 +148,48 @@ export default function FuncionarioDetalhe() {
       if (insErr) throw insErr;
       toast({ title: "Documento anexado" });
       await loadAll();
+    } catch (err: any) {
+      toast({ title: "Erro no upload", description: err.message, variant: "destructive" });
+    } finally {
+      setUploadingCat(null);
+    }
+  };
 
-      // Auto-disparar análise IA quando for um contrato
-      if (categoria === "contrato") {
-        try {
-          const { data: docRow } = await supabase
-            .from("funcionario_documentos")
-            .select("id")
-            .eq("storage_path", path)
-            .maybeSingle();
-          if (docRow?.id) {
-            toast({ title: "Analisando contrato com IA…" });
-            supabase.functions
-              .invoke("analyze-contract", { body: { documento_id: docRow.id } })
-              .then(({ error }) => {
-                if (error) {
-                  toast({ title: "Falha na análise", description: error.message, variant: "destructive" });
-                }
-              });
-          }
-        } catch {
-          // silencioso — UI do AnaliseContrato também tenta auto-analisar
-        }
+  const handleUploadContratos = async (files: File[]) => {
+    if (!func || files.length === 0) return;
+    for (const f of files) {
+      if (f.size > 10 * 1024 * 1024) {
+        toast({ title: "Arquivo muito grande", description: `${f.name} excede 10MB`, variant: "destructive" });
+        return;
       }
+    }
+    setUploadingCat("contrato");
+    const novosIds: string[] = [];
+    try {
+      for (const file of files) {
+        const ext = file.name.split(".").pop() || "bin";
+        const path = `${func.empresa_id}/${func.id}/contrato/${Date.now()}-${Math.random().toString(36).slice(2, 7)}.${ext}`;
+        const { error: upErr } = await supabase.storage.from("colaborador-arquivos").upload(path, file);
+        if (upErr) throw upErr;
+        const { data: inserted, error: insErr } = await supabase
+          .from("funcionario_documentos")
+          .insert({
+            funcionario_id: func.id,
+            empresa_id: func.empresa_id,
+            categoria: "contrato",
+            nome_arquivo: file.name,
+            storage_path: path,
+            mime_type: file.type,
+            tamanho_bytes: file.size,
+          })
+          .select("id")
+          .single();
+        if (insErr) throw insErr;
+        if (inserted?.id) novosIds.push(inserted.id);
+      }
+      toast({ title: `${files.length} arquivo(s) anexado(s)`, description: `Analisando ${files.length} arquivo(s) do contrato com IA…` });
+      await loadAll();
+      // O AnaliseContrato vai auto-disparar a análise consolidada com todos os contratos.
     } catch (err: any) {
       toast({ title: "Erro no upload", description: err.message, variant: "destructive" });
     } finally {
@@ -605,9 +624,15 @@ export default function FuncionarioDetalhe() {
                             accept=".pdf,.docx,.jpeg,.jpg,.png,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png"
                             className="hidden"
                             disabled={isUp}
+                            multiple={cat.value === "contrato"}
                             onChange={(e) => {
-                              const file = e.target.files?.[0];
-                              if (file) handleUploadDoc(cat.value, file);
+                              const files = Array.from(e.target.files || []);
+                              if (files.length === 0) return;
+                              if (cat.value === "contrato") {
+                                handleUploadContratos(files);
+                              } else {
+                                handleUploadDoc(cat.value, files[0]);
+                              }
                               e.target.value = "";
                             }}
                           />

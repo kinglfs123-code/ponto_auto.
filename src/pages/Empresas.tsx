@@ -103,12 +103,7 @@ export default function Empresas() {
         <h1 className="text-2xl font-bold text-foreground tracking-tight animate-fade-in">Empresas</h1>
 
         <Card className="animate-fade-in">
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center gap-2 text-base text-primary">
-              <Plus className="h-4 w-4" /> Nova empresa
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
+          <CardContent className="pt-4">
             <form onSubmit={add} className="space-y-3">
               <Input placeholder="Nome da empresa" value={nome} onChange={(e) => setNome(e.target.value)} />
               <Input placeholder="CNPJ" value={cnpj} onChange={(e) => setCnpj(maskCNPJ(e.target.value))} maxLength={18} />

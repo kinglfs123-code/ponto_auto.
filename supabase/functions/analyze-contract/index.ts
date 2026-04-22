@@ -23,7 +23,7 @@ function addDays(dateStr: string, days: number): string {
 function arrayBufferToBase64(buf: ArrayBuffer): string {
   const bytes = new Uint8Array(buf);
   let binary = "";
-  const chunk = 0x8000; // 32 KB por iteração — evita estouro de pilha
+  const chunk = 0x8000;
   for (let i = 0; i < bytes.length; i += chunk) {
     binary += String.fromCharCode.apply(
       null,
@@ -51,7 +51,6 @@ Deno.serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY não configurado");
 
-    // Auth client (com token do usuário) para validar identidade
     const userClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
       global: { headers: { Authorization: authHeader } },
     });
@@ -63,29 +62,39 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { documento_id } = await req.json();
-    if (!documento_id) {
-      return new Response(JSON.stringify({ error: "documento_id obrigatório" }), {
+    const body = await req.json();
+    // Aceita documento_id (legado) ou documento_ids (array)
+    const idsRaw: unknown = body?.documento_ids ?? (body?.documento_id ? [body.documento_id] : []);
+    const documento_ids: string[] = Array.isArray(idsRaw) ? idsRaw.filter((x) => typeof x === "string") : [];
+    if (documento_ids.length === 0) {
+      return new Response(JSON.stringify({ error: "documento_ids obrigatório" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Service client para baixar arquivo e gravar análise
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
-    const { data: doc, error: docErr } = await admin
+    const { data: docs, error: docErr } = await admin
       .from("funcionario_documentos")
       .select("*")
-      .eq("id", documento_id)
-      .maybeSingle();
-    if (docErr || !doc) throw new Error("Documento não encontrado");
+      .in("id", documento_ids);
+    if (docErr || !docs || docs.length === 0) throw new Error("Documentos não encontrados");
 
-    // Verifica que o usuário é dono da empresa
+    // Validar que todos pertencem ao mesmo funcionário/empresa
+    const funcionarioId = docs[0].funcionario_id;
+    const empresaId = docs[0].empresa_id;
+    if (!docs.every((d) => d.funcionario_id === funcionarioId && d.empresa_id === empresaId)) {
+      return new Response(JSON.stringify({ error: "Documentos pertencem a contextos diferentes" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { data: emp } = await admin
       .from("empresas")
       .select("owner_id")
-      .eq("id", doc.empresa_id)
+      .eq("id", empresaId)
       .maybeSingle();
     if (!emp || emp.owner_id !== userData.user.id) {
       return new Response(JSON.stringify({ error: "Sem permissão" }), {
@@ -94,17 +103,32 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Baixa o arquivo
-    const { data: fileData, error: dlErr } = await admin
-      .storage.from("colaborador-arquivos")
-      .download(doc.storage_path);
-    if (dlErr || !fileData) throw new Error("Erro ao baixar arquivo: " + dlErr?.message);
+    // Baixa todos os arquivos e converte em base64
+    const userContent: Array<Record<string, unknown>> = [
+      {
+        type: "text",
+        text:
+          `Os ${docs.length} arquivo(s) a seguir são páginas/partes de UM MESMO contrato de trabalho ` +
+          `(podem incluir frente/verso, anexos e aditivos). Consolide todas as informações em uma única ` +
+          `extração. Se houver aditivos ou prorrogações, use a data mais recente para data_prorrogacao e ` +
+          `data_vencimento. Considere o conjunto como um todo, sem tratar cada arquivo isoladamente.`,
+      },
+    ];
 
-    const buf = await fileData.arrayBuffer();
-    const base64 = arrayBufferToBase64(buf);
-    const mime = doc.mime_type || "application/pdf";
+    for (const doc of docs) {
+      const { data: fileData, error: dlErr } = await admin
+        .storage.from("colaborador-arquivos")
+        .download(doc.storage_path);
+      if (dlErr || !fileData) throw new Error(`Erro ao baixar ${doc.nome_arquivo}: ${dlErr?.message}`);
+      const buf = await fileData.arrayBuffer();
+      const base64 = arrayBufferToBase64(buf);
+      const mime = doc.mime_type || "application/pdf";
+      userContent.push({
+        type: "image_url",
+        image_url: { url: `data:${mime};base64,${base64}` },
+      });
+    }
 
-    // Chamada à Lovable AI com tool calling
     const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -117,25 +141,16 @@ Deno.serve(async (req) => {
           {
             role: "system",
             content:
-              "Você é um especialista em contratos de trabalho brasileiros (CLT). Extraia datas e tipo do contrato anexado. Retorne datas em formato ISO (YYYY-MM-DD). Se um campo não estiver presente, retorne null. Para tipo_contrato use exatamente um destes valores: 'experiencia_45_45' (experiência 45+45 dias), 'experiencia_90' (experiência 90 dias), 'prazo_determinado' (outro prazo determinado) ou 'indeterminado'.",
+              "Você é um especialista em contratos de trabalho brasileiros (CLT). Extraia datas e tipo do contrato. Quando vários arquivos forem enviados, trate-os como partes do MESMO contrato e consolide os dados. Retorne datas em formato ISO (YYYY-MM-DD). Se um campo não estiver presente, retorne null. Para tipo_contrato use exatamente um destes valores: 'experiencia_45_45', 'experiencia_90', 'prazo_determinado' ou 'indeterminado'.",
           },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Analise este contrato de trabalho e extraia as informações." },
-              {
-                type: "image_url",
-                image_url: { url: `data:${mime};base64,${base64}` },
-              },
-            ],
-          },
+          { role: "user", content: userContent },
         ],
         tools: [
           {
             type: "function",
             function: {
               name: "extrair_dados_contrato",
-              description: "Extrai dados estruturados do contrato",
+              description: "Extrai dados estruturados do contrato consolidado",
               parameters: {
                 type: "object",
                 properties: {
@@ -144,8 +159,8 @@ Deno.serve(async (req) => {
                     type: "string",
                     enum: ["experiencia_45_45", "experiencia_90", "prazo_determinado", "indeterminado"],
                   },
-                  data_vencimento: { type: ["string", "null"], description: "Data de vencimento do contrato (YYYY-MM-DD)" },
-                  data_prorrogacao: { type: ["string", "null"], description: "Data de prorrogação prevista (YYYY-MM-DD)" },
+                  data_vencimento: { type: ["string", "null"], description: "Data de vencimento (YYYY-MM-DD)" },
+                  data_prorrogacao: { type: ["string", "null"], description: "Data de prorrogação (YYYY-MM-DD)" },
                   observacoes: { type: ["string", "null"] },
                   confianca: { type: "integer", minimum: 0, maximum: 100 },
                 },
@@ -180,21 +195,22 @@ Deno.serve(async (req) => {
 
     const extracted = JSON.parse(toolCall.function.arguments);
 
-    // Calcula próximas férias
     let data_proximas_ferias: string | null = null;
     if (extracted.data_admissao) {
       data_proximas_ferias = addMonths(extracted.data_admissao, 12);
     }
 
-    // Inserir/atualizar contrato_analise (substitui análise anterior do mesmo documento)
-    await admin.from("contratos_analise").delete().eq("documento_id", documento_id);
+    // Substitui qualquer análise anterior do funcionário (consolidação)
+    await admin.from("contratos_analise").delete().eq("funcionario_id", funcionarioId);
+
+    const primaryDocId = docs[0].id;
 
     const { data: contrato, error: insErr } = await admin
       .from("contratos_analise")
       .insert({
-        funcionario_id: doc.funcionario_id,
-        empresa_id: doc.empresa_id,
-        documento_id: doc.id,
+        funcionario_id: funcionarioId,
+        empresa_id: empresaId,
+        documento_id: primaryDocId,
         data_admissao: extracted.data_admissao,
         tipo_contrato: extracted.tipo_contrato,
         data_vencimento: extracted.data_vencimento,
@@ -202,14 +218,13 @@ Deno.serve(async (req) => {
         data_proximas_ferias,
         observacoes: extracted.observacoes,
         confianca: extracted.confianca ?? 0,
-        dados_brutos: extracted,
+        dados_brutos: { ...extracted, documento_ids: docs.map((d) => d.id) },
       })
       .select()
       .single();
 
     if (insErr || !contrato) throw new Error("Erro ao salvar análise: " + insErr?.message);
 
-    // Cria alertas
     const alertas: Array<{
       contrato_id: string; funcionario_id: string; empresa_id: string;
       tipo: string; data_evento: string; data_lembrete: string; status: string;
@@ -218,8 +233,8 @@ Deno.serve(async (req) => {
     if (extracted.data_vencimento) {
       alertas.push({
         contrato_id: contrato.id,
-        funcionario_id: doc.funcionario_id,
-        empresa_id: doc.empresa_id,
+        funcionario_id: funcionarioId,
+        empresa_id: empresaId,
         tipo: "vencimento_contrato",
         data_evento: extracted.data_vencimento,
         data_lembrete: addDays(extracted.data_vencimento, -2),
@@ -229,8 +244,8 @@ Deno.serve(async (req) => {
     if (extracted.data_prorrogacao) {
       alertas.push({
         contrato_id: contrato.id,
-        funcionario_id: doc.funcionario_id,
-        empresa_id: doc.empresa_id,
+        funcionario_id: funcionarioId,
+        empresa_id: empresaId,
         tipo: "prorrogacao",
         data_evento: extracted.data_prorrogacao,
         data_lembrete: addDays(extracted.data_prorrogacao, -2),
@@ -240,8 +255,8 @@ Deno.serve(async (req) => {
     if (data_proximas_ferias) {
       alertas.push({
         contrato_id: contrato.id,
-        funcionario_id: doc.funcionario_id,
-        empresa_id: doc.empresa_id,
+        funcionario_id: funcionarioId,
+        empresa_id: empresaId,
         tipo: "ferias_5_meses",
         data_evento: data_proximas_ferias,
         data_lembrete: addMonths(data_proximas_ferias, -5),
@@ -253,10 +268,10 @@ Deno.serve(async (req) => {
       await admin.from("contrato_alertas").insert(alertas);
     }
 
-    return new Response(JSON.stringify({ contrato, alertas_count: alertas.length }), {
-      status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ contrato, alertas_count: alertas.length, documentos_analisados: docs.length }),
+      { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (e) {
     console.error("analyze-contract error:", e);
     return new Response(JSON.stringify({ error: e instanceof Error ? e.message : "Erro desconhecido" }), {

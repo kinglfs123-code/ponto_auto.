@@ -124,18 +124,22 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
     }
   };
 
-  const ultimoContrato = contratos[0];
+  const contratoIds = contratos.map((c) => c.id).sort();
+  const contratoKey = contratoIds.join(",");
 
   const handleAnalisar = async () => {
-    if (!ultimoContrato) return;
+    if (contratoIds.length === 0) return;
     setAnalyzing(true);
     try {
       const { data, error } = await supabase.functions.invoke("analyze-contract", {
-        body: { documento_id: ultimoContrato.id },
+        body: { documento_ids: contratoIds },
       });
       if (error) throw error;
       if (data?.error) throw new Error(data.error);
-      toast({ title: "Contrato analisado", description: `${data.alertas_count} alerta(s) gerado(s)` });
+      toast({
+        title: "Contrato analisado",
+        description: `${data.documentos_analisados ?? contratoIds.length} arquivo(s) · ${data.alertas_count} alerta(s) gerado(s)`,
+      });
       await load();
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Falha na análise";
@@ -169,17 +173,16 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
     }
   };
 
-  // Auto-análise quando há contrato anexado mas sem análise ainda
+  // Auto-análise quando o conjunto de contratos muda (novos arquivos anexados)
   useEffect(() => {
     if (loading) return;
-    if (!ultimoContrato) return;
-    if (analise) return;
+    if (contratoIds.length === 0) return;
     if (analyzing) return;
-    if (autoAnalyzedRef.current === ultimoContrato.id) return;
-    autoAnalyzedRef.current = ultimoContrato.id;
+    if (autoAnalyzedRef.current === contratoKey) return;
+    autoAnalyzedRef.current = contratoKey;
     handleAnalisar();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, ultimoContrato?.id, analise, analyzing]);
+  }, [loading, contratoKey, analyzing]);
 
   // Auto-sync quando há alertas pendentes e Google conectado
   useEffect(() => {
