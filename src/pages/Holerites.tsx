@@ -21,6 +21,7 @@ import { Upload, Send, CheckCircle2, Clock, FileText, Mail, RefreshCw, Trash2 } 
 
 export default function Holerites() {
   const isMobile = useIsMobile();
+  const confirm = useConfirm();
   const { empresa, setEmpresa } = useEmpresa();
   const [mesRef, setMesRef] = useState(currentMonth);
   const [funcionarios, setFuncionarios] = useState<FuncionarioBasic[]>([]);
@@ -28,6 +29,7 @@ export default function Holerites() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [sending, setSending] = useState<Record<string, boolean>>({});
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sendingAll, setSendingAll] = useState(false);
 
   const empresaId = empresa?.id || "";
@@ -80,7 +82,11 @@ export default function Holerites() {
 
   const handleUpload = async (funcId: string, file: File) => {
     if (!file || file.type !== "application/pdf") {
-      toast({ title: "Erro", description: "Selecione um arquivo PDF", variant: "destructive" });
+      toast({ title: "Arquivo inválido", description: "Selecione um arquivo PDF.", variant: "destructive" });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Arquivo muito grande", description: "O limite é 10MB.", variant: "destructive" });
       return;
     }
     setUploading((p) => ({ ...p, [funcId]: true }));
@@ -102,8 +108,8 @@ export default function Holerites() {
       }
       toast({ title: "PDF enviado com sucesso" });
       await loadData();
-    } catch (err: any) {
-      toast({ title: "Erro no upload", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Erro no upload", description: friendlyError(err), variant: "destructive" });
     } finally {
       setUploading((p) => ({ ...p, [funcId]: false }));
     }
@@ -112,14 +118,25 @@ export default function Holerites() {
   const handleDeletePdf = async (funcId: string) => {
     const hol = getHolerite(funcId);
     if (!hol) return;
-    if (!confirm("Excluir o PDF deste holerite?")) return;
+    const func = funcionarios.find((f) => f.id === funcId);
+    const ok = await confirm({
+      title: "Excluir holerite",
+      description: `Tem certeza que deseja excluir o PDF do holerite${func ? ` de ${func.nome_completo}` : ""}? Esta ação não pode ser desfeita.`,
+      confirmLabel: "Excluir PDF",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setDeletingId(hol.id);
     try {
       await supabase.storage.from("holerites").remove([hol.pdf_path]);
-      await supabase.from("holerites").delete().eq("id", hol.id);
+      const { error } = await supabase.from("holerites").delete().eq("id", hol.id);
+      if (error) throw error;
       toast({ title: "PDF excluído" });
       await loadData();
-    } catch (err: any) {
-      toast({ title: "Erro ao excluir", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Erro ao excluir", description: friendlyError(err), variant: "destructive" });
+    } finally {
+      setDeletingId(null);
     }
   };
 
