@@ -259,7 +259,7 @@ Deno.serve(async (req) => {
         empresa_id: empresaId,
         tipo: "ferias_5_meses",
         data_evento: data_proximas_ferias,
-        data_lembrete: addMonths(data_proximas_ferias, -5),
+        data_lembrete: addMonths(data_proximas_ferias, -2),
         status: "pendente",
       });
     }
