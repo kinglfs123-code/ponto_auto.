@@ -29,3 +29,6 @@ verify_jwt = false
 
 [functions.delete-ferias-calendar]
 verify_jwt = false
+
+[functions.delete-calendar-alerts]
+verify_jwt = false
