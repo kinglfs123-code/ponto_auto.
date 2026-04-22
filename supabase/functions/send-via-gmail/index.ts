@@ -299,19 +299,38 @@ Deno.serve(async (req) => {
     }
 
     // Carrega token
-    const { token: accessToken, scope } = await getValidAccessToken(admin, userId);
+    const { token: accessToken, scope, reason: tokenReason } = await getValidAccessToken(admin, userId);
     if (!accessToken) {
-      return jsonResponse({ needs_connection: true, error: "Google não conectado" });
+      return jsonResponse({
+        needs_reconnect: true,
+        reason: tokenReason ?? "no_token",
+        error: tokenReason === "refresh_revoked"
+          ? "Sua autorização Google expirou. Reconecte para continuar."
+          : "Conecte sua conta Google para enviar e-mails.",
+      });
     }
     if (!scope || !scope.includes("https://www.googleapis.com/auth/gmail.send")) {
       return jsonResponse({
         needs_reconnect: true,
-        reason: "missing_gmail_scope",
-        error: "É necessário reconectar o Google para autorizar o envio de e-mail.",
+        reason: "missing_scope",
+        missing_scope: "gmail.send",
+        error: "Permissão de envio de e-mail não concedida. Reconecte e autorize 'Enviar e-mails'.",
       });
     }
 
-    const profile = await getGoogleProfile(accessToken);
+    let profile: { email: string; name: string };
+    try {
+      profile = await getGoogleProfile(accessToken);
+    } catch (e) {
+      if (e instanceof GmailScopeError) {
+        return jsonResponse({
+          needs_reconnect: true,
+          reason: "scope_insufficient",
+          error: "Permissão de envio de e-mail não concedida. Reconecte e autorize 'Enviar e-mails'.",
+        });
+      }
+      throw e;
+    }
     if (!profile.email) {
       return jsonResponse({ error: "Não foi possível obter e-mail do Google" }, 500);
     }
