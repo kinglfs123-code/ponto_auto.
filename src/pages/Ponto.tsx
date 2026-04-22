@@ -23,10 +23,7 @@ import {
 import { Camera, Save, Calculator, AlertTriangle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  preprocessImage,
-  getConfidenceLevel,
-} from "@/lib/ocr-utils";
+import { preprocessImage, getConfidenceLevel } from "@/lib/ocr-utils";
 
 const FUNC_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/read-timesheet`;
 
@@ -137,7 +134,6 @@ export default function Ponto() {
     return (data || []) as Correcao[];
   };
 
-
   // OCR from photo
   const onPhoto = useCallback((f: File | undefined) => {
     if (!f) return;
@@ -202,8 +198,8 @@ export default function Ponto() {
             jornada,
             horarioEntrada,
             horarioSaida,
-            intervalo
-          )
+            intervalo,
+          ),
         );
         setRegistros(regs);
         setResumo(calcularResumo(regs));
@@ -230,7 +226,9 @@ export default function Ponto() {
   };
 
   const recalc = () => {
-    const processed = registros.map((r) => applyToleranceAndDetect(r, jornada, horarioEntrada, horarioSaida, intervalo));
+    const processed = registros.map((r) =>
+      applyToleranceAndDetect(r, jornada, horarioEntrada, horarioSaida, intervalo),
+    );
     setRegistros(processed);
     setResumo(calcularResumo(processed));
   };
@@ -354,7 +352,10 @@ export default function Ponto() {
     if (!t) return null;
     const map: Record<string, { label: string; className: string }> = {
       atraso: { label: "Atraso", className: "bg-destructive/10 text-destructive border-destructive/30" },
-      atraso_saida_antecipada: { label: "Atraso+Saída Ant.", className: "bg-destructive/10 text-destructive border-destructive/30" },
+      atraso_saida_antecipada: {
+        label: "Atraso+Saída Ant.",
+        className: "bg-destructive/10 text-destructive border-destructive/30",
+      },
       saida_antecipada: { label: "Saída Ant.", className: "bg-warning/10 text-warning border-warning/30" },
       falta: { label: "Falta", className: "bg-falta/10 text-falta font-bold border-falta/30" },
       folga: { label: "Folga", className: "bg-folga/10 text-folga border-folga/30" },
@@ -362,7 +363,11 @@ export default function Ponto() {
       feriado: { label: "Feriado", className: "bg-feriado/10 text-feriado border-feriado/30" },
     };
     const info = map[t] || { label: t, className: "" };
-    return <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${info.className}`}>{info.label}</Badge>;
+    return (
+      <Badge variant="outline" className={`text-[9px] px-1.5 py-0 ${info.className}`}>
+        {info.label}
+      </Badge>
+    );
   };
 
   const setExcecao = (i: number, tipo: string | null) => {
@@ -379,7 +384,7 @@ export default function Ponto() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-44">
+    <div className="min-h-screen bg-background pb-20 md:pb-4">
       <NavBar />
       <div className="max-w-6xl mx-auto p-4 space-y-4">
         <h1 className="text-xl font-bold text-primary animate-fade-in">Importar Folha de Ponto</h1>
@@ -390,13 +395,10 @@ export default function Ponto() {
             <div className="flex flex-wrap gap-3 items-end">
               <div className="flex-1 min-w-[200px]">
                 <label className="text-xs text-muted-foreground mb-1 block">Empresa</label>
-                <EmpresaSelector
-                  value={empresa?.id || searchParams.get("empresa")}
-                  onChange={handleEmpresaChange}
-                />
+                <EmpresaSelector value={empresa?.id || searchParams.get("empresa")} onChange={handleEmpresaChange} />
               </div>
               <div className="flex-1 min-w-[200px]">
-                <label className="text-xs text-muted-foreground mb-1 block">Colaborador</label>
+                <label className="text-xs text-muted-foreground mb-1 block">Funcionário</label>
                 <FuncionarioSelector
                   empresaId={empresa?.id || null}
                   value={funcionarioSel}
@@ -411,7 +413,11 @@ export default function Ponto() {
               </div>
               <div className="w-28">
                 <label className="text-xs text-muted-foreground mb-1 block">Mês de referência</label>
-                <Input value={toBrMonth(mesRef)} onChange={(e) => setMesRef(fromBrMonth(e.target.value))} placeholder="04/2026" />
+                <Input
+                  value={toBrMonth(mesRef)}
+                  onChange={(e) => setMesRef(fromBrMonth(e.target.value))}
+                  placeholder="04/2026"
+                />
               </div>
             </div>
           </CardContent>
@@ -425,15 +431,16 @@ export default function Ponto() {
               type="file"
               accept="image/*"
               className="hidden"
-              onChange={(e) => { onPhoto(e.target.files?.[0]); e.target.value = ""; }}
+              onChange={(e) => {
+                onPhoto(e.target.files?.[0]);
+                e.target.value = "";
+              }}
             />
             <Button variant="outline" onClick={() => fileRef.current?.click()} className="gap-2">
               <Camera className="h-4 w-4" /> Anexar Foto
             </Button>
           </div>
-          {image && !empresa && (
-            <p className="text-xs text-destructive">Selecione uma empresa para ler a folha.</p>
-          )}
+          {image && !empresa && <p className="text-xs text-destructive">Selecione uma empresa para ler a folha.</p>}
           {image && empresa && (
             <Button onClick={runOCR} disabled={loading} className="gap-2">
               {loading ? step || "Processando..." : "Ler folha de ponto"}
@@ -457,9 +464,17 @@ export default function Ponto() {
               { l: "Dias", v: resumo.dias_trabalhados, c: "" },
               { l: "Total", v: formatHours(resumo.total_horas), c: "text-primary" },
               { l: "Extras", v: formatHours(resumo.total_extras), c: "text-[hsl(var(--success))]" },
-              { l: "Atraso", v: formatMinutes(resumo.total_atraso), c: resumo.total_atraso > 0 ? "text-destructive" : "" },
+              {
+                l: "Atraso",
+                v: formatMinutes(resumo.total_atraso),
+                c: resumo.total_atraso > 0 ? "text-destructive" : "",
+              },
               { l: "Noturnas", v: formatHours(resumo.total_noturnas), c: "text-[hsl(var(--warning))]" },
-              { l: "Saldo", v: formatHours(resumo.saldo), c: resumo.saldo >= 0 ? "text-[hsl(var(--success))]" : "text-destructive" },
+              {
+                l: "Saldo",
+                v: formatHours(resumo.saldo),
+                c: resumo.saldo >= 0 ? "text-[hsl(var(--success))]" : "text-destructive",
+              },
             ].map((x) => (
               <Card key={x.l}>
                 <CardContent className="py-3 px-4">
@@ -499,13 +514,18 @@ export default function Ponto() {
                   <thead className="sticky top-0 bg-card">
                     <tr>
                       {["Dia", "Entrada", "Saída p/ intervalo", "Volta do intervalo", "Saída", "Exceção"].map((h) => (
-                        <th key={h} className="px-2 py-2 text-center font-semibold text-foreground border border-foreground/80">{h}</th>
+                        <th
+                          key={h}
+                          className="px-2 py-2 text-center font-semibold text-foreground border border-foreground/80"
+                        >
+                          {h}
+                        </th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
                     {registros.map((r, i) => {
-                      const confLevel = confidenceMap[typeof r.dia === 'number' ? r.dia : parseInt(String(r.dia))];
+                      const confLevel = confidenceMap[typeof r.dia === "number" ? r.dia : parseInt(String(r.dia))];
                       const isLowConf = confLevel === "baixa";
                       const isMedConf = confLevel === "media";
                       return (
@@ -517,26 +537,30 @@ export default function Ponto() {
                               {isMedConf && <AlertTriangle className="h-3 w-3 text-[hsl(var(--warning))]" />}
                             </div>
                           </td>
-                          {(["hora_entrada", "hora_saida", "hora_entrada_tarde", "hora_saida_tarde"] as const).map((f) => (
-                            <td key={f} className="px-1 py-1 text-center text-foreground border border-foreground/80">
-                              {editMode ? (
-                                <Input
-                                  value={r[f] || ""}
-                                  onChange={(e) => updateReg(i, f, e.target.value)}
-                                  className="h-7 w-full text-xs text-center p-0.5"
-                                  placeholder="--:--"
-                                />
-                              ) : (
-                                <span>{r[f] || "—"}</span>
-                              )}
-                            </td>
-                          ))}
+                          {(["hora_entrada", "hora_saida", "hora_entrada_tarde", "hora_saida_tarde"] as const).map(
+                            (f) => (
+                              <td key={f} className="px-1 py-1 text-center text-foreground border border-foreground/80">
+                                {editMode ? (
+                                  <Input
+                                    value={r[f] || ""}
+                                    onChange={(e) => updateReg(i, f, e.target.value)}
+                                    className="h-7 w-full text-xs text-center p-0.5"
+                                    placeholder="--:--"
+                                  />
+                                ) : (
+                                  <span>{r[f] || "—"}</span>
+                                )}
+                              </td>
+                            ),
+                          )}
                           <td className="px-1 py-1 text-center border border-foreground/80">
                             {editMode ? (
                               <Popover>
                                 <PopoverTrigger asChild>
                                   <button className="min-w-[3rem] cursor-pointer hover:bg-muted/50 rounded px-1 py-0.5">
-                                    {excecaoBadge(r.tipo_excecao) || <span className="text-xs text-muted-foreground">—</span>}
+                                    {excecaoBadge(r.tipo_excecao) || (
+                                      <span className="text-xs text-muted-foreground">—</span>
+                                    )}
                                   </button>
                                 </PopoverTrigger>
                                 <PopoverContent className="w-36 p-1.5" align="center">
