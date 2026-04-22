@@ -484,30 +484,42 @@ export default function FuncionarioDetalhe() {
     setEditOpen(true);
   };
 
+  const editErrors = (() => {
+    const e: { nome_completo?: string; cpf?: string; email?: string } = {};
+    if (!editForm.nome_completo.trim()) e.nome_completo = "Informe o nome completo.";
+    if (!editForm.cpf || !validateCPF(editForm.cpf)) e.cpf = "CPF inválido. Verifique os dígitos.";
+    if (editForm.email && !validateEmail(editForm.email)) e.email = "E-mail inválido.";
+    return e;
+  })();
+
   const handleSaveEdit = async () => {
     if (!func) return;
-    if (!editForm.nome_completo.trim() || !editForm.cpf.trim()) {
-      toast({ title: "Nome e CPF obrigatórios", variant: "destructive" });
+    setEditTouched({ nome_completo: true, cpf: true, email: true });
+    if (Object.keys(editErrors).length > 0) {
+      toast({ title: "Verifique os campos", description: "Alguns dados estão incorretos.", variant: "destructive" });
       return;
     }
     setSavingEdit(true);
-    const { error } = await supabase.from("funcionarios").update({
-      nome_completo: editForm.nome_completo.trim(),
-      cpf: editForm.cpf.replace(/\D/g, ""),
-      email: editForm.email.trim() || null,
-      cargo: editForm.cargo.trim() || null,
-      data_nascimento: editForm.data_nascimento || null,
-      horario_entrada: editForm.horario_entrada,
-      horario_saida: editForm.horario_saida,
-      intervalo: editForm.intervalo,
-    }).eq("id", func.id);
-    setSavingEdit(false);
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      const { error } = await supabase.from("funcionarios").update({
+        nome_completo: editForm.nome_completo.trim(),
+        cpf: editForm.cpf.replace(/\D/g, ""),
+        email: editForm.email.trim() || null,
+        cargo: editForm.cargo.trim() || null,
+        data_nascimento: editForm.data_nascimento || null,
+        horario_entrada: editForm.horario_entrada,
+        horario_saida: editForm.horario_saida,
+        intervalo: editForm.intervalo,
+      }).eq("id", func.id);
+      if (error) throw error;
       toast({ title: "Dados atualizados" });
       setEditOpen(false);
+      setEditTouched({});
       await loadAll();
+    } catch (err) {
+      toast({ title: "Erro ao salvar", description: friendlyError(err), variant: "destructive" });
+    } finally {
+      setSavingEdit(false);
     }
   };
 
