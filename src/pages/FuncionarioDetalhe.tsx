@@ -258,44 +258,41 @@ export default function FuncionarioDetalhe() {
       await supabase.storage.from("colaborador-arquivos").remove([doc.storage_path]);
       const { error } = await supabase.from("funcionario_documentos").delete().eq("id", doc.id);
       if (error) throw error;
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-      return;
-    }
 
-    // Se for um contrato e não restarem mais contratos, limpar análise + alertas + eventos no Google Agenda
-    if (doc.categoria === "contrato" && func) {
-      const restantes = documentos.filter(
-        (d) => d.id !== doc.id && d.categoria === "contrato",
-      );
-      if (restantes.length === 0) {
-        // Buscar IDs de eventos do Google Agenda antes de apagar
-        const { data: alertasAntigos } = await supabase
-          .from("contrato_alertas")
-          .select("google_event_id, google_event_id_lembrete, google_event_id_vencimento")
-          .eq("funcionario_id", func.id);
-        const eventIds = (alertasAntigos ?? [])
-          .flatMap((a) => [a.google_event_id, a.google_event_id_lembrete, a.google_event_id_vencimento])
-          .filter((x): x is string => typeof x === "string" && x.length > 0);
+      // Se for um contrato e não restarem mais contratos, limpar análise + alertas + eventos no Google Agenda
+      if (doc.categoria === "contrato" && func) {
+        const restantes = documentos.filter(
+          (d) => d.id !== doc.id && d.categoria === "contrato",
+        );
+        if (restantes.length === 0) {
+          const { data: alertasAntigos } = await supabase
+            .from("contrato_alertas")
+            .select("google_event_id, google_event_id_lembrete, google_event_id_vencimento")
+            .eq("funcionario_id", func.id);
+          const eventIds = (alertasAntigos ?? [])
+            .flatMap((a) => [a.google_event_id, a.google_event_id_lembrete, a.google_event_id_vencimento])
+            .filter((x): x is string => typeof x === "string" && x.length > 0);
 
-        if (eventIds.length > 0) {
-          try {
-            await supabase.functions.invoke("delete-calendar-alerts", {
-              body: { event_ids: eventIds },
-            });
-          } catch (err) {
-            console.error("Falha ao remover eventos do Google Agenda:", err);
+          if (eventIds.length > 0) {
+            try {
+              await supabase.functions.invoke("delete-calendar-alerts", {
+                body: { event_ids: eventIds },
+              });
+            } catch {
+              // best-effort
+            }
           }
+
+          await supabase.from("contrato_alertas").delete().eq("funcionario_id", func.id);
+          await supabase.from("contratos_analise").delete().eq("funcionario_id", func.id);
         }
-
-        await supabase.from("contrato_alertas").delete().eq("funcionario_id", func.id);
-        await supabase.from("contratos_analise").delete().eq("funcionario_id", func.id);
       }
-      // Se restam contratos, AnaliseContrato detecta a mudança e re-analisa.
-    }
 
-    toast({ title: "Documento excluído" });
-    await loadAll();
+      toast({ title: "Documento excluído" });
+      await loadAll();
+    } catch (err) {
+      toast({ title: "Erro ao excluir", description: friendlyError(err), variant: "destructive" });
+    }
   };
 
   // ==== Holerites ====
