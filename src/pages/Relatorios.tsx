@@ -115,7 +115,7 @@ export default function Relatorios() {
   const meses = [...new Set(folhas.map((f) => f.mes_referencia))].sort().reverse();
 
   return (
-    <div className="min-h-screen bg-background pb-24 md:pb-8">
+    <div className="min-h-screen bg-background pb-44">
       <NavBar />
       <div className="max-w-4xl mx-auto p-4 space-y-4">
         <h1 className="text-2xl font-bold text-foreground tracking-tight animate-fade-in">Relatórios</h1>
