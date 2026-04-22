@@ -248,7 +248,7 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
               {googleConectado === false && pendentes.length > 0 && (
                 <Button size="sm" variant="outline" onClick={handleConectarGoogle} disabled={connecting} className="gap-1.5">
                   {connecting ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <LinkIcon className="h-3.5 w-3.5" />}
-                  Conectar Google Agenda
+                  Conectar Google (Agenda + Gmail)
                 </Button>
               )}
             </div>
