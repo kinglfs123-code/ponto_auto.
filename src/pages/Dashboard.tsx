@@ -45,7 +45,7 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-4">
+    <div className="min-h-screen bg-background pb-44">
       <NavBar />
       <div className="max-w-4xl mx-auto p-4 space-y-6">
         <div className="animate-fade-in">

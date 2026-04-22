@@ -117,7 +117,7 @@ export default function Funcionarios() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-4">
+    <div className="min-h-screen bg-background pb-44">
       <NavBar />
       <div className="max-w-4xl mx-auto p-4 space-y-4">
         <div className="flex flex-wrap items-end gap-3 animate-fade-in">

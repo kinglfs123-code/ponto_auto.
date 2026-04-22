@@ -379,7 +379,7 @@ export default function Ponto() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-4">
+    <div className="min-h-screen bg-background pb-44">
       <NavBar />
       <div className="max-w-6xl mx-auto p-4 space-y-4">
         <h1 className="text-xl font-bold text-primary animate-fade-in">Importar Folha de Ponto</h1>
