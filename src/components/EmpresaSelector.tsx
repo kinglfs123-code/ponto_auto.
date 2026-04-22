@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useEmpresa } from "@/contexts/EmpresaContext";
@@ -11,13 +11,14 @@ interface Props {
 
 export default function EmpresaSelector({ value, onChange }: Props) {
   const { empresa: ctxEmpresa, setEmpresa: setCtxEmpresa } = useEmpresa();
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
-
-  useEffect(() => {
-    supabase.from("empresas").select("id, cnpj, nome, jornada_padrao").then(({ data }) => {
-      if (data) setEmpresas(data);
-    });
-  }, []);
+  const { data: empresas = [] } = useQuery({
+    queryKey: ["empresas-selector"],
+    queryFn: async () => {
+      const { data } = await supabase.from("empresas").select("id, cnpj, nome, jornada_padrao");
+      return (data ?? []) as Empresa[];
+    },
+    staleTime: 60_000,
+  });
 
   const selectedId = value ?? ctxEmpresa?.id ?? "";
 
