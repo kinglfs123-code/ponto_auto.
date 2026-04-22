@@ -5,7 +5,7 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { Button } from "@/components/ui/button";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useWorkflowStatus, isRouteEnabled, getRouteMessage } from "@/hooks/use-workflow-status";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 
 const links = [
   { to: "/", label: "Início", icon: Home },
@@ -32,7 +32,7 @@ export default function NavBar() {
   const handleNavClick = (e: React.MouseEvent, to: string) => {
     if (!isRouteEnabled(to, workflow)) {
       e.preventDefault();
-      toast.error(getRouteMessage(to));
+      toast({ title: getRouteMessage(to), variant: "destructive" });
     }
   };
 

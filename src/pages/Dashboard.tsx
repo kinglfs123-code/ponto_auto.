@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, ClipboardList, FileText, Plus, Users, Lock } from "lucide-react";
@@ -8,20 +8,19 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { maskCNPJ } from "@/lib/ponto-rules";
 import NavBar from "@/components/NavBar";
 import { useWorkflowStatus, isRouteEnabled, getRouteMessage } from "@/hooks/use-workflow-status";
-import { toast } from "sonner";
+import { toast } from "@/hooks/use-toast";
 import type { Empresa } from "@/types";
 
 export default function Dashboard() {
-  const [empresas, setEmpresas] = useState<Empresa[]>([]);
-  const [loading, setLoading] = useState(true);
   const workflow = useWorkflowStatus();
-
-  useEffect(() => {
-    supabase.from("empresas").select("*").then(({ data }) => {
-      if (data) setEmpresas(data);
-      setLoading(false);
-    });
-  }, []);
+  const { data: empresas = [], isLoading: loading } = useQuery({
+    queryKey: ["empresas"],
+    queryFn: async () => {
+      const { data } = await supabase.from("empresas").select("*");
+      return (data ?? []) as Empresa[];
+    },
+    staleTime: 60_000,
+  });
 
   const quickActions = [
     { to: "/empresas", label: "Nova empresa", icon: Building2 },
