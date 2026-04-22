@@ -24,6 +24,8 @@ export type Database = {
           erro_mensagem: string | null
           funcionario_id: string
           google_event_id: string | null
+          google_event_id_lembrete: string | null
+          google_event_id_vencimento: string | null
           id: string
           status: string
           tipo: string
@@ -38,6 +40,8 @@ export type Database = {
           erro_mensagem?: string | null
           funcionario_id: string
           google_event_id?: string | null
+          google_event_id_lembrete?: string | null
+          google_event_id_vencimento?: string | null
           id?: string
           status?: string
           tipo: string
@@ -52,6 +56,8 @@ export type Database = {
           erro_mensagem?: string | null
           funcionario_id?: string
           google_event_id?: string | null
+          google_event_id_lembrete?: string | null
+          google_event_id_vencimento?: string | null
           id?: string
           status?: string
           tipo?: string
