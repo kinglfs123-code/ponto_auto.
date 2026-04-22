@@ -400,7 +400,7 @@ Deno.serve(async (req) => {
           { mode: "holerite", holerite_id, status: result.status }, errBody);
 
         if (result.status === 403 && lower.includes("insufficient")) {
-          return jsonResponse({ needs_reconnect: true, reason: "missing_gmail_scope", error: "Reconecte o Google para autorizar envio de e-mail." });
+          return jsonResponse({ needs_reconnect: true, reason: "scope_insufficient", error: "Reconecte o Google para autorizar envio de e-mail." });
         }
         if (result.status === 403 && lower.includes("has not been used") && lower.includes("gmail")) {
           return jsonResponse({ error: "Habilite a Gmail API no Google Cloud Console e tente novamente." }, 400);
@@ -517,7 +517,7 @@ Deno.serve(async (req) => {
         { mode: "documentos", funcionario_id, status: result.status }, errBody);
 
       if (result.status === 403 && lower.includes("insufficient")) {
-        return jsonResponse({ needs_reconnect: true, reason: "missing_gmail_scope", error: "Reconecte o Google para autorizar envio de e-mail." });
+        return jsonResponse({ needs_reconnect: true, reason: "scope_insufficient", error: "Reconecte o Google para autorizar envio de e-mail." });
       }
       if (result.status === 403 && lower.includes("has not been used") && lower.includes("gmail")) {
         return jsonResponse({ error: "Habilite a Gmail API no Google Cloud Console e tente novamente." }, 400);
