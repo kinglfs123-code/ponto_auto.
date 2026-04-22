@@ -248,12 +248,31 @@ export default function FuncionarioDetalhe() {
       return;
     }
 
-    // Se for um contrato e não restarem mais contratos, limpar análise + alertas
+    // Se for um contrato e não restarem mais contratos, limpar análise + alertas + eventos no Google Agenda
     if (doc.categoria === "contrato" && func) {
       const restantes = documentos.filter(
         (d) => d.id !== doc.id && d.categoria === "contrato",
       );
       if (restantes.length === 0) {
+        // Buscar IDs de eventos do Google Agenda antes de apagar
+        const { data: alertasAntigos } = await supabase
+          .from("contrato_alertas")
+          .select("google_event_id")
+          .eq("funcionario_id", func.id);
+        const eventIds = (alertasAntigos ?? [])
+          .map((a) => a.google_event_id)
+          .filter((x): x is string => typeof x === "string" && x.length > 0);
+
+        if (eventIds.length > 0) {
+          try {
+            await supabase.functions.invoke("delete-calendar-alerts", {
+              body: { event_ids: eventIds },
+            });
+          } catch (err) {
+            console.error("Falha ao remover eventos do Google Agenda:", err);
+          }
+        }
+
         await supabase.from("contrato_alertas").delete().eq("funcionario_id", func.id);
         await supabase.from("contratos_analise").delete().eq("funcionario_id", func.id);
       }
@@ -873,7 +892,7 @@ export default function FuncionarioDetalhe() {
                     </CardContent>
                   </Card>
 
-                  {cat.value === "contrato" && func && (
+                  {cat.value === "contrato" && func && docs.length > 0 && (
                     <AnaliseContrato funcionarioId={func.id} contratos={docs} />
                   )}
                 </div>
