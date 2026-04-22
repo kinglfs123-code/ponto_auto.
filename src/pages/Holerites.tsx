@@ -162,8 +162,12 @@ export default function Holerites() {
           title: reason === "no_token" ? "Conecte o Google" : "Reconecte o Google",
           description,
           variant: "destructive",
+          action: (
+            <ToastAction altText="Reconectar Google" onClick={() => startGoogleConnect()}>
+              Reconectar Google
+            </ToastAction>
+          ),
         });
-        startGoogleConnect();
         return;
       }
       if (data?.rate_limited) {
