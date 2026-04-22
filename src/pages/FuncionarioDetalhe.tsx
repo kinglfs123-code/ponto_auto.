@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { ToastAction } from "@/components/ui/toast";
 import {
   ArrowLeft, Mail, Briefcase, Cake, Clock, FileText, Upload, Trash2, Download, Send, Plus, Calendar, Loader2, Pencil,
 } from "lucide-react";
@@ -334,8 +335,12 @@ export default function FuncionarioDetalhe() {
           title: reason === "no_token" ? "Conecte o Google" : "Reconecte o Google",
           description,
           variant: "destructive",
+          action: (
+            <ToastAction altText="Reconectar Google" onClick={() => startGoogleConnect()}>
+              Reconectar Google
+            </ToastAction>
+          ),
         });
-        startGoogleConnect();
         return;
       }
       if (data?.rate_limited) {
@@ -378,8 +383,12 @@ export default function FuncionarioDetalhe() {
         title: reason === "no_token" ? "Conecte o Google" : "Reconecte o Google",
         description,
         variant: "destructive",
+        action: (
+          <ToastAction altText="Reconectar Google" onClick={() => startGoogleConnect()}>
+            Reconectar Google
+          </ToastAction>
+        ),
       });
-      startGoogleConnect();
       return;
     }
     if (data?.rate_limited) {
