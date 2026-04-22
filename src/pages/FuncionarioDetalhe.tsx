@@ -892,7 +892,7 @@ export default function FuncionarioDetalhe() {
                     </CardContent>
                   </Card>
 
-                  {cat.value === "contrato" && func && (
+                  {cat.value === "contrato" && func && docs.length > 0 && (
                     <AnaliseContrato funcionarioId={func.id} contratos={docs} />
                   )}
                 </div>
