@@ -1,72 +1,114 @@
 
+## Plano: corrigir o loop infinito do OAuth do Google
 
-## Plano: redeploy de `send-via-gmail` + tratar token revogado/escopo insuficiente como `needs_reconnect`
+### Diagnóstico confirmado
 
-### Diagnóstico real
+O problema **não** está no salvamento do token.
 
-A função **`send-via-gmail` está deployada** — os logs do Supabase mostram execuções nos últimos minutos:
+O que verifiquei:
 
-- `[send-via-gmail] refresh failed: { "error": "invalid_grant", "error_description": "Token has been expired or revoked." }`
-- `[send-via-gmail] gmail profile failed: 403 ... ACCESS_TOKEN_SCOPE_INSUFFICIENT`
-- `[send-via-gmail] error: Falha ao ler perfil Google: 403`
+- A tabela `google_calendar_tokens` **não está vazia**: existe **1 token salvo**.
+- O `google-oauth-callback` já está:
+  - trocando o `code` com sucesso
+  - recebendo os escopos `gmail.send` + `calendar.events`
+  - salvando o token no banco
+- A função callback **já usa service role** (`createClient(SUPABASE_URL, SERVICE_KEY)`), então o insert/upsert **não depende de RLS**.
+- As policies de `google_calendar_tokens` também estão corretas para uso pelo cliente autenticado.
 
-O motivo do "Edge Function returned a non-2xx status code" no front **não é função inexistente** — é a função respondendo 500 em dois casos que ela ainda não trata bem:
+### Causa raiz real do loop
 
-1. **Refresh token revogado** (depois que você revogou em myaccount.google.com): `getValidAccessToken` deleta o registro e devolve `{ token: null }`, mas o handler depois trata como erro genérico → 500.
-2. **403 do Gmail** ao chamar `users/me/profile` (escopo `gmail.send` não foi concedido de verdade): hoje vira `throw new Error(...)` → 500.
+O loop acontece porque `send-via-gmail` faz esta chamada antes de enviar:
 
-### Correção
+- `GET https://gmail.googleapis.com/gmail/v1/users/me/profile`
 
-#### 1. Forçar redeploy de `send-via-gmail`
+Essa chamada exige escopos mais amplos do Gmail e **não funciona só com `gmail.send`**.
 
-Garante que a versão atual do código (com endpoint `gmail/v1/users/me/profile` e logs de scope) está em produção, eliminando a hipótese de cache antigo.
+Então o fluxo atual vira:
 
-#### 2. `supabase/functions/send-via-gmail/index.ts` — tratar 3 casos como `needs_reconnect` (HTTP 200)
+```text
+OAuth salva token corretamente
+-> send-via-gmail tenta ler users/me/profile
+-> Google responde 403 ACCESS_TOKEN_SCOPE_INSUFFICIENT
+-> backend retorna needs_reconnect
+-> frontend chama startGoogleConnect() automaticamente
+-> usuário reconecta
+-> volta com ?google=ok
+-> ao enviar de novo, repete tudo
+```
 
-Em vez de deixar a função explodir com 500, devolver respostas estruturadas que o front entende:
+Ou seja: o token existe, mas a função de envio usa um endpoint incompatível com o escopo solicitado.
 
-| Situação | Resposta hoje | Resposta nova |
-|---|---|---|
-| Sem token salvo (`getValidAccessToken` retorna `null`) | 500 genérico | `200 { needs_reconnect: true, reason: "no_token" }` |
-| Refresh falhou (`invalid_grant`) | Apaga token e retorna 500 | Apaga token e retorna `200 { needs_reconnect: true, reason: "refresh_revoked" }` |
-| Scope sem `gmail.send` antes de chamar Gmail | (já validado no callback, mas não aqui) | `200 { needs_reconnect: true, reason: "missing_scope", missing_scope: "gmail.send" }` |
-| 403 do Gmail no `getGoogleProfile` ou no `messages/send` | 500 | `200 { needs_reconnect: true, reason: "scope_insufficient" }` |
+### O que vou ajustar
 
-Outras falhas (rede, PDF não encontrado, etc.) continuam 500 com mensagem.
+#### 1. Corrigir `send-via-gmail`
+Arquivo:
+- `supabase/functions/send-via-gmail/index.ts`
 
-#### 3. `src/pages/Holerites.tsx` e `src/pages/FuncionarioDetalhe.tsx` — reagir a `needs_reconnect`
+Mudanças:
+- Remover a dependência de `gmail/v1/users/me/profile`.
+- Parar de bloquear o envio por causa dessa leitura de perfil.
+- Refatorar a montagem do MIME para **não depender do e-mail/nome obtidos via profile endpoint**.
+- Deixar o envio acontecer usando apenas o escopo `gmail.send`, que é o escopo já concedido.
+- Manter logs claros de:
+  - escopos do token
+  - tentativa de envio
+  - resposta da Gmail API
+  - motivo de falha real
 
-Hoje as duas telas só verificam `error` e `data?.success`. Adicionar:
+#### 2. Parar o redirecionamento automático que cria o loop
+Arquivos:
+- `src/pages/Holerites.tsx`
+- `src/pages/FuncionarioDetalhe.tsx`
 
-- Se `data?.needs_reconnect === true` → toast amarelo com texto explicando o motivo (`reason`) + botão **"Reconectar Google"** que chama `supabase.functions.invoke("google-oauth-start", { body: { return_to } })` e abre a URL.
-- Mensagens por motivo:
-  - `no_token` → "Conecte sua conta Google para enviar e-mails."
-  - `refresh_revoked` → "Sua autorização Google expirou. Reconecte para continuar."
-  - `missing_scope` / `scope_insufficient` → "Permissão de envio de e-mail não concedida. Reconecte e autorize 'Enviar e-mails'."
+Mudanças:
+- Quando `send-via-gmail` retornar `needs_reconnect`, **não** iniciar `startGoogleConnect()` automaticamente.
+- Mostrar toast com mensagem clara + ação manual “Reconectar Google”.
+- Isso evita loop mesmo se houver nova falha de permissão/token.
 
-### Resultado esperado
+#### 3. Ajustar a lógica visual de “Google conectado”
+Arquivos:
+- `src/pages/FuncionarioDetalhe.tsx`
+- `src/components/AnaliseContrato.tsx` (se necessário)
 
-1. Após o redeploy + você reconectar o Google (já com `gmail.send` habilitado no Google Cloud), o envio funciona.
-2. Se algo der errado de novo, **nunca mais** "Edge Function returned a non-2xx" — sempre toast claro com botão de reconectar.
+Mudanças:
+- Separar melhor o conceito de:
+  - conectado para calendário (`calendar.events`)
+  - conectado para envio de e-mail (`gmail.send`)
+- Garantir que “conectado” não signifique falsamente que todas as ações vão funcionar se o backend ainda estiver usando um endpoint errado.
 
-### O que NÃO muda
+### O que NÃO precisa mudar
 
-- Escopos OAuth (`calendar.events` + `gmail.send`)
-- Lógica de envio, anexos, links assinados, log em `email_send_log`
-- `google-oauth-callback` (já valida scopes e redireciona com erro claro)
-- UI das telas (só ganham 1 toast novo)
+- `google-oauth-callback` já está salvando token
+- `google-oauth-start` está funcionando
+- RLS da tabela `google_calendar_tokens`
+- Estrutura do banco
+- Escopos OAuth solicitados (`gmail.send` + `calendar.events`)
 
-### Arquivos editados
+### Validação após a correção
+
+Depois da implementação, vou validar este fluxo:
+
+```text
+Reconectar Google
+-> retorno com ?google=ok
+-> token continua salvo em google_calendar_tokens
+-> clicar em Enviar
+-> send-via-gmail não chama mais users/me/profile
+-> envio funciona OU retorna erro real sem redirecionar de novo
+```
+
+### Arquivos que serão alterados
 
 | Arquivo | Mudança |
 |---|---|
-| `supabase/functions/send-via-gmail/index.ts` | 4 caminhos de erro viram resposta 200 com `needs_reconnect` + reason; redeploy forçado |
-| `src/pages/Holerites.tsx` | Trata `needs_reconnect` com toast + botão "Reconectar Google" |
-| `src/pages/FuncionarioDetalhe.tsx` | Mesmo tratamento no envio de documentos e holerite individual |
+| `supabase/functions/send-via-gmail/index.ts` | Remover uso de `users/me/profile`, enviar usando apenas `gmail.send`, melhorar logs |
+| `src/pages/Holerites.tsx` | Remover auto-reconnect e trocar por ação manual no toast |
+| `src/pages/FuncionarioDetalhe.tsx` | Mesmo ajuste de reconexão manual |
+| `src/components/AnaliseContrato.tsx` | Ajuste opcional do indicador de conexão para não confundir status de agenda x e-mail |
 
-### Passos manuais que continuam sendo seus
+### Resultado esperado
 
-1. Confirmar no Google Cloud Console que **Gmail API está Enabled** e que `gmail.send` está na **OAuth consent screen → Scopes** (sem isso, mesmo reconectando, vai voltar `scope_insufficient`).
-2. Após o deploy, clicar em "Reconectar Google" pelo botão novo (ou pela tela de Funcionários) para gerar token com `gmail.send` real.
-3. Testar envio de holerite.
-
+- Fim do loop infinito
+- Token permanece salvo e reutilizado
+- “Reconectar Google” só aparece quando realmente necessário
+- Envio de holerite/e-mail passa a funcionar com o escopo já concedido
