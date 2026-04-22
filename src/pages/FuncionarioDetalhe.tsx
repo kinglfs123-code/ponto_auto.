@@ -257,10 +257,10 @@ export default function FuncionarioDetalhe() {
         // Buscar IDs de eventos do Google Agenda antes de apagar
         const { data: alertasAntigos } = await supabase
           .from("contrato_alertas")
-          .select("google_event_id")
+          .select("google_event_id, google_event_id_lembrete, google_event_id_vencimento")
           .eq("funcionario_id", func.id);
         const eventIds = (alertasAntigos ?? [])
-          .map((a) => a.google_event_id)
+          .flatMap((a) => [a.google_event_id, a.google_event_id_lembrete, a.google_event_id_vencimento])
           .filter((x): x is string => typeof x === "string" && x.length > 0);
 
         if (eventIds.length > 0) {

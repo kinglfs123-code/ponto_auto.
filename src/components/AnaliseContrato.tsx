@@ -17,7 +17,7 @@ const TIPO_LABEL: Record<string, string> = {
 const TIPO_ALERTA_LABEL: Record<string, string> = {
   vencimento_contrato: "Vencimento do contrato",
   prorrogacao: "Prorrogação",
-  ferias_5_meses: "Férias (5 meses antes)",
+  ferias_5_meses: "Férias (2 meses antes)",
 };
 
 const formatDate = (d?: string | null) => {
@@ -182,7 +182,7 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
     (async () => {
       try {
         const eventIds = alertas
-          .map((a) => a.google_event_id)
+          .flatMap((a) => [a.google_event_id, a.google_event_id_lembrete, a.google_event_id_vencimento])
           .filter((x): x is string => typeof x === "string" && x.length > 0);
 
         if (eventIds.length > 0) {
@@ -305,7 +305,7 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground">{TIPO_ALERTA_LABEL[al.tipo] || al.tipo}</p>
                   <p className="text-xs text-muted-foreground">
-                    Lembrete em {formatDate(al.data_lembrete)} · evento em {formatDate(al.data_evento)}
+                    🔔 Lembrete em {formatDate(al.data_lembrete)} (azul) · ⚠️ Evento em {formatDate(al.data_evento)} (vermelho)
                   </p>
                 </div>
                 {al.status === "sincronizado" ? (

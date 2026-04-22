@@ -112,6 +112,8 @@ export interface ContratoAlerta {
   data_evento: string;
   data_lembrete: string;
   google_event_id: string | null;
+  google_event_id_lembrete?: string | null;
+  google_event_id_vencimento?: string | null;
   status: StatusAlerta;
   erro_mensagem: string | null;
   created_at: string;
