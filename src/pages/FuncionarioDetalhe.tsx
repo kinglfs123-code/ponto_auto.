@@ -247,9 +247,17 @@ export default function FuncionarioDetalhe() {
   };
 
   const handleDeleteDoc = async (doc: FuncionarioDocumento) => {
-    if (!confirm(`Excluir "${doc.nome_arquivo}"?`)) return;
-    await supabase.storage.from("colaborador-arquivos").remove([doc.storage_path]);
-    const { error } = await supabase.from("funcionario_documentos").delete().eq("id", doc.id);
+    const ok = await confirm({
+      title: "Excluir documento",
+      description: `Tem certeza que deseja excluir "${doc.nome_arquivo}"? Esta ação não pode ser desfeita.`,
+      confirmLabel: "Excluir documento",
+      variant: "danger",
+    });
+    if (!ok) return;
+    try {
+      await supabase.storage.from("colaborador-arquivos").remove([doc.storage_path]);
+      const { error } = await supabase.from("funcionario_documentos").delete().eq("id", doc.id);
+      if (error) throw error;
     if (error) {
       toast({ title: "Erro", description: error.message, variant: "destructive" });
       return;
