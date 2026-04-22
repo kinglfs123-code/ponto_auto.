@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/use-confirm";
+import { friendlyError } from "@/lib/error-messages";
 import NavBar from "@/components/NavBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,12 +14,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { SpinnerButton } from "@/components/ui/spinner-button";
 import { ToastAction } from "@/components/ui/toast";
 import {
   ArrowLeft, Mail, Briefcase, Cake, Clock, FileText, Upload, Trash2, Download, Send, Plus, Calendar, Loader2, Pencil,
 } from "lucide-react";
-import { maskCPF, maskCpfSensitive, maskEmailSensitive } from "@/lib/ponto-rules";
+import { maskCPF, maskCpfSensitive, maskEmailSensitive, validateCPF, validateEmail } from "@/lib/ponto-rules";
 import { SensitiveText } from "@/components/SensitiveText";
+import { cn } from "@/lib/utils";
 import type { Funcionario, Folha, Holerite, FuncionarioDocumento, CategoriaDocumento, FuncionarioFerias, StatusFerias } from "@/types";
 import { AnaliseContrato } from "@/components/AnaliseContrato";
 
