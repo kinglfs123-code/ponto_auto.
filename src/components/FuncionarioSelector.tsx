@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
@@ -21,24 +22,24 @@ interface Props {
 }
 
 export default function FuncionarioSelector({ empresaId, value, manualName, onSelect, onManualName, onLoadedFuncionarios }: Props) {
-  const [funcionarios, setFuncionarios] = useState<FuncionarioOption[]>([]);
+  const { data: funcionarios = [] } = useQuery({
+    queryKey: ["funcionarios-selector", empresaId],
+    enabled: !!empresaId,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("funcionarios")
+        .select("id, nome_completo, horario_entrada, horario_saida, intervalo")
+        .eq("empresa_id", empresaId!)
+        .order("nome_completo");
+      return (data ?? []) as FuncionarioOption[];
+    },
+  });
 
   useEffect(() => {
-    if (!empresaId) {
-      setFuncionarios([]);
-      return;
-    }
-    supabase
-      .from("funcionarios")
-      .select("id, nome_completo, horario_entrada, horario_saida, intervalo")
-      .eq("empresa_id", empresaId)
-      .order("nome_completo")
-      .then(({ data }) => {
-        const list = data || [];
-        setFuncionarios(list);
-        onLoadedFuncionarios?.(list);
-      });
-  }, [empresaId]);
+    onLoadedFuncionarios?.(funcionarios);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [funcionarios]);
 
   // Fallback: empresa sem colaboradores cadastrados — input manual
   if (funcionarios.length === 0) {
