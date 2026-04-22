@@ -8,7 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { maskCPF, validateCPF, maskHM } from "@/lib/ponto-rules";
+import { maskCPF, maskCpfSensitive, validateCPF, maskHM } from "@/lib/ponto-rules";
+import { SensitiveText } from "@/components/SensitiveText";
 import { Pencil, Trash2, Plus, X, Users, Clock } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEmpresa } from "@/contexts/EmpresaContext";
@@ -212,7 +213,7 @@ export default function Funcionarios() {
                     className="border-t border-border/30 hover:bg-muted/20 transition-colors cursor-pointer"
                   >
                     <td className="p-2.5 text-foreground text-sm">{f.nome_completo}</td>
-                    <td className="p-2.5 text-muted-foreground text-sm font-mono">{maskCPF(f.cpf)}</td>
+                    <td className="p-2.5 text-muted-foreground text-sm font-mono"><SensitiveText value={maskCPF(f.cpf)} masked={maskCpfSensitive(f.cpf)} /></td>
                     <td className="p-2.5 text-muted-foreground text-sm hidden sm:table-cell">{f.cargo || "—"}</td>
                     <td className="p-2.5 text-muted-foreground text-sm hidden md:table-cell">{f.horario_entrada} – {f.horario_saida} <span className="text-xs opacity-60">(int: {f.intervalo || "01:00"})</span></td>
                     <td className="p-2.5 flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
@@ -239,7 +240,7 @@ export default function Funcionarios() {
                   <div className="flex items-start justify-between">
                     <div className="space-y-1">
                       <p className="font-semibold text-sm text-foreground">{f.nome_completo}</p>
-                      <p className="text-xs text-muted-foreground font-mono">{maskCPF(f.cpf)}</p>
+                      <p className="text-xs text-muted-foreground font-mono"><SensitiveText value={maskCPF(f.cpf)} masked={maskCpfSensitive(f.cpf)} /></p>
                       {f.cargo && <p className="text-xs text-muted-foreground">{f.cargo}</p>}
                       <div className="flex items-center gap-1 text-xs text-muted-foreground">
                         <Clock className="h-3 w-3" />

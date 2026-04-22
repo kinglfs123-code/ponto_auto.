@@ -16,7 +16,8 @@ import { ToastAction } from "@/components/ui/toast";
 import {
   ArrowLeft, Mail, Briefcase, Cake, Clock, FileText, Upload, Trash2, Download, Send, Plus, Calendar, Loader2, Pencil,
 } from "lucide-react";
-import { maskCPF } from "@/lib/ponto-rules";
+import { maskCPF, maskCpfSensitive, maskEmailSensitive } from "@/lib/ponto-rules";
+import { SensitiveText } from "@/components/SensitiveText";
 import type { Funcionario, Folha, Holerite, FuncionarioDocumento, CategoriaDocumento, FuncionarioFerias, StatusFerias } from "@/types";
 import { AnaliseContrato } from "@/components/AnaliseContrato";
 
@@ -698,7 +699,7 @@ export default function FuncionarioDetalhe() {
               </div>
               <div className="flex-1 min-w-0">
                 <h1 className="text-xl font-bold text-foreground truncate">{func.nome_completo}</h1>
-                <p className="text-sm text-muted-foreground font-mono">{maskCPF(func.cpf)}</p>
+                <p className="text-sm text-muted-foreground font-mono"><SensitiveText value={maskCPF(func.cpf)} masked={maskCpfSensitive(func.cpf)} /></p>
                 {func.cargo && (
                   <Badge variant="secondary" className="mt-1 gap-1 text-xs">
                     <Briefcase className="h-3 w-3" /> {func.cargo}
@@ -725,7 +726,17 @@ export default function FuncionarioDetalhe() {
           <TabsContent value="resumo" className="space-y-3 mt-4">
             <Card className="border-border/50">
               <CardContent className="py-4 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
-                <InfoRow icon={Mail} label="E-mail" value={func.email || "—"} />
+                {func.email ? (
+                  <div className="flex items-start gap-2">
+                    <Mail className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">E-mail</p>
+                      <p className="text-sm text-foreground"><SensitiveText value={func.email} masked={maskEmailSensitive(func.email)} /></p>
+                    </div>
+                  </div>
+                ) : (
+                  <InfoRow icon={Mail} label="E-mail" value="—" />
+                )}
                 <InfoRow icon={Cake} label="Nascimento" value={formatDate(func.data_nascimento)} />
                 <InfoRow icon={Clock} label="Entrada" value={func.horario_entrada} />
                 <InfoRow icon={Clock} label="Saída" value={func.horario_saida} />
