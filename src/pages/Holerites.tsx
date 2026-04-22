@@ -1,11 +1,15 @@
 import { useState, useCallback, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/use-confirm";
+import { friendlyError } from "@/lib/error-messages";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SpinnerButton } from "@/components/ui/spinner-button";
 import { ToastAction } from "@/components/ui/toast";
 import NavBar from "@/components/NavBar";
 import EmpresaSelector from "@/components/EmpresaSelector";
@@ -17,6 +21,7 @@ import { Upload, Send, CheckCircle2, Clock, FileText, Mail, RefreshCw, Trash2 } 
 
 export default function Holerites() {
   const isMobile = useIsMobile();
+  const confirm = useConfirm();
   const { empresa, setEmpresa } = useEmpresa();
   const [mesRef, setMesRef] = useState(currentMonth);
   const [funcionarios, setFuncionarios] = useState<FuncionarioBasic[]>([]);
@@ -24,6 +29,7 @@ export default function Holerites() {
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState<Record<string, boolean>>({});
   const [sending, setSending] = useState<Record<string, boolean>>({});
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [sendingAll, setSendingAll] = useState(false);
 
   const empresaId = empresa?.id || "";
@@ -76,7 +82,11 @@ export default function Holerites() {
 
   const handleUpload = async (funcId: string, file: File) => {
     if (!file || file.type !== "application/pdf") {
-      toast({ title: "Erro", description: "Selecione um arquivo PDF", variant: "destructive" });
+      toast({ title: "Arquivo inválido", description: "Selecione um arquivo PDF.", variant: "destructive" });
+      return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: "Arquivo muito grande", description: "O limite é 10MB.", variant: "destructive" });
       return;
     }
     setUploading((p) => ({ ...p, [funcId]: true }));
@@ -98,8 +108,8 @@ export default function Holerites() {
       }
       toast({ title: "PDF enviado com sucesso" });
       await loadData();
-    } catch (err: any) {
-      toast({ title: "Erro no upload", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Erro no upload", description: friendlyError(err), variant: "destructive" });
     } finally {
       setUploading((p) => ({ ...p, [funcId]: false }));
     }
@@ -108,14 +118,25 @@ export default function Holerites() {
   const handleDeletePdf = async (funcId: string) => {
     const hol = getHolerite(funcId);
     if (!hol) return;
-    if (!confirm("Excluir o PDF deste holerite?")) return;
+    const func = funcionarios.find((f) => f.id === funcId);
+    const ok = await confirm({
+      title: "Excluir holerite",
+      description: `Tem certeza que deseja excluir o PDF do holerite${func ? ` de ${func.nome_completo}` : ""}? Esta ação não pode ser desfeita.`,
+      confirmLabel: "Excluir PDF",
+      variant: "danger",
+    });
+    if (!ok) return;
+    setDeletingId(hol.id);
     try {
       await supabase.storage.from("holerites").remove([hol.pdf_path]);
-      await supabase.from("holerites").delete().eq("id", hol.id);
+      const { error } = await supabase.from("holerites").delete().eq("id", hol.id);
+      if (error) throw error;
       toast({ title: "PDF excluído" });
       await loadData();
-    } catch (err: any) {
-      toast({ title: "Erro ao excluir", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Erro ao excluir", description: friendlyError(err), variant: "destructive" });
+    } finally {
+      setDeletingId(null);
     }
   };
 
@@ -178,8 +199,8 @@ export default function Holerites() {
 
       toast({ title: "Holerite enviado!", description: `E-mail enviado para ${func.email}` });
       await loadData();
-    } catch (err: any) {
-      toast({ title: "Erro ao enviar", description: err?.message || "Falha no envio", variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Erro ao enviar", description: friendlyError(err), variant: "destructive" });
     } finally {
       setSending((p) => ({ ...p, [funcId]: false }));
     }
@@ -194,16 +215,23 @@ export default function Holerites() {
       toast({ title: "Nada para enviar", description: "Todos os holerites já foram enviados ou não há PDFs/e-mails." });
       return;
     }
+    const ok = await confirm({
+      title: "Enviar holerites em massa",
+      description: `Você está prestes a enviar ${toSend.length} holerite(s) por e-mail. Os colaboradores receberão o PDF imediatamente. Deseja continuar?`,
+      confirmLabel: `Enviar ${toSend.length} e-mail(s)`,
+      variant: "default",
+    });
+    if (!ok) return;
     setSendingAll(true);
     let sent = 0;
     for (const f of toSend) {
       try {
         await handleSend(f.id);
         sent++;
-      } catch {}
+      } catch { /* já tratado em handleSend */ }
     }
     setSendingAll(false);
-    toast({ title: `${sent} holerite(s) enviado(s)` });
+    toast({ title: `${sent} de ${toSend.length} holerite(s) enviado(s)` });
   };
 
   const totalUploaded = funcionarios.filter((f) => getHolerite(f.id)).length;
@@ -220,12 +248,12 @@ export default function Holerites() {
           <CardContent className="pt-5 space-y-4">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-muted-foreground">Empresa</label>
+                <Label htmlFor="hol-empresa" className="text-sm font-medium text-muted-foreground">Empresa</Label>
                 <EmpresaSelector value={empresaId} onChange={handleEmpresaChange} />
               </div>
               <div className="space-y-1.5">
-                <label className="text-sm font-medium text-muted-foreground">Mês de Referência</label>
-                <Input type="month" value={mesRef} onChange={(e) => setMesRef(e.target.value)} />
+                <Label htmlFor="hol-mes" className="text-sm font-medium text-muted-foreground">Mês de Referência</Label>
+                <Input id="hol-mes" type="month" value={mesRef} onChange={(e) => setMesRef(e.target.value)} />
               </div>
             </div>
           </CardContent>
@@ -257,10 +285,10 @@ export default function Holerites() {
 
         {/* Send All */}
         {totalUploaded > totalSent && (
-          <Button onClick={handleSendAll} disabled={sendingAll} className="w-full gap-2" size="lg">
+          <SpinnerButton onClick={handleSendAll} loading={sendingAll} loadingText="Enviando…" className="w-full gap-2" size="lg">
             <Send className="h-4 w-4" />
-            {sendingAll ? "Enviando..." : `Enviar todos (${totalUploaded - totalSent} pendentes)`}
-          </Button>
+            Enviar todos ({totalUploaded - totalSent} pendentes)
+          </SpinnerButton>
         )}
 
         {/* Loading */}
@@ -345,8 +373,10 @@ export default function Holerites() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            className="gap-1.5 text-muted-foreground hover:text-destructive"
+                            className="gap-1.5 text-muted-foreground hover:text-destructive min-h-[44px] sm:min-h-0"
                             onClick={() => handleDeletePdf(func.id)}
+                            disabled={deletingId === hol.id}
+                            aria-label={`Excluir holerite de ${func.nome_completo}`}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
                             Excluir PDF

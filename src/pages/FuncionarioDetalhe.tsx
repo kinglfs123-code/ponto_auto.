@@ -2,6 +2,8 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { useConfirm } from "@/hooks/use-confirm";
+import { friendlyError } from "@/lib/error-messages";
 import NavBar from "@/components/NavBar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,12 +14,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { SpinnerButton } from "@/components/ui/spinner-button";
 import { ToastAction } from "@/components/ui/toast";
 import {
   ArrowLeft, Mail, Briefcase, Cake, Clock, FileText, Upload, Trash2, Download, Send, Plus, Calendar, Loader2, Pencil,
 } from "lucide-react";
-import { maskCPF, maskCpfSensitive, maskEmailSensitive } from "@/lib/ponto-rules";
+import { maskCPF, maskCpfSensitive, maskEmailSensitive, validateCPF, validateEmail } from "@/lib/ponto-rules";
 import { SensitiveText } from "@/components/SensitiveText";
+import { cn } from "@/lib/utils";
 import type { Funcionario, Folha, Holerite, FuncionarioDocumento, CategoriaDocumento, FuncionarioFerias, StatusFerias } from "@/types";
 import { AnaliseContrato } from "@/components/AnaliseContrato";
 
@@ -67,12 +71,14 @@ type EditForm = {
 export default function FuncionarioDetalhe() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const confirm = useConfirm();
   const [func, setFunc] = useState<Funcionario | null>(null);
   const [folhas, setFolhas] = useState<Folha[]>([]);
   const [holerites, setHolerites] = useState<Holerite[]>([]);
   const [documentos, setDocumentos] = useState<FuncionarioDocumento[]>([]);
   const [ferias, setFerias] = useState<FuncionarioFerias[]>([]);
   const [loading, setLoading] = useState(true);
+  const [editTouched, setEditTouched] = useState<{ nome_completo?: boolean; cpf?: boolean; email?: boolean }>({});
   const [uploadingCat, setUploadingCat] = useState<CategoriaDocumento | null>(null);
 
   // Holerite upload
@@ -241,47 +247,52 @@ export default function FuncionarioDetalhe() {
   };
 
   const handleDeleteDoc = async (doc: FuncionarioDocumento) => {
-    if (!confirm(`Excluir "${doc.nome_arquivo}"?`)) return;
-    await supabase.storage.from("colaborador-arquivos").remove([doc.storage_path]);
-    const { error } = await supabase.from("funcionario_documentos").delete().eq("id", doc.id);
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-      return;
-    }
+    const ok = await confirm({
+      title: "Excluir documento",
+      description: `Tem certeza que deseja excluir "${doc.nome_arquivo}"? Esta ação não pode ser desfeita.`,
+      confirmLabel: "Excluir documento",
+      variant: "danger",
+    });
+    if (!ok) return;
+    try {
+      await supabase.storage.from("colaborador-arquivos").remove([doc.storage_path]);
+      const { error } = await supabase.from("funcionario_documentos").delete().eq("id", doc.id);
+      if (error) throw error;
 
-    // Se for um contrato e não restarem mais contratos, limpar análise + alertas + eventos no Google Agenda
-    if (doc.categoria === "contrato" && func) {
-      const restantes = documentos.filter(
-        (d) => d.id !== doc.id && d.categoria === "contrato",
-      );
-      if (restantes.length === 0) {
-        // Buscar IDs de eventos do Google Agenda antes de apagar
-        const { data: alertasAntigos } = await supabase
-          .from("contrato_alertas")
-          .select("google_event_id, google_event_id_lembrete, google_event_id_vencimento")
-          .eq("funcionario_id", func.id);
-        const eventIds = (alertasAntigos ?? [])
-          .flatMap((a) => [a.google_event_id, a.google_event_id_lembrete, a.google_event_id_vencimento])
-          .filter((x): x is string => typeof x === "string" && x.length > 0);
+      // Se for um contrato e não restarem mais contratos, limpar análise + alertas + eventos no Google Agenda
+      if (doc.categoria === "contrato" && func) {
+        const restantes = documentos.filter(
+          (d) => d.id !== doc.id && d.categoria === "contrato",
+        );
+        if (restantes.length === 0) {
+          const { data: alertasAntigos } = await supabase
+            .from("contrato_alertas")
+            .select("google_event_id, google_event_id_lembrete, google_event_id_vencimento")
+            .eq("funcionario_id", func.id);
+          const eventIds = (alertasAntigos ?? [])
+            .flatMap((a) => [a.google_event_id, a.google_event_id_lembrete, a.google_event_id_vencimento])
+            .filter((x): x is string => typeof x === "string" && x.length > 0);
 
-        if (eventIds.length > 0) {
-          try {
-            await supabase.functions.invoke("delete-calendar-alerts", {
-              body: { event_ids: eventIds },
-            });
-          } catch (err) {
-            console.error("Falha ao remover eventos do Google Agenda:", err);
+          if (eventIds.length > 0) {
+            try {
+              await supabase.functions.invoke("delete-calendar-alerts", {
+                body: { event_ids: eventIds },
+              });
+            } catch {
+              // best-effort
+            }
           }
+
+          await supabase.from("contrato_alertas").delete().eq("funcionario_id", func.id);
+          await supabase.from("contratos_analise").delete().eq("funcionario_id", func.id);
         }
-
-        await supabase.from("contrato_alertas").delete().eq("funcionario_id", func.id);
-        await supabase.from("contratos_analise").delete().eq("funcionario_id", func.id);
       }
-      // Se restam contratos, AnaliseContrato detecta a mudança e re-analisa.
-    }
 
-    toast({ title: "Documento excluído" });
-    await loadAll();
+      toast({ title: "Documento excluído" });
+      await loadAll();
+    } catch (err) {
+      toast({ title: "Erro ao excluir", description: friendlyError(err), variant: "destructive" });
+    }
   };
 
   // ==== Holerites ====
@@ -393,15 +404,21 @@ export default function FuncionarioDetalhe() {
   };
 
   const handleDeleteHolerite = async (h: Holerite) => {
-    if (!confirm(`Excluir holerite de ${formatMes(h.mes_referencia)}?`)) return;
+    const ok = await confirm({
+      title: "Excluir holerite",
+      description: `Tem certeza que deseja excluir o holerite de ${formatMes(h.mes_referencia)}? Esta ação não pode ser desfeita.`,
+      confirmLabel: "Excluir holerite",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
       await supabase.storage.from("holerites").remove([h.pdf_path]);
       const { error } = await supabase.from("holerites").delete().eq("id", h.id);
       if (error) throw error;
       toast({ title: "Holerite excluído" });
       await loadAll();
-    } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Erro ao excluir", description: friendlyError(err), variant: "destructive" });
     }
   };
 
@@ -433,15 +450,21 @@ export default function FuncionarioDetalhe() {
   };
 
   const handleDeleteFolha = async (f: Folha) => {
-    if (!confirm(`Excluir folha de ${formatMes(f.mes_referencia)}? Todos os registros serão removidos.`)) return;
+    const ok = await confirm({
+      title: "Excluir folha de ponto",
+      description: `Tem certeza que deseja excluir a folha de ${formatMes(f.mes_referencia)}? Todos os registros serão removidos. Esta ação não pode ser desfeita.`,
+      confirmLabel: "Excluir folha",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
       await supabase.from("registros_ponto").delete().eq("folha_id", f.id);
       const { error } = await supabase.from("folhas_ponto").delete().eq("id", f.id);
       if (error) throw error;
       toast({ title: "Folha excluída" });
       await loadAll();
-    } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Erro ao excluir", description: friendlyError(err), variant: "destructive" });
     }
   };
 
@@ -461,30 +484,42 @@ export default function FuncionarioDetalhe() {
     setEditOpen(true);
   };
 
+  const editErrors = (() => {
+    const e: { nome_completo?: string; cpf?: string; email?: string } = {};
+    if (!editForm.nome_completo.trim()) e.nome_completo = "Informe o nome completo.";
+    if (!editForm.cpf || !validateCPF(editForm.cpf)) e.cpf = "CPF inválido. Verifique os dígitos.";
+    if (editForm.email && !validateEmail(editForm.email)) e.email = "E-mail inválido.";
+    return e;
+  })();
+
   const handleSaveEdit = async () => {
     if (!func) return;
-    if (!editForm.nome_completo.trim() || !editForm.cpf.trim()) {
-      toast({ title: "Nome e CPF obrigatórios", variant: "destructive" });
+    setEditTouched({ nome_completo: true, cpf: true, email: true });
+    if (Object.keys(editErrors).length > 0) {
+      toast({ title: "Verifique os campos", description: "Alguns dados estão incorretos.", variant: "destructive" });
       return;
     }
     setSavingEdit(true);
-    const { error } = await supabase.from("funcionarios").update({
-      nome_completo: editForm.nome_completo.trim(),
-      cpf: editForm.cpf.replace(/\D/g, ""),
-      email: editForm.email.trim() || null,
-      cargo: editForm.cargo.trim() || null,
-      data_nascimento: editForm.data_nascimento || null,
-      horario_entrada: editForm.horario_entrada,
-      horario_saida: editForm.horario_saida,
-      intervalo: editForm.intervalo,
-    }).eq("id", func.id);
-    setSavingEdit(false);
-    if (error) {
-      toast({ title: "Erro", description: error.message, variant: "destructive" });
-    } else {
+    try {
+      const { error } = await supabase.from("funcionarios").update({
+        nome_completo: editForm.nome_completo.trim(),
+        cpf: editForm.cpf.replace(/\D/g, ""),
+        email: editForm.email.trim() || null,
+        cargo: editForm.cargo.trim() || null,
+        data_nascimento: editForm.data_nascimento || null,
+        horario_entrada: editForm.horario_entrada,
+        horario_saida: editForm.horario_saida,
+        intervalo: editForm.intervalo,
+      }).eq("id", func.id);
+      if (error) throw error;
       toast({ title: "Dados atualizados" });
       setEditOpen(false);
+      setEditTouched({});
       await loadAll();
+    } catch (err) {
+      toast({ title: "Erro ao salvar", description: friendlyError(err), variant: "destructive" });
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -637,7 +672,13 @@ export default function FuncionarioDetalhe() {
   };
 
   const handleDeleteFerias = async (fid: string) => {
-    if (!confirm("Excluir este período de férias?")) return;
+    const ok = await confirm({
+      title: "Excluir período de férias",
+      description: "Tem certeza que deseja excluir este período de férias? Esta ação não pode ser desfeita.",
+      confirmLabel: "Excluir férias",
+      variant: "danger",
+    });
+    if (!ok) return;
     const fr = ferias.find((f) => f.id === fid);
     if (fr?.documento_storage_path) {
       await supabase.storage.from("colaborador-arquivos").remove([fr.documento_storage_path]);
@@ -1074,51 +1115,78 @@ export default function FuncionarioDetalhe() {
       </div>
 
       {/* Edit Funcionário Dialog */}
-      <Dialog open={editOpen} onOpenChange={setEditOpen}>
-        <DialogContent className="max-w-lg">
+      <Dialog open={editOpen} onOpenChange={(o) => !savingEdit && setEditOpen(o)}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar informações do colaborador</DialogTitle>
           </DialogHeader>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="sm:col-span-2">
-              <Label className="text-xs">Nome completo *</Label>
-              <Input value={editForm.nome_completo} onChange={(e) => setEditForm({ ...editForm, nome_completo: e.target.value })} />
+              <Label htmlFor="ed-nome" className="text-xs">Nome completo *</Label>
+              <Input
+                id="ed-nome"
+                value={editForm.nome_completo}
+                onChange={(e) => setEditForm({ ...editForm, nome_completo: e.target.value })}
+                onBlur={() => setEditTouched((t) => ({ ...t, nome_completo: true }))}
+                aria-invalid={editTouched.nome_completo && !!editErrors.nome_completo}
+                className={cn(editTouched.nome_completo && editErrors.nome_completo && "border-destructive focus-visible:ring-destructive/40")}
+              />
+              {editTouched.nome_completo && editErrors.nome_completo && <p className="text-xs text-destructive mt-1">{editErrors.nome_completo}</p>}
             </div>
             <div>
-              <Label className="text-xs">CPF *</Label>
-              <Input value={maskCPF(editForm.cpf)} onChange={(e) => setEditForm({ ...editForm, cpf: e.target.value.replace(/\D/g, "").slice(0, 11) })} />
+              <Label htmlFor="ed-cpf" className="text-xs">CPF *</Label>
+              <Input
+                id="ed-cpf"
+                value={maskCPF(editForm.cpf)}
+                onChange={(e) => setEditForm({ ...editForm, cpf: e.target.value.replace(/\D/g, "").slice(0, 11) })}
+                onBlur={() => setEditTouched((t) => ({ ...t, cpf: true }))}
+                placeholder="000.000.000-00"
+                inputMode="numeric"
+                aria-invalid={editTouched.cpf && !!editErrors.cpf}
+                className={cn(editTouched.cpf && editErrors.cpf && "border-destructive focus-visible:ring-destructive/40")}
+              />
+              {editTouched.cpf && editErrors.cpf && <p className="text-xs text-destructive mt-1">{editErrors.cpf}</p>}
             </div>
             <div>
-              <Label className="text-xs">E-mail</Label>
-              <Input type="email" value={editForm.email} onChange={(e) => setEditForm({ ...editForm, email: e.target.value })} />
+              <Label htmlFor="ed-email" className="text-xs">E-mail</Label>
+              <Input
+                id="ed-email"
+                type="email"
+                placeholder="joao@empresa.com.br"
+                value={editForm.email}
+                onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                onBlur={() => setEditTouched((t) => ({ ...t, email: true }))}
+                aria-invalid={editTouched.email && !!editErrors.email}
+                className={cn(editTouched.email && editErrors.email && "border-destructive focus-visible:ring-destructive/40")}
+              />
+              {editTouched.email && editErrors.email && <p className="text-xs text-destructive mt-1">{editErrors.email}</p>}
             </div>
             <div>
-              <Label className="text-xs">Cargo</Label>
-              <Input value={editForm.cargo} onChange={(e) => setEditForm({ ...editForm, cargo: e.target.value })} />
+              <Label htmlFor="ed-cargo" className="text-xs">Cargo</Label>
+              <Input id="ed-cargo" value={editForm.cargo} onChange={(e) => setEditForm({ ...editForm, cargo: e.target.value })} />
             </div>
             <div>
-              <Label className="text-xs">Nascimento</Label>
-              <Input type="date" value={editForm.data_nascimento} onChange={(e) => setEditForm({ ...editForm, data_nascimento: e.target.value })} />
+              <Label htmlFor="ed-nasc" className="text-xs">Nascimento</Label>
+              <Input id="ed-nasc" type="date" max={new Date().toISOString().split("T")[0]} value={editForm.data_nascimento} onChange={(e) => setEditForm({ ...editForm, data_nascimento: e.target.value })} />
             </div>
             <div>
-              <Label className="text-xs">Entrada</Label>
-              <Input type="time" value={editForm.horario_entrada} onChange={(e) => setEditForm({ ...editForm, horario_entrada: e.target.value })} />
+              <Label htmlFor="ed-ent" className="text-xs">Entrada</Label>
+              <Input id="ed-ent" type="time" value={editForm.horario_entrada} onChange={(e) => setEditForm({ ...editForm, horario_entrada: e.target.value })} />
             </div>
             <div>
-              <Label className="text-xs">Saída</Label>
-              <Input type="time" value={editForm.horario_saida} onChange={(e) => setEditForm({ ...editForm, horario_saida: e.target.value })} />
+              <Label htmlFor="ed-sai" className="text-xs">Saída</Label>
+              <Input id="ed-sai" type="time" value={editForm.horario_saida} onChange={(e) => setEditForm({ ...editForm, horario_saida: e.target.value })} />
             </div>
             <div>
-              <Label className="text-xs">Intervalo (HH:MM)</Label>
-              <Input value={editForm.intervalo} onChange={(e) => setEditForm({ ...editForm, intervalo: e.target.value })} placeholder="01:00" />
+              <Label htmlFor="ed-int" className="text-xs">Intervalo (HH:MM)</Label>
+              <Input id="ed-int" value={editForm.intervalo} onChange={(e) => setEditForm({ ...editForm, intervalo: e.target.value })} placeholder="01:00" />
             </div>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={savingEdit}>Cancelar</Button>
-            <Button onClick={handleSaveEdit} disabled={savingEdit} className="gap-1.5">
-              {savingEdit && <Loader2 className="h-4 w-4 animate-spin" />}
+          <DialogFooter className="gap-2 sm:gap-2">
+            <Button variant="outline" onClick={() => setEditOpen(false)} disabled={savingEdit} className="min-h-[44px] sm:min-h-0">Cancelar</Button>
+            <SpinnerButton onClick={handleSaveEdit} loading={savingEdit} loadingText="Salvando…" className="min-h-[44px] sm:min-h-0">
               Salvar
-            </Button>
+            </SpinnerButton>
           </DialogFooter>
         </DialogContent>
       </Dialog>

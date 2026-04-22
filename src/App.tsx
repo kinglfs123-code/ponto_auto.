@@ -4,6 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { EmpresaProvider } from "@/contexts/EmpresaContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { ConfirmProvider } from "@/hooks/use-confirm";
 import AuthGuard from "@/components/AuthGuard";
 import Login from "@/pages/Login";
 import Dashboard from "@/pages/Dashboard";
@@ -27,20 +28,22 @@ const App = () => (
         <Toaster />
         <BrowserRouter>
           <EmpresaProvider>
-            <Routes>
-              <Route path="/login" element={<Login />} />
-              <Route path="/" element={<AuthGuard><Dashboard /></AuthGuard>} />
-              <Route path="/empresas" element={<AuthGuard><Empresas /></AuthGuard>} />
-              <Route path="/ponto" element={<AuthGuard><Ponto /></AuthGuard>} />
-              <Route path="/ponto/:folhaId" element={<AuthGuard><FolhaDetalhe /></AuthGuard>} />
-              <Route path="/funcionarios" element={<AuthGuard><Funcionarios /></AuthGuard>} />
-              <Route path="/funcionarios/:id" element={<AuthGuard><FuncionarioDetalhe /></AuthGuard>} />
-              
-              <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
-              <Route path="/holerites" element={<AuthGuard><Holerites /></AuthGuard>} />
-              <Route path="/unsubscribe" element={<Unsubscribe />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+            <ConfirmProvider>
+              <Routes>
+                <Route path="/login" element={<Login />} />
+                <Route path="/" element={<AuthGuard><Dashboard /></AuthGuard>} />
+                <Route path="/empresas" element={<AuthGuard><Empresas /></AuthGuard>} />
+                <Route path="/ponto" element={<AuthGuard><Ponto /></AuthGuard>} />
+                <Route path="/ponto/:folhaId" element={<AuthGuard><FolhaDetalhe /></AuthGuard>} />
+                <Route path="/funcionarios" element={<AuthGuard><Funcionarios /></AuthGuard>} />
+                <Route path="/funcionarios/:id" element={<AuthGuard><FuncionarioDetalhe /></AuthGuard>} />
+
+                <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
+                <Route path="/holerites" element={<AuthGuard><Holerites /></AuthGuard>} />
+                <Route path="/unsubscribe" element={<Unsubscribe />} />
+                <Route path="*" element={<NotFound />} />
+              </Routes>
+            </ConfirmProvider>
           </EmpresaProvider>
         </BrowserRouter>
       </TooltipProvider>

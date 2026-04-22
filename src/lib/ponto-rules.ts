@@ -63,7 +63,18 @@ export function maskCNPJ(v: string): string {
 
 export function validateCNPJ(cnpj: string): boolean {
   const d = cnpj.replace(/\D/g, "");
-  return d.length === 14;
+  if (d.length !== 14) return false;
+  if (/^(\d)\1{13}$/.test(d)) return false;
+  const calc = (base: string, weights: number[]) => {
+    const sum = base.split("").reduce((acc, ch, i) => acc + parseInt(ch, 10) * weights[i], 0);
+    const r = sum % 11;
+    return r < 2 ? 0 : 11 - r;
+  };
+  const w1 = [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const w2 = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2];
+  const dv1 = calc(d.slice(0, 12), w1);
+  const dv2 = calc(d.slice(0, 12) + dv1, w2);
+  return dv1 === parseInt(d[12], 10) && dv2 === parseInt(d[13], 10);
 }
 
 export function maskCPF(v: string): string {
@@ -76,7 +87,47 @@ export function maskCPF(v: string): string {
 
 export function validateCPF(cpf: string): boolean {
   const d = cpf.replace(/\D/g, "");
-  return d.length === 11;
+  if (d.length !== 11) return false;
+  if (/^(\d)\1{10}$/.test(d)) return false;
+  const calc = (slice: string, factor: number) => {
+    let sum = 0;
+    for (let i = 0; i < slice.length; i++) sum += parseInt(slice[i], 10) * (factor - i);
+    const r = (sum * 10) % 11;
+    return r === 10 ? 0 : r;
+  };
+  const dv1 = calc(d.slice(0, 9), 10);
+  const dv2 = calc(d.slice(0, 10), 11);
+  return dv1 === parseInt(d[9], 10) && dv2 === parseInt(d[10], 10);
+}
+
+/** Valida formato de e-mail (RFC simplificada). */
+export function validateEmail(v: string | null | undefined): boolean {
+  if (!v) return false;
+  const s = v.trim();
+  if (s.length > 254) return false;
+  // user@domain.tld (TLD ≥ 2 chars)
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s);
+}
+
+/** Aplica máscara de telefone BR: (11) 91234-5678 ou (11) 1234-5678 */
+export function maskTelefoneBR(v: string): string {
+  const d = v.replace(/\D/g, "").slice(0, 11);
+  if (d.length === 0) return "";
+  if (d.length <= 2) return `(${d}`;
+  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
+  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
+  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
+}
+
+/** Telefone BR válido: 10 ou 11 dígitos com DDD entre 11 e 99. Celular (11 dígitos) deve começar com 9. */
+export function validateTelefoneBR(v: string | null | undefined): boolean {
+  if (!v) return false;
+  const d = v.replace(/\D/g, "");
+  if (d.length !== 10 && d.length !== 11) return false;
+  const ddd = parseInt(d.slice(0, 2), 10);
+  if (ddd < 11 || ddd > 99) return false;
+  if (d.length === 11 && d[2] !== "9") return false;
+  return true;
 }
 
 /** Mascara um CPF mantendo apenas os 3 primeiros e os 2 últimos dígitos: 123.***.***-00 */
