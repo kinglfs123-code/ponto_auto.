@@ -1,118 +1,167 @@
 
 
-## Plano: melhorias finais de UX antes de publicar
+## Plano: otimizações finais de performance
 
-Foco em 5 áreas — **confirmação visual**, **validações fortes**, **estados de loading**, **mensagens de erro amigáveis** e **acessibilidade/touch**. Mantém todo comportamento atual.
+Foco em **lazy loading de rotas** (maior impacto no first paint), **queries enxutas + índices**, **paginação** em listas longas, **limpeza de dependências** e **memoização** onde compensa. Sem mudar comportamento.
 
 ---
 
-### 1. Componentes utilitários (novos)
+### 1. Lazy loading de rotas (`src/App.tsx`)
 
-**`src/components/ui/confirm-dialog.tsx`** — modal reutilizável (baseado em `Dialog` que já existe), substitui todos os `confirm()` do navegador:
-- Props: `open`, `title`, `description`, `confirmLabel`, `cancelLabel`, `variant ('danger' | 'default')`, `loading`, `onConfirm`, `onOpenChange`.
-- Botão de confirmar fica vermelho (`variant="destructive"`) quando `variant="danger"`, com spinner + `disabled` durante `loading`.
-- Mensagem padrão para deleção: *"Tem certeza que deseja excluir [item]? Esta ação não pode ser desfeita."*
+Trocar `import Dashboard from "@/pages/Dashboard"` por `React.lazy(() => import(...))` para todas as páginas autenticadas. **Login fica eager** (precisa ser instantâneo). Envolver `<Routes>` em `<Suspense fallback={<RouteFallback />}>` mostrando uma tela neutra com o mesmo `bg-background` + spinner pequeno (zero CLS).
 
-**`src/hooks/use-confirm.tsx`** — hook que expõe `confirm({...})` retornando `Promise<boolean>`. Renderiza um único `<ConfirmDialog>` controlado por estado interno via Provider em `App.tsx`. Permite chamar `await confirm({...})` em vez do `window.confirm`.
+Resultado: cada rota vira um chunk separado (ex: `Funcionarios-[hash].js`, `Holerites-[hash].js`), e o bundle inicial cai de ~1 arquivo grande para ~10–11 chunks carregados sob demanda.
 
-**`src/components/ui/spinner-button.tsx`** (opcional) — wrapper fino sobre `Button` que aceita `loading: boolean` e renderiza `<Loader2 className="animate-spin" />` + texto, e força `disabled` enquanto carrega. Reaproveitado em todas as ações.
+**Pré-fetch leve**: no hover/focus dos links da NavBar, chamar a função `import(...)` para já baixar o chunk antes do clique (`onMouseEnter` / `onFocus`).
 
-**`src/lib/error-messages.ts`** — função `friendlyError(err)` que traduz erros técnicos:
-| Padrão detectado | Mensagem amigável |
+---
+
+### 2. Otimização de queries (campos específicos)
+
+Substituir `select('*')` por seleção explícita nos arquivos abaixo — reduz payload e evita transferir colunas inúteis:
+
+| Arquivo | Tabela | Campos a manter |
+|---|---|---|
+| `Empresas.tsx` | empresas | `id, nome, cnpj, jornada_padrao, owner_id, created_at` |
+| `Dashboard.tsx` | empresas | `id, nome` |
+| `Funcionarios.tsx` | funcionarios | `id, nome_completo, cpf, email, cargo, data_nascimento, horario_entrada, horario_saida, intervalo, empresa_id` |
+| `Holerites.tsx` | holerites | `id, funcionario_id, mes_referencia, pdf_path, enviado, enviado_em, created_at` |
+| `Relatorios.tsx` | folhas_ponto | `id, funcionario, mes_referencia, status, created_at` |
+| `Relatorios.tsx` | relatorios | `id, mes_referencia, pdf_path, created_at` |
+| `FolhaDetalhe.tsx` | registros_ponto | só os campos usados (já tem join enxuto pra empresas) |
+| `FuncionarioDetalhe.tsx` | mesmas seleções enxutas pra 4 tabelas paralelas |
+| `AnaliseContrato.tsx` | contratos_analise + contrato_alertas | campos exibidos |
+
+---
+
+### 3. Índices faltando no banco (migration)
+
+Hoje só `funcionarios` e `contratos_analise/alertas/correcoes/func_docs/func_ferias` têm índices em FKs. Criar:
+
+```sql
+-- folhas_ponto: filtra muito por empresa_id e funcionario_id
+create index if not exists idx_folhas_ponto_empresa on public.folhas_ponto(empresa_id);
+create index if not exists idx_folhas_ponto_funcionario on public.folhas_ponto(funcionario_id);
+create index if not exists idx_folhas_ponto_empresa_mes on public.folhas_ponto(empresa_id, mes_referencia desc);
+
+-- holerites: queries sempre por empresa+mes ou funcionario
+create index if not exists idx_holerites_empresa_mes on public.holerites(empresa_id, mes_referencia);
+create index if not exists idx_holerites_funcionario on public.holerites(funcionario_id);
+
+-- registros_ponto: já filtra por folha_id (FK não indexada)
+create index if not exists idx_registros_folha on public.registros_ponto(folha_id);
+
+-- relatorios: lista por empresa+data
+create index if not exists idx_relatorios_empresa on public.relatorios(empresa_id, created_at desc);
+
+-- empresas: owner_id é usado na função user_owns_empresa
+create index if not exists idx_empresas_owner on public.empresas(owner_id);
+```
+
+Impacto direto em RLS (a `user_owns_empresa` faz lookup por `id+owner_id`) e nas listas de holerites/relatórios.
+
+---
+
+### 4. Paginação em listas grandes
+
+Limite inicial **50 itens** com botão "Carregar mais" (mantém UX simples, sem reescrever pra cursor):
+
+- `Funcionarios.tsx`: `.range(0, 49)` + estado `page`. "Carregar mais 50" abaixo da lista.
+- `Holerites.tsx`: a tabela já é por mês (poucos registros) — paginar **só** `funcionarios` quando >50.
+- `Relatorios.tsx`: paginar `folhas_ponto` (quando empresa tem muitos meses) e `relatorios`.
+- `FuncionarioDetalhe.tsx`: paginar `folhas_ponto`, `holerites`, `documentos`, `férias` (cada lista 20 inicial + "Carregar mais").
+
+Onde a contagem é importante mostrar, usar `{ count: 'exact', head: true }` em request paralelo barato.
+
+---
+
+### 5. Remoção de dependências não utilizadas
+
+Após inspeção (`src/components/ui/` só tem 16 primitivos usados; o restante das libs está órfão), **remover do `package.json`**:
+
+| Pacote | Por que |
 |---|---|
-| `Failed to fetch` / `Network` | "Não foi possível conectar. Verifique sua internet." |
-| `JWT expired` / `not authenticated` | "Sua sessão expirou. Faça login novamente." |
-| `permission denied` / `42501` / `Unauthorized` | "Você não tem permissão para esta ação." |
-| `duplicate key` / `23505` | "Este registro já existe." |
-| `violates foreign key` / `23503` | "Não é possível excluir: existem itens vinculados." |
-| `value too long` / `22001` | "Algum campo ultrapassou o limite de caracteres." |
-| validação Zod | concatena `issues[].message` |
-| fallback | "Algo deu errado. Tente novamente em instantes." |
+| `@radix-ui/react-accordion` | sem `accordion.tsx` |
+| `@radix-ui/react-alert-dialog` | substituído pelo `ConfirmDialog` |
+| `@radix-ui/react-aspect-ratio` | não usado |
+| `@radix-ui/react-avatar` | não usado |
+| `@radix-ui/react-checkbox` | não usado |
+| `@radix-ui/react-collapsible` | não usado |
+| `@radix-ui/react-context-menu` | não usado |
+| `@radix-ui/react-hover-card` | não usado |
+| `@radix-ui/react-menubar` | não usado |
+| `@radix-ui/react-navigation-menu` | não usado |
+| `@radix-ui/react-progress` | não usado |
+| `@radix-ui/react-radio-group` | não usado |
+| `@radix-ui/react-scroll-area` | não usado |
+| `@radix-ui/react-separator` | não usado |
+| `@radix-ui/react-slider` | não usado |
+| `@radix-ui/react-switch` | não usado |
+| `@radix-ui/react-toggle` / `toggle-group` | não usado |
+| `embla-carousel-react` | sem carousel |
+| `vaul` | sem drawer |
+| `cmdk` | sem command palette |
+| `recharts` | sem gráficos (Dashboard usa cards) |
+| `react-day-picker` | sem calendar (campos `<input type="date">`) |
+| `react-hook-form` + `@hookform/resolvers` | forms são controlados manualmente |
+| `input-otp` | sem OTP |
+| `react-resizable-panels` | sem painéis redimensionáveis |
+| `next-themes` | `ThemeContext` próprio já cuida disso |
 
-Todos os `toast({ description: error.message })` passam a usar `friendlyError(err)`.
+Manter: `lucide-react`, `sonner` (usado no Toaster?), `tailwind-merge`, `clsx`, `class-variance-authority`, `date-fns`, `tailwindcss-animate`, todos os Radix em uso (dialog, dropdown-menu, label, popover, select, slot, tabs, toast, tooltip, ai). **Validar com `grep` cada um antes de remover** — se algum primitivo `ui/*.tsx` não-listado importar, mantém o pacote.
 
----
-
-### 2. Validações reforçadas em `src/lib/ponto-rules.ts`
-
-- `validateCPF`: implementar **dígitos verificadores** completos (algoritmo módulo 11), além de rejeitar sequências como `111.111.111-11`.
-- `validateCNPJ`: idem com módulo 11 (pesos 5,4,3,2,9,8,7,6,5,4,3,2 / 6,5,4,3,2,9,8,7,6,5,4,3,2).
-- Novas funções:
-  - `validateEmail(v)` — regex RFC simplificada + `.includes('@')` + domínio com TLD ≥ 2.
-  - `maskTelefoneBR(v)` — `(11) 91234-5678` ou `(11) 1234-5678`.
-  - `validateTelefoneBR(v)` — 10 ou 11 dígitos, DDD válido (11–99).
-
-Todas retornam `{ valid: boolean, message?: string }` para alimentar erros inline.
-
----
-
-### 3. Validação inline (em tempo real, ao perder foco)
-
-**Padrão aplicado a todos os formulários** (`Funcionarios`, `Empresas`, `FuncionarioDetalhe → editar`, holerite, férias):
-
-- Estado local `errors: Record<string, string>` e `touched: Record<string, boolean>`.
-- `onBlur` marca `touched[campo] = true` e roda validação do campo.
-- `onChange` limpa o erro se o valor virou válido (UX positiva).
-- Render: abaixo do `<Input>`, mostrar `<p class="text-xs text-destructive mt-1">{errors.campo}</p>` quando `touched && errors[campo]`.
-- Borda do `Input` ganha `aria-invalid` + classe `border-destructive` quando tem erro.
-- Botão Salvar fica `disabled` se há **qualquer** erro ou campo obrigatório vazio.
-
-Campos validados:
-- **Empresa**: nome (obrigatório, ≥ 2 chars), CNPJ (14 dígitos + DV), jornada (HH:MM válido).
-- **Colaborador**: nome (obrigatório), CPF (11 dígitos + DV), e-mail (formato), data nascimento (não futura), entrada/saída/intervalo (HH:MM).
-- **Holerite/upload**: tipo MIME PDF + tamanho ≤ 10MB.
+Ganho estimado: **~30–40% no bundle vendor** (recharts + embla + cmdk + react-hook-form somam centenas de KB).
 
 ---
 
-### 4. Substituir todos os `window.confirm(...)`
+### 6. Otimizações React (anti re-render)
 
-Trocar por `await confirm({...})` do novo hook nos arquivos:
-
-| Arquivo | Ações |
-|---|---|
-| `Empresas.tsx` | excluir empresa |
-| `Funcionarios.tsx` | excluir colaborador |
-| `FuncionarioDetalhe.tsx` | excluir documento, holerite, folha, férias |
-| `Holerites.tsx` | excluir PDF; **NOVO**: confirmação de "Enviar todos por e-mail" mostrando contagem (*"Enviar holerite para 12 colaboradores?"*) |
-| `Relatorios.tsx` | excluir folha, excluir folhas do mês, excluir relatório |
-
-Botão de confirmar sempre vermelho quando for deleção.
+- **`EmpresaContext`**: envolver `value` em `useMemo` e expor `setEmpresa` estável (já é `useState` setter, ok). Hoje cada render do provider cria objeto novo e refaz toda a árvore.
+- **`ThemeContext`**: idem.
+- **`NavBar.tsx`**: `React.memo` (renderiza em todas as páginas com mesmas props).
+- **`EmpresaSelector` / `FuncionarioSelector`**: `React.memo` + `useCallback` no `onChange` dentro dos pais que renderizam frequentemente (`Holerites`, `Funcionarios`, `Ponto`).
+- **`Holerites.tsx`**: extrair `HoleriteRow` em componente memoizado (lista de até 50+ funcionários re-renderiza todos quando um upload progride).
+- **`Funcionarios.tsx`**: a função `validateFuncionario(form)` roda em todo render — embrulhar em `useMemo([form])`.
+- **AuthGuard**: já está ok, sem mudança.
 
 ---
 
-### 5. Loading states + botões anti-duplo-clique
+### 7. QueryClient configurado
 
-Padronizar em **todos** os botões de ação (Salvar, Excluir confirmado, Enviar, Anexar, Gerar relatório, Conectar Google, Sincronizar férias, Analisar contrato):
+Trocar `new QueryClient()` cru por:
 
-- Estado `loading: boolean` local (já existe na maioria — completar onde falta).
-- Botão usa o novo `SpinnerButton` ou padrão: `disabled={loading}` + `<Loader2 className="h-4 w-4 animate-spin" />` + texto "Salvando…", "Excluindo…", "Enviando…".
-- Toast de sucesso após cada ação (já existe na maior parte — completar onde falta, ex: `Empresas.remove`, `Relatorios.deleteRelatorio`).
-- Toast de erro sempre via `friendlyError()`.
+```ts
+new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 60_000,           // 1 min
+      gcTime: 5 * 60_000,          // 5 min
+      refetchOnWindowFocus: false, // evita refetch agressivo
+      retry: 1,
+    },
+  },
+});
+```
 
----
-
-### 6. Skeletons em listas
-
-Onde hoje só aparece "carregando" implícito ou tela vazia, adicionar skeletons enquanto `loading === true`:
-
-- `Funcionarios.tsx` — 5 skeleton cards/linhas.
-- `Empresas.tsx` — 3 skeleton cards.
-- `FuncionarioDetalhe.tsx` — header + 3 sections de skeleton.
-- `Relatorios.tsx` — skeleton da tabela.
-- `Holerites.tsx` já tem.
+Hoje `Dashboard`, `EmpresaSelector`, `useWorkflowStatus` usam React Query — vão se beneficiar imediatamente do cache compartilhado.
 
 ---
 
-### 7. Acessibilidade básica + mobile touch
+### 8. Otimização do asset de fundo
 
-Aplicado de forma global:
+`src/assets/login-bg.jpg` (77 KB) — converter para **WebP** (~25 KB) e referenciar com `<img loading="lazy" decoding="async">` quando aplicável (no Login fica eager, é LCP). Adicionar `fetchpriority="high"` no Login.
 
-- Todo `<Input>` recebe `<Label htmlFor>` correspondente + `id` (alguns hoje têm `<Label>` solto).
-- Foco visível: `Input` já tem `focus-visible:ring-2`. Garantir o mesmo em `button[size="icon"]` aumentando `ring-offset-2`.
-- Botões de ícone (`Pencil`/`Trash2`) hoje são `h-7 w-7` (28px) — em mobile (`useIsMobile`) usar `h-11 w-11` (44px) atendendo touch target mínimo. Em desktop manter compacto.
-- Em `ConfirmDialog`, o `DialogContent` já é centralizado; adicionar `max-h-[90vh] overflow-y-auto` para garantir scroll em telas pequenas.
-- Tabelas (`Funcionarios`, `Relatorios`) wrappadas em `<div className="overflow-x-auto">` para scroll horizontal em mobile (já há fallback de cards, mas reforço).
-- `placeholder` descritivo onde falta (ex: e-mail "joao@empresa.com.br", telefone "(11) 91234-5678").
+---
+
+### 9. Build: drop console em produção
+
+Adicionar no `vite.config.ts`:
+
+```ts
+esbuild: { drop: mode === 'production' ? ['console', 'debugger'] : [] }
+```
+
+Isso remove `console.log/info/debug` do bundle final mas **preserva `console.error/warn` em runtime** se você quiser via `pure: ['console.log']` em vez de drop completo. Combinando: `drop: ['debugger'], pure: ['console.log','console.info','console.debug']` — mantém error/warn.
 
 ---
 
@@ -120,17 +169,25 @@ Aplicado de forma global:
 
 | Arquivo | Mudança |
 |---|---|
-| `src/components/ui/confirm-dialog.tsx` | **NOVO** — modal de confirmação reutilizável |
-| `src/hooks/use-confirm.tsx` | **NOVO** — provider + hook `useConfirm()` |
-| `src/components/ui/spinner-button.tsx` | **NOVO** — botão com spinner integrado |
-| `src/lib/error-messages.ts` | **NOVO** — `friendlyError()` |
-| `src/lib/ponto-rules.ts` | DV de CPF/CNPJ + `validateEmail`, `maskTelefoneBR`, `validateTelefoneBR` |
-| `src/App.tsx` | Envolver app no `ConfirmProvider` |
-| `src/pages/Empresas.tsx` | Validação inline, ConfirmDialog, friendlyError, skeleton |
-| `src/pages/Funcionarios.tsx` | Validação inline, ConfirmDialog, friendlyError, skeleton, touch targets mobile |
-| `src/pages/FuncionarioDetalhe.tsx` | Substituir 4× `confirm()`, validação inline no editar, friendlyError nos uploads |
-| `src/pages/Holerites.tsx` | Confirmação de envio em massa, ConfirmDialog para excluir |
-| `src/pages/Relatorios.tsx` | 3× ConfirmDialog, toast de sucesso onde falta, skeleton |
+| `src/App.tsx` | `React.lazy` + `<Suspense>`; QueryClient com defaults |
+| `src/components/NavBar.tsx` | prefetch on-hover; `React.memo` |
+| `src/components/EmpresaSelector.tsx` | `React.memo` + select de campos enxutos |
+| `src/components/FuncionarioSelector.tsx` | `React.memo` |
+| `src/contexts/EmpresaContext.tsx` | `useMemo` no value |
+| `src/contexts/ThemeContext.tsx` | `useMemo` no value |
+| `src/pages/Dashboard.tsx` | select enxuto |
+| `src/pages/Empresas.tsx` | select enxuto |
+| `src/pages/Funcionarios.tsx` | select enxuto, paginação 50, `useMemo` validação |
+| `src/pages/Holerites.tsx` | select enxuto, `HoleriteRow` memoizado, paginação funcionarios |
+| `src/pages/Relatorios.tsx` | select enxuto, paginação |
+| `src/pages/FuncionarioDetalhe.tsx` | select enxuto, paginação dos 4 sub-tabs |
+| `src/pages/FolhaDetalhe.tsx` | select enxuto |
+| `src/components/AnaliseContrato.tsx` | select enxuto |
+| `src/assets/login-bg.webp` | NOVO (substitui .jpg) |
+| `src/pages/Login.tsx` | trocar import do bg para webp |
+| `vite.config.ts` | `pure: ['console.log','console.info','console.debug']` |
+| `package.json` | remover ~25 deps não usadas |
+| `supabase/migrations/...` | NEW: 7 índices (folhas, holerites, registros, relatorios, empresas.owner_id) |
 
-Sem mudanças em backend, RLS ou edge functions. Sem novas dependências.
+Sem mudanças em RLS, edge functions ou regras de negócio.
 
