@@ -6,13 +6,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const CATEGORIA_LABEL: Record<string, string> = {
-  contrato: "Contrato de Trabalho",
-  aso: "ASO",
-  epi: "Ficha de EPI",
-  outros: "Outros",
-};
-
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -54,9 +47,43 @@ function escapeHtml(s: string): string {
     .replace(/'/g, "&#039;");
 }
 
-function formatMes(m: string): string {
+const MESES_PT = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
+function formatMesShort(m: string): string {
+  // YYYY-MM -> MM/YYYY
   const [y, mm] = m.split("-");
   return `${mm}/${y}`;
+}
+
+function mesNomeAno(m: string): { mesNome: string; ano: string } {
+  const [y, mm] = m.split("-");
+  const idx = Math.max(0, Math.min(11, Number(mm) - 1));
+  return { mesNome: MESES_PT[idx], ano: y };
+}
+
+function removeAcentos(s: string): string {
+  return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+}
+
+function sanitizeForFilename(s: string): string {
+  return removeAcentos(s)
+    .replace(/[^A-Za-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 60) || "Colaborador";
+}
+
+function rfc2822Date(d: Date = new Date()): string {
+  // Wed, 23 Apr 2026 14:25:01 +0000
+  return d.toUTCString().replace("GMT", "+0000");
+}
+
+function buildMessageId(domain: string): string {
+  const rand = Math.random().toString(36).slice(2);
+  const ts = Date.now().toString(36);
+  return `<${ts}.${rand}@${domain}>`;
 }
 
 async function getValidAccessToken(
@@ -109,12 +136,6 @@ async function getValidAccessToken(
   };
   const newExpiresAt = new Date(Date.now() + (tok.expires_in - 60) * 1000).toISOString();
   const newScope = tok.scope ?? scope;
-  console.log("[send-via-gmail] refreshed token", {
-    user_id: userId,
-    scope_from_refresh: tok.scope ?? "(none)",
-    has_gmail_send: !!(newScope ?? "").includes("https://www.googleapis.com/auth/gmail.send"),
-    has_calendar_events: !!(newScope ?? "").includes("https://www.googleapis.com/auth/calendar.events"),
-  });
 
   await admin.from("google_calendar_tokens").update({
     access_token: tok.access_token,
@@ -125,14 +146,6 @@ async function getValidAccessToken(
 
   return { token: tok.access_token, scope: newScope };
 }
-
-// Note: We intentionally do NOT call gmail/v1/users/me/profile here.
-// That endpoint requires the gmail.readonly/metadata scope, which we do not request.
-// With only the `gmail.send` scope, Gmail still:
-//   - sends the message as the authenticated account
-//   - overrides the From header with the real Gmail display name + address
-// So we build the MIME with a placeholder From (the auth user's email when available),
-// and Gmail rewrites it server-side.
 
 function deriveDisplayName(email: string): string {
   const localPart = (email.split("@")[0] ?? "").trim();
@@ -146,77 +159,192 @@ function deriveDisplayName(email: string): string {
   );
 }
 
-function buildHolerieMime(opts: {
+function encodeHeader(value: string): string {
+  // Encode non-ASCII em RFC 2047
+  if (/^[\x00-\x7F]*$/.test(value)) return value;
+  return `=?UTF-8?B?${btoa(unescape(encodeURIComponent(value)))}?=`;
+}
+
+function formatCNPJ(cnpj?: string | null): string {
+  if (!cnpj) return "";
+  const d = cnpj.replace(/\D/g, "");
+  if (d.length !== 14) return cnpj;
+  return `${d.slice(0, 2)}.${d.slice(2, 5)}.${d.slice(5, 8)}/${d.slice(8, 12)}-${d.slice(12)}`;
+}
+
+interface HoleriteEmailData {
   fromName: string;
   fromEmail: string;
   toEmail: string;
   toName: string;
   subject: string;
-  html: string;
+  empresaNome: string;
+  empresaCnpj: string | null;
+  mesNome: string;
+  ano: string;
   pdfBase64: string;
   pdfFilename: string;
-}): string {
-  const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).slice(2)}`;
-  const { fromName, fromEmail, toEmail, toName, subject, html, pdfBase64, pdfFilename } = opts;
+}
 
-  const subjectEnc = `=?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`;
-  const fromHeader = `${fromName} <${fromEmail}>`;
-  const toHeader = toName ? `${toName} <${toEmail}>` : toEmail;
+function buildHoleriteHtml(d: HoleriteEmailData): string {
+  const cnpjLine = d.empresaCnpj
+    ? `<p style="margin:4px 0;font-size:13px;color:#555555;font-family:Arial,Helvetica,sans-serif;">CNPJ: ${escapeHtml(formatCNPJ(d.empresaCnpj))}</p>`
+    : "";
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>${escapeHtml(d.subject)}</title>
+</head>
+<body style="margin:0;padding:0;background-color:#f4f4f7;font-family:Arial,Helvetica,sans-serif;color:#333333;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color:#f4f4f7;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background-color:#ffffff;border-radius:8px;overflow:hidden;border:1px solid #e5e7eb;">
+          <tr>
+            <td style="padding:28px 32px 16px;border-bottom:3px solid #0066cc;">
+              <h1 style="margin:0;font-size:22px;font-weight:bold;color:#0066cc;font-family:Arial,Helvetica,sans-serif;">
+                ${escapeHtml(d.empresaNome)}
+              </h1>
+              <p style="margin:6px 0 0;font-size:13px;color:#666666;font-family:Arial,Helvetica,sans-serif;">Recursos Humanos</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px 32px;">
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#333333;font-family:Arial,Helvetica,sans-serif;">
+                Olá <strong>${escapeHtml(d.toName)}</strong>,
+              </p>
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#333333;font-family:Arial,Helvetica,sans-serif;">
+                Segue em anexo seu holerite referente ao mês de <strong>${escapeHtml(d.mesNome)}/${escapeHtml(d.ano)}</strong>.
+              </p>
+              <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#333333;font-family:Arial,Helvetica,sans-serif;">
+                Recomendamos guardar este documento em local seguro. Em caso de dúvidas, entre em contato com o setor de Recursos Humanos respondendo este e-mail.
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:0 32px 24px;">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-top:1px solid #e5e7eb;padding-top:18px;">
+                <tr>
+                  <td style="font-family:Arial,Helvetica,sans-serif;">
+                    <p style="margin:0 0 4px;font-size:14px;color:#1f2937;font-weight:bold;">${escapeHtml(d.empresaNome)}</p>
+                    <p style="margin:4px 0;font-size:13px;color:#555555;">Setor de Recursos Humanos</p>
+                    <p style="margin:4px 0;font-size:13px;color:#555555;">
+                      E-mail: <a href="mailto:${escapeHtml(d.fromEmail)}" style="color:#0066cc;text-decoration:none;">${escapeHtml(d.fromEmail)}</a>
+                    </p>
+                    ${cnpjLine}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:14px 32px 24px;background-color:#fafafa;border-top:1px solid #e5e7eb;">
+              <p style="margin:0;font-size:11px;line-height:1.5;color:#888888;font-family:Arial,Helvetica,sans-serif;text-align:center;">
+                Esta mensagem é destinada exclusivamente ao colaborador identificado acima e contém informações confidenciais.<br />
+                Se você recebeu este e-mail por engano, favor descartá-lo.
+              </p>
+            </td>
+          </tr>
+        </table>
+        <p style="margin:14px 0 0;font-size:11px;color:#9ca3af;font-family:Arial,Helvetica,sans-serif;">
+          ${escapeHtml(d.empresaNome)} • Departamento Pessoal
+        </p>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+}
 
-  // Quebra o base64 em linhas de 76 chars (RFC 2045)
-  const pdfWrapped = pdfBase64.match(/.{1,76}/g)?.join("\r\n") ?? pdfBase64;
-
+function buildHolerieTextPlain(d: HoleriteEmailData): string {
   const lines = [
-    `From: ${fromHeader}`,
-    `To: ${toHeader}`,
-    `Subject: ${subjectEnc}`,
-    `MIME-Version: 1.0`,
-    `Content-Type: multipart/mixed; boundary="${boundary}"`,
+    `${d.empresaNome} - Recursos Humanos`,
+    `------------------------------------------------------------`,
     ``,
-    `--${boundary}`,
-    `Content-Type: text/html; charset="UTF-8"`,
-    `Content-Transfer-Encoding: base64`,
+    `Olá ${d.toName},`,
     ``,
-    btoa(unescape(encodeURIComponent(html))).match(/.{1,76}/g)?.join("\r\n") ?? "",
+    `Segue em anexo seu holerite referente ao mês de ${d.mesNome}/${d.ano}.`,
     ``,
-    `--${boundary}`,
-    `Content-Type: application/pdf; name="${pdfFilename}"`,
-    `Content-Transfer-Encoding: base64`,
-    `Content-Disposition: attachment; filename="${pdfFilename}"`,
+    `Recomendamos guardar este documento em local seguro. Em caso de dúvidas, entre em contato com o setor de Recursos Humanos respondendo este e-mail.`,
     ``,
-    pdfWrapped,
-    ``,
-    `--${boundary}--`,
-    ``,
+    `--`,
+    `${d.empresaNome}`,
+    `Setor de Recursos Humanos`,
+    `E-mail: ${d.fromEmail}`,
   ];
-
+  if (d.empresaCnpj) lines.push(`CNPJ: ${formatCNPJ(d.empresaCnpj)}`);
+  lines.push("");
+  lines.push("Esta mensagem é destinada exclusivamente ao colaborador identificado acima.");
+  lines.push("Se você recebeu este e-mail por engano, favor descartá-lo.");
   return lines.join("\r\n");
 }
 
-function buildDocumentosMime(opts: {
-  fromName: string;
-  fromEmail: string;
-  toEmail: string;
-  toName: string;
-  subject: string;
-  html: string;
-}): string {
-  const { fromName, fromEmail, toEmail, toName, subject, html } = opts;
-  const subjectEnc = `=?UTF-8?B?${btoa(unescape(encodeURIComponent(subject)))}?=`;
-  const fromHeader = `${fromName} <${fromEmail}>`;
-  const toHeader = toName ? `${toName} <${toEmail}>` : toEmail;
+function buildHoleriteMime(d: HoleriteEmailData): string {
+  const mixedBoundary = `mixed_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+  const altBoundary = `alt_${Date.now()}_${Math.random().toString(36).slice(2)}`;
+
+  const fromHeader = `${encodeHeader(d.fromName)} <${d.fromEmail}>`;
+  const toHeader = d.toName
+    ? `${encodeHeader(d.toName)} <${d.toEmail}>`
+    : d.toEmail;
+  const subjectEnc = encodeHeader(d.subject);
+
+  const html = buildHoleriteHtml(d);
+  const text = buildHolerieTextPlain(d);
+
+  const htmlB64 = btoa(unescape(encodeURIComponent(html))).match(/.{1,76}/g)?.join("\r\n") ?? "";
+  const textB64 = btoa(unescape(encodeURIComponent(text))).match(/.{1,76}/g)?.join("\r\n") ?? "";
+  const pdfB64 = d.pdfBase64.match(/.{1,76}/g)?.join("\r\n") ?? d.pdfBase64;
+
+  const fromDomain = (d.fromEmail.split("@")[1] || "gmail.com").toLowerCase();
+  const messageId = buildMessageId(fromDomain);
+
+  // Filename RFC 2231 (UTF-8 safe) — também enviamos um filename ASCII como fallback
+  const asciiFilename = removeAcentos(d.pdfFilename).replace(/[^A-Za-z0-9._-]/g, "_");
 
   const lines = [
+    `MIME-Version: 1.0`,
+    `Date: ${rfc2822Date()}`,
+    `Message-ID: ${messageId}`,
     `From: ${fromHeader}`,
     `To: ${toHeader}`,
+    `Reply-To: ${fromHeader}`,
     `Subject: ${subjectEnc}`,
-    `MIME-Version: 1.0`,
+    `X-Mailer: Ponto_auto. - ${d.empresaNome}`,
+    `X-Priority: 3`,
+    `Importance: Normal`,
+    `Content-Type: multipart/mixed; boundary="${mixedBoundary}"`,
+    ``,
+    `--${mixedBoundary}`,
+    `Content-Type: multipart/alternative; boundary="${altBoundary}"`,
+    ``,
+    `--${altBoundary}`,
+    `Content-Type: text/plain; charset="UTF-8"`,
+    `Content-Transfer-Encoding: base64`,
+    ``,
+    textB64,
+    ``,
+    `--${altBoundary}`,
     `Content-Type: text/html; charset="UTF-8"`,
     `Content-Transfer-Encoding: base64`,
     ``,
-    btoa(unescape(encodeURIComponent(html))).match(/.{1,76}/g)?.join("\r\n") ?? "",
+    htmlB64,
+    ``,
+    `--${altBoundary}--`,
+    ``,
+    `--${mixedBoundary}`,
+    `Content-Type: application/pdf; name="${asciiFilename}"`,
+    `Content-Transfer-Encoding: base64`,
+    `Content-Disposition: attachment; filename="${asciiFilename}"`,
+    ``,
+    pdfB64,
+    ``,
+    `--${mixedBoundary}--`,
     ``,
   ];
+
   return lines.join("\r\n");
 }
 
@@ -284,9 +412,9 @@ Deno.serve(async (req) => {
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
 
     const body = await req.json().catch(() => ({}));
-    const kind = body?.kind as "holerite" | "documentos" | undefined;
-    if (kind !== "holerite" && kind !== "documentos") {
-      return jsonResponse({ error: "kind inválido (holerite|documentos)" }, 400);
+    const kind = body?.kind as "holerite" | undefined;
+    if (kind !== "holerite") {
+      return jsonResponse({ error: "kind inválido. Apenas 'holerite' é suportado." }, 400);
     }
 
     // Carrega token
@@ -309,198 +437,72 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Build From identity without calling Gmail profile endpoint.
-    // Gmail rewrites the From header to the real authenticated account on send,
-    // so this is mostly a placeholder — we just need a syntactically valid address.
     const authEmail = userData.user.email ?? "me@gmail.com";
     const profile = { email: authEmail, name: deriveDisplayName(authEmail) };
-    console.log("[send-via-gmail] sending", {
-      kind,
-      user_id: userId,
-      from_placeholder: profile.email,
-      scope_has_gmail_send: scope?.includes("https://www.googleapis.com/auth/gmail.send") ?? false,
-    });
 
-    if (kind === "holerite") {
-      const holerite_id = body?.holerite_id as string | undefined;
-      if (!holerite_id) return jsonResponse({ error: "holerite_id obrigatório" }, 400);
+    const holerite_id = body?.holerite_id as string | undefined;
+    if (!holerite_id) return jsonResponse({ error: "holerite_id obrigatório" }, 400);
 
-      const { data: hol, error: hErr } = await admin
-        .from("holerites")
-        .select("id, mes_referencia, pdf_path, empresa_id, funcionario_id, funcionarios(nome_completo, email), empresas(nome, owner_id)")
-        .eq("id", holerite_id)
-        .maybeSingle();
-
-      if (hErr || !hol) return jsonResponse({ error: `Holerite não encontrado: ${hErr?.message ?? ""}` }, 404);
-      const empresa = (hol as any).empresas;
-      if (!empresa || empresa.owner_id !== userId) {
-        return jsonResponse({ error: "Sem permissão" }, 403);
-      }
-      const func = (hol as any).funcionarios;
-      if (!func?.email) {
-        return jsonResponse({ error: `Colaborador não tem e-mail cadastrado` }, 400);
-      }
-
-      // baixa PDF
-      const { data: pdfData, error: stErr } = await admin.storage
-        .from("holerites")
-        .download((hol as any).pdf_path);
-      if (stErr || !pdfData) return jsonResponse({ error: `Erro ao baixar PDF: ${stErr?.message}` }, 500);
-      const pdfBase64 = arrayBufferToBase64(await pdfData.arrayBuffer());
-
-      const mes = (hol as any).mes_referencia as string;
-      const subject = `Holerite — ${formatMes(mes)}`;
-      const html = `
-<!doctype html><html><body style="margin:0;padding:0;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;color:#1d1d1f;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f7;padding:32px 16px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:14px;padding:32px;">
-        <tr><td>
-          <h1 style="margin:0 0 12px;font-size:22px;font-weight:600;letter-spacing:-0.01em;">Olá, ${escapeHtml(func.nome_completo)}</h1>
-          <p style="margin:0 0 16px;font-size:15px;line-height:1.55;color:#1d1d1f;">Segue em anexo o seu holerite referente a <strong>${escapeHtml(formatMes(mes))}</strong>.</p>
-          <p style="margin:0 0 24px;font-size:15px;line-height:1.55;color:#1d1d1f;">Em caso de dúvidas, basta responder este e-mail.</p>
-          <hr style="border:none;border-top:1px solid #e5e5ea;margin:24px 0;" />
-          <p style="margin:0;font-size:13px;color:#6e6e73;">${escapeHtml(empresa.nome)}</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`.trim();
-
-      const rawMime = buildHolerieMime({
-        fromName: profile.name,
-        fromEmail: profile.email,
-        toEmail: func.email,
-        toName: func.nome_completo,
-        subject,
-        html,
-        pdfBase64,
-        pdfFilename: `holerite-${mes}.pdf`,
-      });
-
-      const result = await sendGmail(accessToken, rawMime);
-      if (!result.ok) {
-        const errBody = typeof result.body === "string" ? result.body : JSON.stringify(result.body);
-        const lower = errBody.toLowerCase();
-        await logSend(admin, func.email, "gmail_holerite", "failed",
-          { mode: "holerite", holerite_id, status: result.status }, errBody);
-
-        if (result.status === 403 && lower.includes("insufficient")) {
-          return jsonResponse({ needs_reconnect: true, reason: "scope_insufficient", error: "Reconecte o Google para autorizar envio de e-mail." });
-        }
-        if (result.status === 403 && lower.includes("has not been used") && lower.includes("gmail")) {
-          return jsonResponse({ error: "Habilite a Gmail API no Google Cloud Console e tente novamente." }, 400);
-        }
-        if (result.status === 429) {
-          return jsonResponse({ rate_limited: true, error: "Limite de envio atingido. Tente novamente em alguns minutos." });
-        }
-        return jsonResponse({ error: `Falha Gmail (${result.status}): ${errBody.slice(0, 300)}` }, 500);
-      }
-
-      const messageId = (result.body as any)?.id ?? null;
-      await admin.from("holerites").update({ enviado: true, enviado_em: new Date().toISOString() }).eq("id", holerite_id);
-      await logSend(admin, func.email, "gmail_holerite", "sent",
-        { mode: "holerite", holerite_id, gmail_message_id: messageId, from: profile.email }, undefined, messageId);
-
-      return jsonResponse({ ok: true, message: `Holerite enviado para ${func.email}`, gmail_message_id: messageId });
-    }
-
-    // === Modo documentos ===
-    const funcionario_id = body?.funcionario_id as string | undefined;
-    if (!funcionario_id) return jsonResponse({ error: "funcionario_id obrigatório" }, 400);
-    const categorias = (body?.categorias as string[] | undefined) ?? null;
-
-    const { data: func, error: fErr } = await admin
-      .from("funcionarios")
-      .select("id, nome_completo, email, empresa_id, empresas(nome, owner_id)")
-      .eq("id", funcionario_id)
+    const { data: hol, error: hErr } = await admin
+      .from("holerites")
+      .select("id, mes_referencia, pdf_path, empresa_id, funcionario_id, funcionarios(nome_completo, email), empresas(nome, cnpj, owner_id)")
+      .eq("id", holerite_id)
       .maybeSingle();
-    if (fErr || !func) return jsonResponse({ error: `Colaborador não encontrado: ${fErr?.message ?? ""}` }, 404);
-    const empresa = (func as any).empresas;
-    if (!empresa || empresa.owner_id !== userId) return jsonResponse({ error: "Sem permissão" }, 403);
-    if (!(func as any).email) return jsonResponse({ error: "Colaborador não tem e-mail cadastrado" }, 400);
 
-    let docsQuery = admin.from("funcionario_documentos")
-      .select("id, categoria, nome_arquivo, storage_path, tamanho_bytes")
-      .eq("funcionario_id", funcionario_id)
-      .order("categoria")
-      .order("created_at", { ascending: false });
-    if (categorias && categorias.length > 0) docsQuery = docsQuery.in("categoria", categorias);
-
-    const { data: docs, error: dErr } = await docsQuery;
-    if (dErr) return jsonResponse({ error: `Erro ao listar documentos: ${dErr.message}` }, 500);
-    if (!docs || docs.length === 0) return jsonResponse({ error: "Nenhum documento para enviar" }, 400);
-
-    // Gera links assinados (1h)
-    type DocRow = { id: string; categoria: string; nome_arquivo: string; storage_path: string; tamanho_bytes: number | null; signed_url?: string };
-    const docsWithUrls: DocRow[] = [];
-    for (const d of docs as DocRow[]) {
-      const { data: sig, error: sErr } = await admin.storage
-        .from("colaborador-arquivos")
-        .createSignedUrl(d.storage_path, 3600);
-      if (sErr) {
-        console.error("[send-via-gmail] signed url failed:", sErr.message);
-        continue;
-      }
-      docsWithUrls.push({ ...d, signed_url: sig?.signedUrl });
+    if (hErr || !hol) return jsonResponse({ error: `Holerite não encontrado: ${hErr?.message ?? ""}` }, 404);
+    const empresa = (hol as any).empresas;
+    if (!empresa || empresa.owner_id !== userId) {
+      return jsonResponse({ error: "Sem permissão" }, 403);
     }
-    if (docsWithUrls.length === 0) return jsonResponse({ error: "Falha ao gerar links de download" }, 500);
-
-    const grouped = new Map<string, DocRow[]>();
-    for (const d of docsWithUrls) {
-      const arr = grouped.get(d.categoria) ?? [];
-      arr.push(d);
-      grouped.set(d.categoria, arr);
+    const func = (hol as any).funcionarios;
+    if (!func?.email) {
+      return jsonResponse({ error: `Colaborador não tem e-mail cadastrado` }, 400);
     }
 
-    const orderCat = ["contrato", "aso", "epi", "outros"];
-    const sections = orderCat
-      .filter((c) => grouped.has(c))
-      .map((c) => {
-        const items = grouped.get(c)!.map((d) => `
-          <li style="margin:0 0 8px;line-height:1.5;">
-            <a href="${escapeHtml(d.signed_url!)}" style="color:#0071e3;text-decoration:none;font-size:14px;">${escapeHtml(d.nome_arquivo)}</a>
-            ${d.tamanho_bytes ? `<span style="color:#6e6e73;font-size:12px;"> · ${(d.tamanho_bytes / 1024).toFixed(0)} KB</span>` : ""}
-          </li>`).join("");
-        return `
-          <h2 style="margin:24px 0 8px;font-size:15px;font-weight:600;color:#1d1d1f;">${escapeHtml(CATEGORIA_LABEL[c] ?? c)}</h2>
-          <ul style="margin:0;padding:0 0 0 18px;">${items}</ul>`;
-      })
-      .join("");
+    // baixa PDF
+    const { data: pdfData, error: stErr } = await admin.storage
+      .from("holerites")
+      .download((hol as any).pdf_path);
+    if (stErr || !pdfData) return jsonResponse({ error: `Erro ao baixar PDF: ${stErr?.message}` }, 500);
+    const pdfBase64 = arrayBufferToBase64(await pdfData.arrayBuffer());
 
-    const subject = `Seus documentos — ${empresa.nome}`;
-    const html = `
-<!doctype html><html><body style="margin:0;padding:0;background:#f5f5f7;font-family:-apple-system,BlinkMacSystemFont,'SF Pro Text','Helvetica Neue',Arial,sans-serif;color:#1d1d1f;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f5f5f7;padding:32px 16px;">
-    <tr><td align="center">
-      <table role="presentation" width="100%" style="max-width:560px;background:#ffffff;border-radius:14px;padding:32px;">
-        <tr><td>
-          <h1 style="margin:0 0 12px;font-size:22px;font-weight:600;letter-spacing:-0.01em;">Olá, ${escapeHtml((func as any).nome_completo)}</h1>
-          <p style="margin:0 0 16px;font-size:15px;line-height:1.55;">Segue abaixo a lista dos seus documentos. Os links são válidos por <strong>1 hora</strong>.</p>
-          ${sections}
-          <hr style="border:none;border-top:1px solid #e5e5ea;margin:28px 0 16px;" />
-          <p style="margin:0;font-size:13px;color:#6e6e73;">${escapeHtml(empresa.nome)}</p>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`.trim();
+    const mes = (hol as any).mes_referencia as string;
+    const { mesNome, ano } = mesNomeAno(mes);
 
-    const rawMime = buildDocumentosMime({
-      fromName: profile.name,
+    const empresaNome: string = empresa.nome ?? "Empresa";
+    const subject = `Holerite ${formatMesShort(mes)} - ${empresaNome}`;
+
+    const pdfFilename = `Holerite_${sanitizeForFilename(func.nome_completo as string)}_${mesNome}_${ano}.pdf`;
+
+    const emailData: HoleriteEmailData = {
+      fromName: empresaNome ? `${empresaNome} - RH` : profile.name,
       fromEmail: profile.email,
-      toEmail: (func as any).email,
-      toName: (func as any).nome_completo,
+      toEmail: func.email as string,
+      toName: func.nome_completo as string,
       subject,
-      html,
+      empresaNome,
+      empresaCnpj: empresa.cnpj ?? null,
+      mesNome,
+      ano,
+      pdfBase64,
+      pdfFilename,
+    };
+
+    const rawMime = buildHoleriteMime(emailData);
+
+    console.log("[send-via-gmail] sending holerite", {
+      user_id: userId,
+      to: emailData.toEmail,
+      subject,
+      pdf_filename: pdfFilename,
     });
 
     const result = await sendGmail(accessToken, rawMime);
     if (!result.ok) {
       const errBody = typeof result.body === "string" ? result.body : JSON.stringify(result.body);
       const lower = errBody.toLowerCase();
-      await logSend(admin, (func as any).email, "gmail_documentos", "failed",
-        { mode: "documentos", funcionario_id, status: result.status }, errBody);
+      await logSend(admin, func.email as string, "gmail_holerite", "failed",
+        { mode: "holerite", holerite_id, status: result.status }, errBody);
 
       if (result.status === 403 && lower.includes("insufficient")) {
         return jsonResponse({ needs_reconnect: true, reason: "scope_insufficient", error: "Reconecte o Google para autorizar envio de e-mail." });
@@ -515,15 +517,12 @@ Deno.serve(async (req) => {
     }
 
     const messageId = (result.body as any)?.id ?? null;
-    await logSend(admin, (func as any).email, "gmail_documentos", "sent",
-      { mode: "documentos", funcionario_id, gmail_message_id: messageId, count: docsWithUrls.length, from: profile.email }, undefined, messageId);
+    await admin.from("holerites").update({ enviado: true, enviado_em: new Date().toISOString() }).eq("id", holerite_id);
+    await logSend(admin, func.email as string, "gmail_holerite", "sent",
+      { mode: "holerite", holerite_id, gmail_message_id: messageId, from: profile.email, subject, pdf_filename: pdfFilename },
+      undefined, messageId);
 
-    return jsonResponse({
-      ok: true,
-      message: `Documentos enviados para ${(func as any).email}`,
-      gmail_message_id: messageId,
-      documentos_enviados: docsWithUrls.length,
-    });
+    return jsonResponse({ ok: true, message: `Holerite enviado para ${func.email}`, gmail_message_id: messageId });
   } catch (e) {
     console.error("[send-via-gmail] error:", e);
     return jsonResponse({ error: e instanceof Error ? e.message : "Erro" }, 500);
