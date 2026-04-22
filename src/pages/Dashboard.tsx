@@ -40,7 +40,7 @@ export default function Dashboard() {
   const handleActionClick = (e: React.MouseEvent, to: string) => {
     if (!isRouteEnabled(to, workflow)) {
       e.preventDefault();
-      toast.error(getRouteMessage(to));
+      toast({ title: getRouteMessage(to), variant: "destructive" });
     }
   };
 
