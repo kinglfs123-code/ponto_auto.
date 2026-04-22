@@ -58,7 +58,7 @@ export default function Empresas() {
 
   const load = async () => {
     setListLoading(true);
-    const { data, error } = await supabase.from("empresas").select("*").order("created_at");
+    const { data, error } = await supabase.from("empresas").select("id, cnpj, nome, jornada_padrao, owner_id, created_at").order("created_at");
     if (error) toast({ title: "Erro ao carregar", description: friendlyError(error), variant: "destructive" });
     if (data) setEmpresas(data);
     setListLoading(false);

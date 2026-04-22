@@ -59,7 +59,7 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
     setLoading(true);
     const { data: aData } = await supabase
       .from("contratos_analise")
-      .select("*")
+      .select("id, funcionario_id, empresa_id, documento_id, data_admissao, tipo_contrato, data_vencimento, data_prorrogacao, data_proximas_ferias, observacoes, confianca, dados_brutos, created_at, updated_at")
       .eq("funcionario_id", funcionarioId)
       .order("created_at", { ascending: false })
       .limit(1)
@@ -69,7 +69,7 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
       setAnalise(aData as unknown as ContratoAnalise);
       const { data: alData } = await supabase
         .from("contrato_alertas")
-        .select("*")
+        .select("id, contrato_id, funcionario_id, empresa_id, tipo, data_evento, data_lembrete, google_event_id, google_event_id_lembrete, google_event_id_vencimento, status, erro_mensagem, created_at, updated_at")
         .eq("contrato_id", aData.id)
         .order("data_lembrete");
       setAlertas((alData as unknown as ContratoAlerta[]) || []);

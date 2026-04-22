@@ -16,7 +16,7 @@ export default function Dashboard() {
   const { data: empresas = [], isLoading: loading } = useQuery({
     queryKey: ["empresas"],
     queryFn: async () => {
-      const { data } = await supabase.from("empresas").select("*");
+      const { data } = await supabase.from("empresas").select("id, cnpj, nome, jornada_padrao");
       return (data ?? []) as Empresa[];
     },
     staleTime: 60_000,

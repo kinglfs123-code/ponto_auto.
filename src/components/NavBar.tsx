@@ -1,5 +1,15 @@
-import { useState } from "react";
+import { memo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
+
+// Prefetch route chunks on hover/focus to avoid waiting for download on click
+const prefetchers: Record<string, () => Promise<unknown>> = {
+  "/": () => import("@/pages/Dashboard"),
+  "/empresas": () => import("@/pages/Empresas"),
+  "/funcionarios": () => import("@/pages/Funcionarios"),
+  "/ponto": () => import("@/pages/Ponto"),
+  "/holerites": () => import("@/pages/Holerites"),
+  "/relatorios": () => import("@/pages/Relatorios"),
+};
 import { supabase } from "@/integrations/supabase/client";
 import {
   Building2,
@@ -28,7 +38,7 @@ const links = [
   { to: "/relatorios", label: "Relatórios", icon: FileText },
 ];
 
-export default function NavBar() {
+function NavBarBase() {
   const { pathname } = useLocation();
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
@@ -64,6 +74,8 @@ export default function NavBar() {
                 key={l.to}
                 to={l.to}
                 onClick={(e) => handleNavClick(e, l.to)}
+                onMouseEnter={() => prefetchers[l.to]?.().catch(() => {})}
+                onFocus={() => prefetchers[l.to]?.().catch(() => {})}
                 aria-label={l.label}
                 className={`liquid-hover flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-2xl min-w-[3.5rem] ${
                   !enabled
@@ -156,3 +168,6 @@ export default function NavBar() {
     </div>
   );
 }
+
+const NavBar = memo(NavBarBase);
+export default NavBar;

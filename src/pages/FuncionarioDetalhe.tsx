@@ -119,7 +119,11 @@ export default function FuncionarioDetalhe() {
   const loadAll = useCallback(async () => {
     if (!id) return;
     setLoading(true);
-    const { data: fData, error: fErr } = await supabase.from("funcionarios").select("*").eq("id", id).maybeSingle();
+    const { data: fData, error: fErr } = await supabase
+      .from("funcionarios")
+      .select("id, empresa_id, nome_completo, cpf, email, data_nascimento, cargo, horario_entrada, horario_saida, intervalo")
+      .eq("id", id)
+      .maybeSingle();
     if (fErr || !fData) {
       toast({ title: "Colaborador não encontrado", variant: "destructive" });
       setLoading(false);
@@ -128,10 +132,30 @@ export default function FuncionarioDetalhe() {
     setFunc(fData as Funcionario);
 
     const [folhasRes, holRes, docsRes, ferRes] = await Promise.all([
-      supabase.from("folhas_ponto").select("*").eq("funcionario_id", id).order("mes_referencia", { ascending: false }),
-      supabase.from("holerites").select("*").eq("funcionario_id", id).order("mes_referencia", { ascending: false }),
-      supabase.from("funcionario_documentos").select("*").eq("funcionario_id", id).order("created_at", { ascending: false }),
-      supabase.from("funcionario_ferias").select("*").eq("funcionario_id", id).order("data_inicio", { ascending: false }),
+      supabase
+        .from("folhas_ponto")
+        .select("id, funcionario, mes_referencia, status, empresa_id")
+        .eq("funcionario_id", id)
+        .order("mes_referencia", { ascending: false })
+        .limit(50),
+      supabase
+        .from("holerites")
+        .select("id, funcionario_id, mes_referencia, pdf_path, enviado, enviado_em")
+        .eq("funcionario_id", id)
+        .order("mes_referencia", { ascending: false })
+        .limit(50),
+      supabase
+        .from("funcionario_documentos")
+        .select("id, funcionario_id, empresa_id, categoria, nome_arquivo, storage_path, mime_type, tamanho_bytes, created_at")
+        .eq("funcionario_id", id)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabase
+        .from("funcionario_ferias")
+        .select("id, funcionario_id, empresa_id, data_inicio, data_fim, dias, status, observacao, documento_storage_path, documento_nome, google_event_id, google_event_id_inicio, google_event_id_fim, created_at")
+        .eq("funcionario_id", id)
+        .order("data_inicio", { ascending: false })
+        .limit(50),
     ]);
 
     setFolhas((folhasRes.data as Folha[]) || []);
