@@ -76,6 +76,9 @@ export interface FuncionarioFerias {
   status: StatusFerias;
   observacao: string | null;
   created_at: string;
+  documento_storage_path?: string | null;
+  documento_nome?: string | null;
+  google_event_id?: string | null;
 }
 
 export interface ContratoAnalise {

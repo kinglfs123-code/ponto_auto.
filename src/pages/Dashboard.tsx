@@ -70,7 +70,7 @@ export default function Dashboard() {
                   !enabled
                     ? "opacity-40 cursor-not-allowed border-border/50"
                     : isNext
-                      ? "border-primary/50 bg-primary/5 hover:bg-primary/10 ring-1 ring-primary/20 animate-pulse"
+                      ? "border-primary/50 bg-primary/5 hover:bg-primary/10 ring-1 ring-primary/20"
                       : "border-border/50 hover:border-primary/30 hover:bg-primary/5"
                 }`}
                 onClick={(e: React.MouseEvent) => !enabled && handleActionClick(e, a.to)}
