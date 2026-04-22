@@ -387,6 +387,8 @@ export type Database = {
           empresa_id: string
           funcionario_id: string
           google_event_id: string | null
+          google_event_id_fim: string | null
+          google_event_id_inicio: string | null
           id: string
           observacao: string | null
           status: string
@@ -401,6 +403,8 @@ export type Database = {
           empresa_id: string
           funcionario_id: string
           google_event_id?: string | null
+          google_event_id_fim?: string | null
+          google_event_id_inicio?: string | null
           id?: string
           observacao?: string | null
           status?: string
@@ -415,6 +419,8 @@ export type Database = {
           empresa_id?: string
           funcionario_id?: string
           google_event_id?: string | null
+          google_event_id_fim?: string | null
+          google_event_id_inicio?: string | null
           id?: string
           observacao?: string | null
           status?: string

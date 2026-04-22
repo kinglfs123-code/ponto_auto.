@@ -243,8 +243,25 @@ export default function FuncionarioDetalhe() {
     if (!confirm(`Excluir "${doc.nome_arquivo}"?`)) return;
     await supabase.storage.from("colaborador-arquivos").remove([doc.storage_path]);
     const { error } = await supabase.from("funcionario_documentos").delete().eq("id", doc.id);
-    if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
-    else { toast({ title: "Documento excluído" }); await loadAll(); }
+    if (error) {
+      toast({ title: "Erro", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    // Se for um contrato e não restarem mais contratos, limpar análise + alertas
+    if (doc.categoria === "contrato" && func) {
+      const restantes = documentos.filter(
+        (d) => d.id !== doc.id && d.categoria === "contrato",
+      );
+      if (restantes.length === 0) {
+        await supabase.from("contrato_alertas").delete().eq("funcionario_id", func.id);
+        await supabase.from("contratos_analise").delete().eq("funcionario_id", func.id);
+      }
+      // Se restam contratos, AnaliseContrato detecta a mudança e re-analisa.
+    }
+
+    toast({ title: "Documento excluído" });
+    await loadAll();
   };
 
   // ==== Holerites ====
@@ -306,55 +323,7 @@ export default function FuncionarioDetalhe() {
     }
   };
 
-  const [sendingDocsEmail, setSendingDocsEmail] = useState(false);
-
-  const handleSendDocumentosEmail = async () => {
-    if (!func) return;
-    if (!func.email) {
-      toast({ title: "Sem e-mail cadastrado", variant: "destructive" });
-      return;
-    }
-    setSendingDocsEmail(true);
-    try {
-      const { data, error } = await supabase.functions.invoke("send-via-gmail", {
-        body: { kind: "documentos", funcionario_id: func.id },
-      });
-      if (error) throw error;
-      if (data?.needs_connection || data?.needs_reconnect) {
-        const reason = data.reason as string | undefined;
-        const description =
-          data?.error ||
-          (reason === "no_token"
-            ? "Conecte sua conta Google para enviar e-mails."
-            : reason === "refresh_revoked"
-            ? "Sua autorização Google expirou. Reconecte para continuar."
-            : reason === "missing_scope" || reason === "scope_insufficient"
-            ? "Permissão de envio de e-mail não concedida. Reconecte e autorize 'Enviar e-mails'."
-            : "Necessário autorizar envio de e-mail pelo seu Gmail.");
-        toast({
-          title: reason === "no_token" ? "Conecte o Google" : "Reconecte o Google",
-          description,
-          variant: "destructive",
-          action: (
-            <ToastAction altText="Reconectar Google" onClick={() => startGoogleConnect()}>
-              Reconectar Google
-            </ToastAction>
-          ),
-        });
-        return;
-      }
-      if (data?.rate_limited) {
-        toast({ title: "Limite atingido", description: data.error, variant: "destructive" });
-        return;
-      }
-      if (data?.error) throw new Error(data.error);
-      toast({ title: "Documentos enviados!", description: `${data?.documentos_enviados ?? ""} arquivo(s) para ${func.email}` });
-    } catch (err: any) {
-      toast({ title: "Erro ao enviar", description: err?.message || "Falha no envio", variant: "destructive" });
-    } finally {
-      setSendingDocsEmail(false);
-    }
-  };
+  // Envio por e-mail acontece apenas na aba Holerites.
 
   const handleSendHolerite = async (h: Holerite) => {
     if (!func?.email) {
@@ -653,6 +622,14 @@ export default function FuncionarioDetalhe() {
     if (fr?.documento_storage_path) {
       await supabase.storage.from("colaborador-arquivos").remove([fr.documento_storage_path]);
     }
+    // Remove eventos no Google Agenda (best-effort)
+    if (fr?.google_event_id || fr?.google_event_id_inicio || fr?.google_event_id_fim) {
+      try {
+        await supabase.functions.invoke("delete-ferias-calendar", { body: { ferias_id: fid } });
+      } catch {
+        // ignora — exclusão local segue mesmo se a remoção no Calendar falhar
+      }
+    }
     const { error } = await supabase.from("funcionario_ferias").delete().eq("id", fid);
     if (error) toast({ title: "Erro", description: error.message, variant: "destructive" });
     else { toast({ title: "Excluído" }); await loadAll(); }
@@ -836,20 +813,6 @@ export default function FuncionarioDetalhe() {
 
           {/* DOCUMENTOS */}
           <TabsContent value="documentos" className="space-y-3 mt-4">
-            {documentos.length > 0 && (
-              <div className="flex justify-end">
-                <Button
-                  size="sm"
-                  onClick={handleSendDocumentosEmail}
-                  disabled={sendingDocsEmail || !func?.email}
-                  className="gap-1.5"
-                  title={!func?.email ? "Cadastre um e-mail para o colaborador" : undefined}
-                >
-                  {sendingDocsEmail ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
-                  Enviar documentos por e-mail
-                </Button>
-              </div>
-            )}
             {CATEGORIAS.map((cat) => {
               const docs = docsByCategoria(cat.value);
               const isUp = uploadingCat === cat.value;
