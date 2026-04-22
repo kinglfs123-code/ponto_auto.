@@ -199,8 +199,8 @@ export default function Holerites() {
 
       toast({ title: "Holerite enviado!", description: `E-mail enviado para ${func.email}` });
       await loadData();
-    } catch (err: any) {
-      toast({ title: "Erro ao enviar", description: err?.message || "Falha no envio", variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Erro ao enviar", description: friendlyError(err), variant: "destructive" });
     } finally {
       setSending((p) => ({ ...p, [funcId]: false }));
     }
@@ -215,16 +215,23 @@ export default function Holerites() {
       toast({ title: "Nada para enviar", description: "Todos os holerites já foram enviados ou não há PDFs/e-mails." });
       return;
     }
+    const ok = await confirm({
+      title: "Enviar holerites em massa",
+      description: `Você está prestes a enviar ${toSend.length} holerite(s) por e-mail. Os colaboradores receberão o PDF imediatamente. Deseja continuar?`,
+      confirmLabel: `Enviar ${toSend.length} e-mail(s)`,
+      variant: "default",
+    });
+    if (!ok) return;
     setSendingAll(true);
     let sent = 0;
     for (const f of toSend) {
       try {
         await handleSend(f.id);
         sent++;
-      } catch {}
+      } catch { /* já tratado em handleSend */ }
     }
     setSendingAll(false);
-    toast({ title: `${sent} holerite(s) enviado(s)` });
+    toast({ title: `${sent} de ${toSend.length} holerite(s) enviado(s)` });
   };
 
   const totalUploaded = funcionarios.filter((f) => getHolerite(f.id)).length;
