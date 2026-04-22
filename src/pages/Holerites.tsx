@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { ToastAction } from "@/components/ui/toast";
 import NavBar from "@/components/NavBar";
 import EmpresaSelector from "@/components/EmpresaSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
