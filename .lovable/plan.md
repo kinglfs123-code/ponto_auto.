@@ -1,60 +1,72 @@
 
 
-## Plano: não sincronizar contrato sem arquivo + limpar resíduos
+## Plano: 2 eventos por alerta (lembrete azul + vencimento vermelho) e férias 2 meses antes
 
-### Comportamento atual (bug visível no print)
-Mesmo com "Nenhum arquivo" no Contrato de Trabalho, a tela mostra:
-- Card de análise (Admissão, Tipo, Vencimento, Prorrogação, Próximas férias)
-- Alertas "Sincronizado" no Google Agenda
+### Comportamento atual
+- Cada alerta de contrato cria **um único evento** no Google Agenda, no dia do `data_lembrete`, sem cor definida (cor padrão da agenda).
+- Alerta de férias é gerado com lembrete **5 meses antes** (`addMonths(data_proximas_ferias, -5)`).
 
-Isso acontece porque:
-1. O componente `AnaliseContrato` é montado mesmo sem contrato e exibe a última análise salva.
-2. A limpeza ao excluir contrato só foi adicionada depois — registros antigos (e os eventos correspondentes no Google Agenda) continuam lá.
-3. Ao excluir o último contrato, hoje só removemos do banco; os eventos no Google Agenda ficam órfãos.
+### Novo comportamento
+Para cada alerta (vencimento, prorrogação, férias), criar **2 eventos** no Google Agenda:
+1. **Lembrete antecipado** (azul, `colorId: "9"` Blueberry) na data `data_lembrete`. Título prefixado com `🔔 Lembrete:`.
+2. **Evento no dia do vencimento/evento real** (vermelho, `colorId: "11"` Tomato) na data `data_evento`, caso o lembrete passe despercebido. Título prefixado com `⚠️` (vencimento) / `📝` (prorrogação) / `🌴` (férias).
 
-### Regra nova
-**Se não houver arquivo de contrato anexado, não há análise e não há sincronização.** Tudo o que existir é considerado resíduo e deve ser apagado (banco + Google Agenda).
+Antecedência do lembrete de **férias** muda de 5 meses para **2 meses** (`addMonths(data_proximas_ferias, -2)`). Vencimento e prorrogação continuam com 2 dias de antecedência.
 
 ### Mudanças
 
-**1. `src/pages/FuncionarioDetalhe.tsx` — não montar análise sem contrato**
-Na aba Documentos, só renderizar `<AnaliseContrato />` quando `documentos.filter(d => d.categoria === "contrato").length > 0`. Sem contrato → nenhum card de análise, nenhum card de alertas.
+**1. Migração de banco — `contrato_alertas`**
+Adicionar duas colunas para guardar os dois `event_id`s do Google. Manter `google_event_id` como legado/migração (deixa de ser usado para escrita nova):
+```sql
+ALTER TABLE public.contrato_alertas
+  ADD COLUMN IF NOT EXISTS google_event_id_lembrete text,
+  ADD COLUMN IF NOT EXISTS google_event_id_vencimento text;
+```
 
-**2. `src/pages/FuncionarioDetalhe.tsx → handleDeleteDoc` — limpar Google Agenda também**
-Quando o último contrato for excluído:
-- Buscar `contrato_alertas` do funcionário com `google_event_id` preenchido **antes** do delete.
-- Chamar a edge function nova `delete-calendar-alerts` com a lista de `google_event_id`s para apagar do Google Agenda.
-- Em seguida apagar `contrato_alertas` e `contratos_analise` (já feito hoje).
+**2. `supabase/functions/analyze-contract/index.ts`**
+- Trocar antecedência de férias: `addMonths(data_proximas_ferias, -2)` em vez de `-5`.
+- Atualizar label do tipo `ferias_5_meses` segue valendo (string interna) — ajuste só visual no front.
 
-**3. Nova edge function `supabase/functions/delete-calendar-alerts/index.ts`**
-Espelha o padrão de `delete-ferias-calendar`:
-- Recebe `{ event_ids: string[] }`.
-- Autentica usuário, pega `access_token` válido (mesma lógica `getValidAccessToken` reaproveitada).
-- Para cada `eventId`: `DELETE https://www.googleapis.com/calendar/v3/calendars/primary/events/{eventId}` (ignora 404/410 — evento já não existe).
-- Retorna `{ deleted: n }`.
-- Registrar em `supabase/config.toml` se necessário.
+**3. `supabase/functions/sync-calendar-alerts/index.ts`**
+- Para cada alerta, montar e enviar **dois eventos**:
+  - Lembrete: `summary: "🔔 Lembrete: <titulo> — <nome>"`, `start/end.date = data_lembrete`, `colorId: "9"`.
+  - Vencimento: `summary: "<emoji> <titulo> — <nome>"`, `start/end.date = data_evento`, `colorId: "11"`, popup no próprio dia (override 0–60 min).
+- Fazer POST se o respectivo `google_event_id_*` ainda não existir, PUT se existir (idempotente).
+- Salvar `google_event_id_lembrete` e `google_event_id_vencimento` na tabela.
+- Marcar `status = "sincronizado"` apenas quando ambos os eventos forem criados/atualizados com sucesso.
 
-**4. `src/components/AnaliseContrato.tsx` — auto-limpeza defensiva**
-No `useEffect` de carga, se `contratos.length === 0`:
-- Pular a análise.
-- Se existir `analise` no banco, disparar limpeza (apagar `contrato_alertas` + `contratos_analise` + chamar `delete-calendar-alerts` com os event ids encontrados).
-- Setar `analise` e `alertas` para vazio.
-Isso garante que, ao abrir a tela do funcionário do print **sem precisar excluir nada manualmente**, os resíduos antigos somem do banco e do Google Agenda automaticamente.
+**4. `supabase/functions/delete-calendar-alerts/index.ts`**
+- Hoje recebe `event_ids: string[]`. Continuar aceitando esse formato (já é genérico). No `FuncionarioDetalhe.tsx` e `AnaliseContrato.tsx`, ao montar a lista para deletar, juntar `google_event_id`, `google_event_id_lembrete` e `google_event_id_vencimento` de cada alerta antes de chamar a função.
 
-**5. Bloquear auto-sync sem contrato**
-No `useEffect` de auto-sync de `AnaliseContrato`, sair cedo se `contratos.length === 0` (cinto e suspensório, em paralelo ao item 4).
+**5. `src/pages/FuncionarioDetalhe.tsx → handleDeleteDoc`**
+- Ao excluir o último contrato, buscar os 3 campos (`google_event_id`, `google_event_id_lembrete`, `google_event_id_vencimento`) de `contrato_alertas` e enviar todos para `delete-calendar-alerts`.
+
+**6. `src/components/AnaliseContrato.tsx`**
+- Auto-limpeza: mesma alteração — coletar os 3 campos.
+- Label visual `TIPO_ALERTA_LABEL.ferias_5_meses` passa a "Férias (2 meses antes)".
+- Texto exibido por alerta passa a indicar os dois eventos: `Lembrete em DD/MM/YYYY (azul) · Vencimento em DD/MM/YYYY (vermelho)`.
+
+**7. `src/types/index.ts`**
+- Adicionar `google_event_id_lembrete?: string | null` e `google_event_id_vencimento?: string | null` em `ContratoAlerta`.
+
+**8. Re-sincronização dos alertas existentes**
+- O auto-sync do `AnaliseContrato` já roda quando há pendentes. Para forçar a recriação dos eventos na nova estrutura sem duplicar, na primeira execução com os novos campos vazios:
+  - se `google_event_id` (legado) existir e `google_event_id_lembrete`/`vencimento` estiverem vazios → criar os dois eventos novos via POST e, em seguida, deletar o evento legado (`google_event_id`) do Google Agenda; limpar a coluna legada.
+  - Senão, comportamento normal (POST quando vazio, PUT quando preenchido).
 
 ### Resultado esperado
-- Funcionário sem contrato anexado: aba Documentos mostra só o card "Contrato de Trabalho — Nenhum arquivo" e o botão "Anexar". Sem análise, sem alertas, sem chamadas ao Google.
-- Ao abrir o funcionário do print, o card de análise e os 3 alertas sumirão da tela; os 3 eventos correspondentes serão removidos do Google Agenda automaticamente.
-- Ao excluir o último contrato no futuro: análise, alertas e eventos no Google Agenda são apagados juntos.
-- Quando um novo contrato for anexado, a análise é refeita do zero e novos eventos são criados.
+- Cada alerta passa a ter **2 marcações no Google Agenda**: uma azul de lembrete e uma vermelha no dia do vencimento.
+- Lembrete de férias passa a sair **2 meses antes** (em vez de 5).
+- Excluir contrato continua limpando tudo: ambos os eventos por alerta são removidos do Google Agenda junto com os registros locais.
 
 ### Arquivos
 | Arquivo | Mudança |
 |---|---|
-| `src/pages/FuncionarioDetalhe.tsx` | Render condicional de `AnaliseContrato`; chamar `delete-calendar-alerts` antes de limpar tabelas no `handleDeleteDoc` |
-| `src/components/AnaliseContrato.tsx` | Auto-limpeza quando `contratos.length === 0`; bloquear auto-sync sem contrato |
-| `supabase/functions/delete-calendar-alerts/index.ts` (novo) | Apaga eventos do Google Agenda por ID |
-| `supabase/config.toml` | Registro da nova função (se necessário) |
+| `supabase/migrations/<novo>.sql` | Adiciona `google_event_id_lembrete` e `google_event_id_vencimento` em `contrato_alertas` |
+| `supabase/functions/analyze-contract/index.ts` | Férias: 2 meses antes em vez de 5 |
+| `supabase/functions/sync-calendar-alerts/index.ts` | Cria/atualiza 2 eventos por alerta com `colorId` 9 (azul) e 11 (vermelho); migra eventos legados |
+| `supabase/functions/delete-calendar-alerts/index.ts` | Sem mudança de contrato; segue deletando lista de IDs |
+| `src/pages/FuncionarioDetalhe.tsx` | Coletar os 3 campos de event_id ao limpar |
+| `src/components/AnaliseContrato.tsx` | Coletar os 3 campos na auto-limpeza; ajustar labels e descrição |
+| `src/types/index.ts` | Novos campos em `ContratoAlerta` |
 
