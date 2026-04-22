@@ -62,7 +62,7 @@ function formatMes(m: string): string {
 async function getValidAccessToken(
   admin: ReturnType<typeof createClient>,
   userId: string,
-): Promise<{ token: string | null; scope: string | null }> {
+): Promise<{ token: string | null; scope: string | null; reason?: "no_token" | "refresh_revoked" }> {
   const { data, error } = await admin
     .from("google_calendar_tokens")
     .select("*")
@@ -70,7 +70,7 @@ async function getValidAccessToken(
     .maybeSingle();
 
   if (error) throw new Error(`Erro ao ler tokens: ${error.message}`);
-  if (!data) return { token: null, scope: null };
+  if (!data) return { token: null, scope: null, reason: "no_token" };
 
   const expiresAt = new Date(data.expires_at as string).getTime();
   const scope = (data.scope as string | null) ?? null;
