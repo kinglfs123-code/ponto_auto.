@@ -382,8 +382,11 @@ export type Database = {
           data_fim: string
           data_inicio: string
           dias: number
+          documento_nome: string | null
+          documento_storage_path: string | null
           empresa_id: string
           funcionario_id: string
+          google_event_id: string | null
           id: string
           observacao: string | null
           status: string
@@ -393,8 +396,11 @@ export type Database = {
           data_fim: string
           data_inicio: string
           dias: number
+          documento_nome?: string | null
+          documento_storage_path?: string | null
           empresa_id: string
           funcionario_id: string
+          google_event_id?: string | null
           id?: string
           observacao?: string | null
           status?: string
@@ -404,8 +410,11 @@ export type Database = {
           data_fim?: string
           data_inicio?: string
           dias?: number
+          documento_nome?: string | null
+          documento_storage_path?: string | null
           empresa_id?: string
           funcionario_id?: string
+          google_event_id?: string | null
           id?: string
           observacao?: string | null
           status?: string
