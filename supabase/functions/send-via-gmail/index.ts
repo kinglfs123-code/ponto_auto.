@@ -109,6 +109,12 @@ async function getValidAccessToken(
   };
   const newExpiresAt = new Date(Date.now() + (tok.expires_in - 60) * 1000).toISOString();
   const newScope = tok.scope ?? scope;
+  console.log("[send-via-gmail] refreshed token", {
+    user_id: userId,
+    scope_from_refresh: tok.scope ?? "(none)",
+    has_gmail_send: !!(newScope ?? "").includes("https://www.googleapis.com/auth/gmail.send"),
+    has_calendar_events: !!(newScope ?? "").includes("https://www.googleapis.com/auth/calendar.events"),
+  });
 
   await admin.from("google_calendar_tokens").update({
     access_token: tok.access_token,

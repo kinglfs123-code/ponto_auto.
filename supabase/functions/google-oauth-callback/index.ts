@@ -149,6 +149,26 @@ Deno.serve(async (req) => {
       scope: tok.scope,
     });
 
+    // Validate that Google actually granted the scopes we requested.
+    // If gmail.send is missing, the Gmail API will be silently inaccessible —
+    // surface this as a clear error before we save a half-broken token.
+    const grantedScopes = (tok.scope ?? "").split(/\s+/).filter(Boolean);
+    const REQUIRED_SCOPES = [
+      "https://www.googleapis.com/auth/gmail.send",
+      "https://www.googleapis.com/auth/calendar.events",
+    ];
+    const missing = REQUIRED_SCOPES.filter((s) => !grantedScopes.includes(s));
+    if (missing.length > 0) {
+      console.warn("[oauth-callback] missing scopes after consent", { missing, granted: grantedScopes });
+      const missingShort = missing
+        .map((s) => s.split("/").pop() || s)
+        .join(",");
+      return htmlRedirect(
+        buildAppUrl(decoded.rt, { google: "error", reason: "missing_scopes", missing: missingShort }, decoded.og),
+        "Faltam permissões — autorize todos os escopos no Google",
+      );
+    }
+
     const expiresAt = new Date(Date.now() + (tok.expires_in - 60) * 1000).toISOString();
 
     const admin = createClient(SUPABASE_URL, SERVICE_KEY);
