@@ -304,22 +304,17 @@ Deno.serve(async (req) => {
       });
     }
 
-    let profile: { email: string; name: string };
-    try {
-      profile = await getGoogleProfile(accessToken);
-    } catch (e) {
-      if (e instanceof GmailScopeError) {
-        return jsonResponse({
-          needs_reconnect: true,
-          reason: "scope_insufficient",
-          error: "Permissão de envio de e-mail não concedida. Reconecte e autorize 'Enviar e-mails'.",
-        });
-      }
-      throw e;
-    }
-    if (!profile.email) {
-      return jsonResponse({ error: "Não foi possível obter e-mail do Google" }, 500);
-    }
+    // Build From identity without calling Gmail profile endpoint.
+    // Gmail rewrites the From header to the real authenticated account on send,
+    // so this is mostly a placeholder — we just need a syntactically valid address.
+    const authEmail = userData.user.email ?? "me@gmail.com";
+    const profile = { email: authEmail, name: deriveDisplayName(authEmail) };
+    console.log("[send-via-gmail] sending", {
+      kind,
+      user_id: userId,
+      from_placeholder: profile.email,
+      scope_has_gmail_send: scope?.includes("https://www.googleapis.com/auth/gmail.send") ?? false,
+    });
 
     if (kind === "holerite") {
       const holerite_id = body?.holerite_id as string | undefined;
