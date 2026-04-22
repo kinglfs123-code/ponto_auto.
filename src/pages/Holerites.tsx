@@ -328,12 +328,12 @@ export default function Holerites() {
                             }}
                             disabled={isUploading}
                           />
-                          <Button variant="outline" size="sm" className="gap-1.5 pointer-events-none" tabIndex={-1} asChild>
+                          <Button variant="outline" size="sm" className="gap-1.5 pointer-events-none btn-press relative" tabIndex={-1} asChild>
                             <span>
                               {isUploading ? (
                                 <RefreshCw className="h-3.5 w-3.5 animate-spin" />
                               ) : (
-                                <Upload className="h-3.5 w-3.5" />
+                                <span className="attach-bounce"><Upload className="h-3.5 w-3.5" /></span>
                               )}
                               Anexar PDF
                             </span>

@@ -1,11 +1,9 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { ClipboardList } from "lucide-react";
+import { ArrowRight, User, Loader2 } from "lucide-react";
+import loginBg from "@/assets/login-bg.jpg";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -14,10 +12,22 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
+  const today = useMemo(() => {
+    const d = new Date();
+    const formatted = d.toLocaleDateString("pt-BR", {
+      weekday: "long",
+      day: "numeric",
+      month: "long",
+    });
+    return formatted.charAt(0).toUpperCase() + formatted.slice(1);
+  }, []);
+
+  const initial = useMemo(() => email.trim().charAt(0).toUpperCase(), [email]);
+  const displayName = email.trim() || "Entrar";
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
       if (isSignUp) {
         const { error } = await supabase.auth.signUp({
@@ -44,52 +54,127 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Gradient orbs */}
-      <div className="absolute top-[-20%] left-[-10%] w-[500px] h-[500px] rounded-full bg-primary/5 blur-[120px] pointer-events-none" />
-      <div className="absolute bottom-[-20%] right-[-10%] w-[400px] h-[400px] rounded-full bg-primary/8 blur-[100px] pointer-events-none" />
+    <div className="min-h-screen w-full relative overflow-hidden">
+      {/* Background image */}
+      <img
+        src={loginBg}
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-0 h-full w-full object-cover scale-[1.05]"
+      />
+      {/* Soft overlay for legibility */}
+      <div
+        className="absolute inset-0 pointer-events-none"
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(0,0,0,0.10) 0%, rgba(0,0,0,0.0) 35%, rgba(0,0,0,0.0) 65%, rgba(0,0,0,0.25) 100%)",
+        }}
+      />
 
-      <Card className="w-full max-w-sm animate-fade-in glass shadow-2xl">
-        <CardHeader className="text-center pb-2 pt-8">
-          <div className="mx-auto mb-4 h-16 w-16 rounded-[1.25rem] bg-primary/15 flex items-center justify-center backdrop-blur-sm">
-            <ClipboardList className="h-8 w-8 text-primary" />
+      {/* Top: date */}
+      <div className="absolute inset-x-0 top-0 z-10 pt-10 sm:pt-14 flex flex-col items-center text-white">
+        <p
+          className="text-base sm:text-lg font-light tracking-wide"
+          style={{ textShadow: "0 1px 12px rgba(0,0,0,0.35)" }}
+        >
+          {today}
+        </p>
+      </div>
+
+      {/* Center-bottom: avatar + login */}
+      <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center pb-12 sm:pb-20 px-6">
+        <form onSubmit={handleSubmit} className="flex flex-col items-center gap-3 w-full max-w-[320px]">
+          {/* Avatar */}
+          <div
+            className="liquid-glass !rounded-full h-[68px] w-[68px] flex items-center justify-center text-white text-2xl font-light"
+            style={{
+              background: "rgba(255,255,255,0.18)",
+              border: "1px solid rgba(255,255,255,0.35)",
+            }}
+            aria-hidden="true"
+          >
+            {initial ? initial : <User className="h-8 w-8" />}
           </div>
-          <h1 className="text-xl font-bold tracking-tight text-foreground">
-            FOLHA DE PONTO
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {isSignUp ? "Crie sua conta" : "Entre na sua conta"}
+
+          {/* Name / email preview */}
+          <p
+            className="text-white text-[15px] font-medium tracking-tight max-w-full truncate"
+            style={{ textShadow: "0 1px 8px rgba(0,0,0,0.35)" }}
+          >
+            {displayName}
           </p>
-        </CardHeader>
-        <CardContent className="pt-2">
-          <form onSubmit={handleSubmit} className="space-y-3">
-            <Input
+
+          {/* Unified input pill (email + password) */}
+          <div
+            className="liquid-glass w-full !rounded-2xl overflow-hidden"
+            style={{
+              background: "rgba(255,255,255,0.18)",
+              border: "1px solid rgba(255,255,255,0.30)",
+            }}
+          >
+            <input
               type="email"
+              required
+              autoComplete="email"
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              required
+              className="w-full bg-transparent px-4 py-2.5 text-[14px] text-white placeholder:text-white/70 outline-none border-0"
+              style={{ caretColor: "white" }}
             />
-            <Input
-              type="password"
-              placeholder="Senha"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              minLength={6}
-            />
-            <Button type="submit" className="w-full font-semibold" size="lg" disabled={loading}>
-              {loading ? "..." : isSignUp ? "Cadastrar" : "Entrar"}
-            </Button>
-          </form>
+            <div className="h-px w-full bg-white/25" />
+            <div className="flex items-center">
+              <input
+                type="password"
+                required
+                minLength={6}
+                autoComplete={isSignUp ? "new-password" : "current-password"}
+                placeholder={isSignUp ? "Crie uma senha" : "Digite a senha"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="flex-1 bg-transparent px-4 py-2.5 text-[14px] text-white placeholder:text-white/70 outline-none border-0"
+                style={{ caretColor: "white" }}
+              />
+              <button
+                type="submit"
+                disabled={loading}
+                aria-label={isSignUp ? "Cadastrar" : "Entrar"}
+                className="btn-press mr-1.5 my-1 h-8 w-8 rounded-full flex items-center justify-center text-white disabled:opacity-50"
+                style={{
+                  background: "rgba(255,255,255,0.25)",
+                  border: "1px solid rgba(255,255,255,0.35)",
+                }}
+              >
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <ArrowRight className="h-4 w-4" />
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Helper text */}
+          <p
+            className="text-white/80 text-[12px] mt-1"
+            style={{ textShadow: "0 1px 6px rgba(0,0,0,0.30)" }}
+          >
+            {isSignUp
+              ? "Crie uma conta para começar."
+              : "Sua senha é necessária para iniciar sessão."}
+          </p>
+
+          {/* Toggle signup/login */}
           <button
+            type="button"
             onClick={() => setIsSignUp(!isSignUp)}
-            className="w-full mt-4 text-sm text-muted-foreground hover:text-primary transition-colors"
+            className="text-white/85 hover:text-white transition-colors text-[12px] mt-2"
+            style={{ textShadow: "0 1px 6px rgba(0,0,0,0.30)" }}
           >
             {isSignUp ? "Já tem conta? Entrar" : "Não tem conta? Cadastrar"}
           </button>
-        </CardContent>
-      </Card>
+        </form>
+      </div>
     </div>
   );
 }
