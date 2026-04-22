@@ -1,8 +1,21 @@
+import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Building2, ClipboardList, FileText, LogOut, Home, Users, Receipt, Sun, Moon, Lock } from "lucide-react";
+import {
+  Building2,
+  ClipboardList,
+  FileText,
+  LogOut,
+  Home,
+  Users,
+  Receipt,
+  Sun,
+  Moon,
+  Lock,
+  Settings,
+} from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
-import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useWorkflowStatus, isRouteEnabled, getRouteMessage } from "@/hooks/use-workflow-status";
 import { toast } from "@/hooks/use-toast";
 
