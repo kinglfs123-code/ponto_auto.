@@ -94,6 +94,19 @@ export default function FuncionarioDetalhe() {
   const [showFeriasForm, setShowFeriasForm] = useState(false);
   const [editingFeriasId, setEditingFeriasId] = useState<string | null>(null);
   const [feriasForm, setFeriasForm] = useState({ data_inicio: "", data_fim: "", status: "planejada" as StatusFerias, observacao: "" });
+  const [feriasFile, setFeriasFile] = useState<File | null>(null);
+  const [feriasRemoveDoc, setFeriasRemoveDoc] = useState(false);
+  const [savingFerias, setSavingFerias] = useState(false);
+  const [syncingFeriasId, setSyncingFeriasId] = useState<string | null>(null);
+  const feriasFileInputRef = useRef<HTMLInputElement>(null);
+
+  // Conexão Google (para sync de férias)
+  const [googleConnected, setGoogleConnected] = useState(false);
+  useEffect(() => {
+    supabase.from("google_calendar_tokens").select("scope").maybeSingle().then(({ data }) => {
+      setGoogleConnected(!!data && (data.scope || "").includes("calendar.events"));
+    });
+  }, []);
 
   const loadAll = useCallback(async () => {
     if (!id) return;
