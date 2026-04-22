@@ -91,35 +91,67 @@ export default function NavBar() {
               </Link>
             );
           })}
+
+          {/* Configurações */}
+          <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                aria-label="Configurações"
+                className={`liquid-hover flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-2xl min-w-[3.5rem] ${
+                  settingsOpen ? "liquid-pill-active text-primary" : "text-muted-foreground"
+                }`}
+              >
+                <Settings
+                  className={`h-6 w-6 ${settingsOpen ? "drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]" : ""}`}
+                  strokeWidth={settingsOpen ? 2.2 : 1.8}
+                />
+                <span className={`text-[11px] leading-4 ${settingsOpen ? "font-semibold" : "font-normal opacity-80"}`}>
+                  Configurações
+                </span>
+              </button>
+            </PopoverTrigger>
+            <PopoverContent
+              side="top"
+              align="end"
+              sideOffset={12}
+              className="liquid-glass w-60 p-2 border-0 !rounded-2xl text-foreground"
+            >
+              <div className="px-3 pt-1 pb-2 text-[11px] uppercase tracking-wider text-muted-foreground">
+                Configurações
+              </div>
+
+              <button
+                type="button"
+                onClick={toggleTheme}
+                className="liquid-hover w-full flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm hover:bg-foreground/5"
+              >
+                <span className="flex items-center gap-3">
+                  {theme === "dark" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
+                  <span>Tema</span>
+                </span>
+                <span className="text-xs text-muted-foreground">
+                  {theme === "dark" ? "Escuro" : "Claro"}
+                </span>
+              </button>
+
+              <div className="my-1 h-px bg-border/60" />
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSettingsOpen(false);
+                  logout();
+                }}
+                className="liquid-hover w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
+              >
+                <LogOut className="h-5 w-5" />
+                <span>Sair</span>
+              </button>
+            </PopoverContent>
+          </Popover>
         </div>
       </nav>
-
-      {/* Linha de controles: tema e sair em pílulas separadas */}
-      <div className="flex items-center justify-center gap-3 pointer-events-auto">
-        <div className="liquid-glass !rounded-full">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={toggleTheme}
-            aria-label="Alternar tema"
-            className="h-10 w-10 text-muted-foreground rounded-full liquid-hover hover:bg-transparent"
-          >
-            {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
-          </Button>
-        </div>
-        <div className="liquid-glass !rounded-full">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={logout}
-            aria-label="Sair"
-            className="h-10 px-4 gap-2 text-muted-foreground hover:text-destructive rounded-full liquid-hover hover:bg-transparent"
-          >
-            <LogOut className="h-5 w-5" />
-            <span className="text-sm">Sair</span>
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }
