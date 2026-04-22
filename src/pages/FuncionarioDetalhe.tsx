@@ -910,9 +910,57 @@ export default function FuncionarioDetalhe() {
                     <Label className="text-xs">Observação</Label>
                     <Textarea value={feriasForm.observacao} onChange={(e) => setFeriasForm({ ...feriasForm, observacao: e.target.value })} rows={2} />
                   </div>
+                  <div className="sm:col-span-2">
+                    <Label className="text-xs">Anexar documento (opcional)</Label>
+                    {(() => {
+                      const existing = editingFeriasId ? ferias.find((f) => f.id === editingFeriasId) : null;
+                      const showExisting = existing?.documento_storage_path && !feriasFile && !feriasRemoveDoc;
+                      return showExisting ? (
+                        <div className="flex items-center justify-between bg-muted/20 rounded-lg px-3 py-2">
+                          <p className="text-sm text-foreground truncate">{existing!.documento_nome || "Documento anexado"}</p>
+                          <div className="flex gap-1">
+                            <Button type="button" variant="ghost" size="sm" onClick={() => feriasFileInputRef.current?.click()}>
+                              Trocar
+                            </Button>
+                            <Button type="button" variant="ghost" size="sm" className="text-destructive" onClick={() => setFeriasRemoveDoc(true)}>
+                              Remover
+                            </Button>
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            ref={feriasFileInputRef}
+                            type="file"
+                            accept=".pdf,.docx,.jpeg,.jpg,.png,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png"
+                            onChange={(e) => {
+                              const f = e.target.files?.[0] || null;
+                              setFeriasFile(f);
+                              if (f) setFeriasRemoveDoc(false);
+                            }}
+                            className="text-xs"
+                          />
+                          {feriasFile && (
+                            <Button type="button" variant="ghost" size="sm" onClick={() => { setFeriasFile(null); if (feriasFileInputRef.current) feriasFileInputRef.current.value = ""; }}>
+                              Limpar
+                            </Button>
+                          )}
+                        </div>
+                      );
+                    })()}
+                    <p className="text-[11px] text-muted-foreground mt-1">PDF, DOCX, JPG ou PNG · máx 10MB</p>
+                  </div>
+                  {googleConnected && (
+                    <p className="sm:col-span-2 text-[11px] text-muted-foreground">
+                      📅 O evento será criado automaticamente no seu Google Agenda ao salvar.
+                    </p>
+                  )}
                   <div className="sm:col-span-2 flex justify-end gap-2">
-                    <Button variant="outline" size="sm" onClick={() => { setShowFeriasForm(false); setEditingFeriasId(null); }}>Cancelar</Button>
-                    <Button size="sm" onClick={handleSaveFerias}>Salvar</Button>
+                    <Button variant="outline" size="sm" onClick={() => { setShowFeriasForm(false); setEditingFeriasId(null); setFeriasFile(null); setFeriasRemoveDoc(false); }} disabled={savingFerias}>Cancelar</Button>
+                    <Button size="sm" onClick={handleSaveFerias} disabled={savingFerias} className="gap-1.5">
+                      {savingFerias && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                      Salvar
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
@@ -925,12 +973,39 @@ export default function FuncionarioDetalhe() {
               return (
                 <Card key={fr.id} className="border-border/50">
                   <CardContent className="py-3 px-4 flex items-center justify-between flex-wrap gap-2">
-                    <div>
+                    <div className="min-w-0">
                       <p className="font-medium text-sm text-foreground">
                         {formatDate(fr.data_inicio)} → {formatDate(fr.data_fim)}
                       </p>
                       <p className="text-xs text-muted-foreground">{fr.dias} dia(s)</p>
                       {fr.observacao && <p className="text-xs text-muted-foreground mt-1">{fr.observacao}</p>}
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {fr.documento_storage_path && (
+                          <Button variant="outline" size="sm" className="h-6 text-[11px] gap-1" onClick={() => handleDownloadFeriasDoc(fr)}>
+                            <Download className="h-3 w-3" /> {fr.documento_nome || "Documento"}
+                          </Button>
+                        )}
+                        {fr.google_event_id && (
+                          <Badge variant="outline" className="text-[10px] bg-primary/5 border-primary/30 text-primary">
+                            📅 Na Agenda
+                          </Badge>
+                        )}
+                        {!fr.google_event_id && googleConnected && (
+                          <Button
+                            variant="outline" size="sm" className="h-6 text-[11px] gap-1"
+                            disabled={syncingFeriasId === fr.id}
+                            onClick={async () => {
+                              setSyncingFeriasId(fr.id);
+                              await trySyncFeriasCalendar(fr.id, false);
+                              setSyncingFeriasId(null);
+                              await loadAll();
+                            }}
+                          >
+                            {syncingFeriasId === fr.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Calendar className="h-3 w-3" />}
+                            Sincronizar Agenda
+                          </Button>
+                        )}
+                      </div>
                     </div>
                     <div className="flex items-center gap-2">
                       {st && <Badge className={`text-xs ${st.color}`} variant="outline">{st.label}</Badge>}
