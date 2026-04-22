@@ -173,6 +173,40 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
     }
   };
 
+  // Auto-limpeza: se não há contratos anexados, apaga qualquer resíduo (DB + Google Agenda)
+  useEffect(() => {
+    if (loading) return;
+    if (contratoIds.length > 0) return;
+    if (!analise && alertas.length === 0) return;
+
+    (async () => {
+      try {
+        const eventIds = alertas
+          .map((a) => a.google_event_id)
+          .filter((x): x is string => typeof x === "string" && x.length > 0);
+
+        if (eventIds.length > 0) {
+          try {
+            await supabase.functions.invoke("delete-calendar-alerts", {
+              body: { event_ids: eventIds },
+            });
+          } catch (err) {
+            console.error("Falha ao remover eventos do Google Agenda:", err);
+          }
+        }
+
+        await supabase.from("contrato_alertas").delete().eq("funcionario_id", funcionarioId);
+        await supabase.from("contratos_analise").delete().eq("funcionario_id", funcionarioId);
+      } finally {
+        setAnalise(null);
+        setAlertas([]);
+        autoAnalyzedRef.current = null;
+        autoSyncedRef.current = null;
+      }
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, contratoIds.length]);
+
   // Auto-análise quando o conjunto de contratos muda (novos arquivos anexados)
   useEffect(() => {
     if (loading) return;
@@ -187,6 +221,7 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
   // Auto-sync quando há alertas pendentes e Google conectado
   useEffect(() => {
     if (loading) return;
+    if (contratoIds.length === 0) return;
     if (googleConectado !== true) return;
     if (syncing) return;
     const pendentes = alertas.filter((a) => a.status !== "sincronizado");
