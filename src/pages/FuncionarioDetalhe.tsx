@@ -404,15 +404,21 @@ export default function FuncionarioDetalhe() {
   };
 
   const handleDeleteHolerite = async (h: Holerite) => {
-    if (!confirm(`Excluir holerite de ${formatMes(h.mes_referencia)}?`)) return;
+    const ok = await confirm({
+      title: "Excluir holerite",
+      description: `Tem certeza que deseja excluir o holerite de ${formatMes(h.mes_referencia)}? Esta ação não pode ser desfeita.`,
+      confirmLabel: "Excluir holerite",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
       await supabase.storage.from("holerites").remove([h.pdf_path]);
       const { error } = await supabase.from("holerites").delete().eq("id", h.id);
       if (error) throw error;
       toast({ title: "Holerite excluído" });
       await loadAll();
-    } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Erro ao excluir", description: friendlyError(err), variant: "destructive" });
     }
   };
 
@@ -444,15 +450,21 @@ export default function FuncionarioDetalhe() {
   };
 
   const handleDeleteFolha = async (f: Folha) => {
-    if (!confirm(`Excluir folha de ${formatMes(f.mes_referencia)}? Todos os registros serão removidos.`)) return;
+    const ok = await confirm({
+      title: "Excluir folha de ponto",
+      description: `Tem certeza que deseja excluir a folha de ${formatMes(f.mes_referencia)}? Todos os registros serão removidos. Esta ação não pode ser desfeita.`,
+      confirmLabel: "Excluir folha",
+      variant: "danger",
+    });
+    if (!ok) return;
     try {
       await supabase.from("registros_ponto").delete().eq("folha_id", f.id);
       const { error } = await supabase.from("folhas_ponto").delete().eq("id", f.id);
       if (error) throw error;
       toast({ title: "Folha excluída" });
       await loadAll();
-    } catch (err: any) {
-      toast({ title: "Erro", description: err.message, variant: "destructive" });
+    } catch (err) {
+      toast({ title: "Erro ao excluir", description: friendlyError(err), variant: "destructive" });
     }
   };
 
@@ -648,7 +660,13 @@ export default function FuncionarioDetalhe() {
   };
 
   const handleDeleteFerias = async (fid: string) => {
-    if (!confirm("Excluir este período de férias?")) return;
+    const ok = await confirm({
+      title: "Excluir período de férias",
+      description: "Tem certeza que deseja excluir este período de férias? Esta ação não pode ser desfeita.",
+      confirmLabel: "Excluir férias",
+      variant: "danger",
+    });
+    if (!ok) return;
     const fr = ferias.find((f) => f.id === fid);
     if (fr?.documento_storage_path) {
       await supabase.storage.from("colaborador-arquivos").remove([fr.documento_storage_path]);
