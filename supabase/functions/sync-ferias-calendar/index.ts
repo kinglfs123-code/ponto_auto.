@@ -68,6 +68,56 @@ const STATUS_LABEL: Record<string, string> = {
   concluida: "Concluída",
 };
 
+const CAL_BASE = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+
+async function deleteEvent(accessToken: string, eventId: string): Promise<void> {
+  try {
+    await fetch(`${CAL_BASE}/${eventId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+    });
+  } catch (e) {
+    console.error("[sync-ferias] delete event failed (ignored):", e);
+  }
+}
+
+async function upsertEvent(
+  accessToken: string,
+  eventId: string | null,
+  payload: Record<string, unknown>,
+): Promise<string | null> {
+  const url = eventId ? `${CAL_BASE}/${eventId}` : CAL_BASE;
+  const method = eventId ? "PATCH" : "POST";
+  const resp = await fetch(url, {
+    method,
+    headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+
+  if (resp.ok) {
+    const json = await resp.json();
+    return json.id as string;
+  }
+
+  // Se evento foi removido manualmente, recria
+  if (resp.status === 404 && eventId) {
+    const retry = await fetch(CAL_BASE, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    if (retry.ok) {
+      const json = await retry.json();
+      return json.id as string;
+    }
+    const txt = await retry.text();
+    throw new Error(`Falha ao recriar evento (${retry.status}): ${txt.slice(0, 300)}`);
+  }
+
+  const txt = await resp.text();
+  throw new Error(`Falha Calendar (${resp.status}): ${txt.slice(0, 300)}`);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -140,60 +190,54 @@ Deno.serve(async (req) => {
       .maybeSingle();
     const nome = func?.nome_completo || "Colaborador";
 
-    const event = {
-      summary: `Férias — ${nome}`,
+    const statusLabel = STATUS_LABEL[fer.status as string] || fer.status;
+    const obsLine = fer.observacao ? `Obs: ${fer.observacao}` : null;
+
+    const eventoInicio = {
+      summary: `Início das férias — ${nome}`,
       description: [
-        `Status: ${STATUS_LABEL[fer.status as string] || fer.status}`,
-        `Dias: ${fer.dias}`,
-        fer.observacao ? `Obs: ${fer.observacao}` : null,
+        `Status: ${statusLabel}`,
+        `Período: ${fer.data_inicio} → ${fer.data_fim} (${fer.dias} dias)`,
+        obsLine,
       ].filter(Boolean).join("\n"),
       start: { date: fer.data_inicio },
-      end: { date: addOneDay(fer.data_fim as string) }, // exclusivo
+      end: { date: addOneDay(fer.data_inicio as string) }, // all-day exclusivo
     };
 
-    let url = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
-    let method = "POST";
-    if (fer.google_event_id) {
-      url = `${url}/${fer.google_event_id}`;
-      method = "PATCH";
+    const eventoFim = {
+      summary: `Fim das férias — ${nome}`,
+      description: [
+        `Status: ${statusLabel}`,
+        `Período: ${fer.data_inicio} → ${fer.data_fim} (${fer.dias} dias)`,
+        obsLine,
+      ].filter(Boolean).join("\n"),
+      start: { date: fer.data_fim },
+      end: { date: addOneDay(fer.data_fim as string) }, // all-day exclusivo
+    };
+
+    // Migração: se existia o evento único antigo, apagar para evitar duplicidade
+    const legacyId = (fer as any).google_event_id as string | null | undefined;
+    if (legacyId) {
+      await deleteEvent(accessToken, legacyId);
     }
 
-    const resp = await fetch(url, {
-      method,
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(event),
-    });
+    const idInicioAtual = (fer as any).google_event_id_inicio as string | null | undefined;
+    const idFimAtual = (fer as any).google_event_id_fim as string | null | undefined;
 
-    if (!resp.ok) {
-      const txt = await resp.text();
-      console.error("Calendar error:", txt);
-      // Se evento não existe mais, tenta criar novo
-      if (resp.status === 404 && fer.google_event_id) {
-        const retryResp = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-          body: JSON.stringify(event),
-        });
-        if (retryResp.ok) {
-          const json = await retryResp.json();
-          await admin.from("funcionario_ferias").update({ google_event_id: json.id }).eq("id", ferias_id);
-          return new Response(JSON.stringify({ ok: true, event_id: json.id }), {
-            status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-      }
-      return new Response(JSON.stringify({ error: txt.slice(0, 500) }), {
-        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    const novoIdInicio = await upsertEvent(accessToken, idInicioAtual ?? null, eventoInicio);
+    const novoIdFim = await upsertEvent(accessToken, idFimAtual ?? null, eventoFim);
 
-    const json = await resp.json();
-    await admin.from("funcionario_ferias").update({ google_event_id: json.id }).eq("id", ferias_id);
+    await admin.from("funcionario_ferias").update({
+      google_event_id: null,
+      google_event_id_inicio: novoIdInicio,
+      google_event_id_fim: novoIdFim,
+    }).eq("id", ferias_id);
 
-    return new Response(JSON.stringify({ ok: true, event_id: json.id }), {
+    return new Response(JSON.stringify({
+      ok: true,
+      event_id_inicio: novoIdInicio,
+      event_id_fim: novoIdFim,
+    }), {
       status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (e) {

@@ -79,6 +79,8 @@ export interface FuncionarioFerias {
   documento_storage_path?: string | null;
   documento_nome?: string | null;
   google_event_id?: string | null;
+  google_event_id_inicio?: string | null;
+  google_event_id_fim?: string | null;
 }
 
 export interface ContratoAnalise {
