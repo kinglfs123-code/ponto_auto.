@@ -45,16 +45,18 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-44">
+    <div className="min-h-screen bg-background pb-20 md:pb-4">
       <NavBar />
       <div className="max-w-4xl mx-auto p-4 space-y-6">
         <div className="animate-fade-in">
-          <h1 className="text-2xl font-bold text-foreground tracking-tight">Painel</h1>
           <p className="text-sm text-muted-foreground mt-0.5">Visão geral do sistema</p>
         </div>
 
         {/* Quick actions */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 animate-fade-in" style={{ animationDelay: "100ms", animationFillMode: "backwards" }}>
+        <div
+          className="grid grid-cols-2 sm:grid-cols-4 gap-2 animate-fade-in"
+          style={{ animationDelay: "100ms", animationFillMode: "backwards" }}
+        >
           {quickActions.map((a) => {
             const Icon = a.icon;
             const enabled = isRouteEnabled(a.to, workflow);
@@ -123,7 +125,10 @@ export default function Dashboard() {
               </div>
             ) : (
               empresas.map((e) => (
-                <div key={e.id} className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors">
+                <div
+                  key={e.id}
+                  className="flex items-center justify-between p-3 rounded-xl bg-muted/30 hover:bg-muted/50 transition-colors"
+                >
                   <div>
                     <p className="font-medium text-sm text-foreground">{e.nome}</p>
                     <p className="text-xs text-muted-foreground">CNPJ: {maskCNPJ(e.cnpj)}</p>
