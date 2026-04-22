@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { memo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -21,7 +21,7 @@ interface Props {
   onLoadedFuncionarios?: (list: FuncionarioOption[]) => void;
 }
 
-export default function FuncionarioSelector({ empresaId, value, manualName, onSelect, onManualName, onLoadedFuncionarios }: Props) {
+function FuncionarioSelectorBase({ empresaId, value, manualName, onSelect, onManualName, onLoadedFuncionarios }: Props) {
   const { data: funcionarios = [] } = useQuery({
     queryKey: ["funcionarios-selector", empresaId],
     enabled: !!empresaId,
@@ -75,3 +75,6 @@ export default function FuncionarioSelector({ empresaId, value, manualName, onSe
     </Select>
   );
 }
+
+const FuncionarioSelector = memo(FuncionarioSelectorBase);
+export default FuncionarioSelector;

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 import type { Empresa } from "@/types";
 
 interface EmpresaContextType {
@@ -13,11 +13,9 @@ const EmpresaContext = createContext<EmpresaContextType>({
 
 export function EmpresaProvider({ children }: { children: ReactNode }) {
   const [empresa, setEmpresa] = useState<Empresa | null>(null);
-  return (
-    <EmpresaContext.Provider value={{ empresa, setEmpresa }}>
-      {children}
-    </EmpresaContext.Provider>
-  );
+  // Memoize value so unrelated re-renders don't ripple through every consumer
+  const value = useMemo(() => ({ empresa, setEmpresa }), [empresa]);
+  return <EmpresaContext.Provider value={value}>{children}</EmpresaContext.Provider>;
 }
 
 export function useEmpresa() {

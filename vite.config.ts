@@ -19,4 +19,9 @@ export default defineConfig(({ mode }) => ({
     },
     dedupe: ["react", "react-dom", "react/jsx-runtime", "react/jsx-dev-runtime", "@tanstack/react-query", "@tanstack/query-core"],
   },
+  // Strip non-essential console calls in production while keeping warn/error for ops visibility
+  esbuild: {
+    drop: mode === "production" ? ["debugger"] : [],
+    pure: mode === "production" ? ["console.log", "console.info", "console.debug", "console.trace"] : [],
+  },
 }));

@@ -1,3 +1,4 @@
+import { memo, useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -9,7 +10,7 @@ interface Props {
   onChange?: (empresa: Empresa | null) => void;
 }
 
-export default function EmpresaSelector({ value, onChange }: Props) {
+function EmpresaSelectorBase({ value, onChange }: Props) {
   const { empresa: ctxEmpresa, setEmpresa: setCtxEmpresa } = useEmpresa();
   const { data: empresas = [] } = useQuery({
     queryKey: ["empresas-selector"],
@@ -22,11 +23,14 @@ export default function EmpresaSelector({ value, onChange }: Props) {
 
   const selectedId = value ?? ctxEmpresa?.id ?? "";
 
-  const handleChange = (v: string) => {
-    const emp = empresas.find((e) => e.id === v) || null;
-    setCtxEmpresa(emp);
-    onChange?.(emp);
-  };
+  const handleChange = useCallback(
+    (v: string) => {
+      const emp = empresas.find((e) => e.id === v) || null;
+      setCtxEmpresa(emp);
+      onChange?.(emp);
+    },
+    [empresas, setCtxEmpresa, onChange],
+  );
 
   return (
     <Select value={selectedId || ""} onValueChange={handleChange}>
@@ -43,3 +47,6 @@ export default function EmpresaSelector({ value, onChange }: Props) {
     </Select>
   );
 }
+
+const EmpresaSelector = memo(EmpresaSelectorBase);
+export default EmpresaSelector;

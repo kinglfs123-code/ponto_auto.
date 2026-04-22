@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ArrowRight, User, Loader2 } from "lucide-react";
-import loginBg from "@/assets/login-bg.jpg";
+import loginBg from "@/assets/login-bg.webp";
 
 export default function Login() {
   const [email, setEmail] = useState("");

@@ -28,8 +28,18 @@ export default function Relatorios() {
     if (!empresaId) { setFolhas([]); setRelatorios([]); return; }
     setLoading(true);
     Promise.all([
-      supabase.from("folhas_ponto").select("*").eq("empresa_id", empresaId).order("mes_referencia", { ascending: false }),
-      supabase.from("relatorios").select("*").eq("empresa_id", empresaId).order("created_at", { ascending: false }),
+      supabase
+        .from("folhas_ponto")
+        .select("id, funcionario, mes_referencia, status, empresa_id")
+        .eq("empresa_id", empresaId)
+        .order("mes_referencia", { ascending: false })
+        .limit(500),
+      supabase
+        .from("relatorios")
+        .select("id, empresa_id, mes_referencia, pdf_path, created_at")
+        .eq("empresa_id", empresaId)
+        .order("created_at", { ascending: false })
+        .limit(200),
     ]).then(([fRes, rRes]) => {
       if (fRes.data) setFolhas(fRes.data);
       if (rRes.data) setRelatorios(rRes.data);
@@ -41,7 +51,12 @@ export default function Relatorios() {
 
   const loadRelatorios = async () => {
     if (!empresaId) return;
-    const { data } = await supabase.from("relatorios").select("*").eq("empresa_id", empresaId).order("created_at", { ascending: false });
+    const { data } = await supabase
+      .from("relatorios")
+      .select("id, empresa_id, mes_referencia, pdf_path, created_at")
+      .eq("empresa_id", empresaId)
+      .order("created_at", { ascending: false })
+      .limit(200);
     if (data) setRelatorios(data);
   };
 
