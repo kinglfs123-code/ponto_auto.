@@ -99,7 +99,7 @@ async function getValidAccessToken(
     const txt = await resp.text();
     console.error("[send-via-gmail] refresh failed:", txt);
     await admin.from("google_calendar_tokens").delete().eq("user_id", userId);
-    return { token: null, scope: null };
+    return { token: null, scope: null, reason: "refresh_revoked" };
   }
 
   const tok = await resp.json() as {
