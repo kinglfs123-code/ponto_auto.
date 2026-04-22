@@ -320,9 +320,19 @@ export default function FuncionarioDetalhe() {
       });
       if (error) throw error;
       if (data?.needs_connection || data?.needs_reconnect) {
+        const reason = data.reason as string | undefined;
+        const description =
+          data?.error ||
+          (reason === "no_token"
+            ? "Conecte sua conta Google para enviar e-mails."
+            : reason === "refresh_revoked"
+            ? "Sua autorização Google expirou. Reconecte para continuar."
+            : reason === "missing_scope" || reason === "scope_insufficient"
+            ? "Permissão de envio de e-mail não concedida. Reconecte e autorize 'Enviar e-mails'."
+            : "Necessário autorizar envio de e-mail pelo seu Gmail.");
         toast({
-          title: data.needs_reconnect ? "Reconecte o Google" : "Conecte sua conta Google",
-          description: "Necessário autorizar envio de e-mail pelo seu Gmail.",
+          title: reason === "no_token" ? "Conecte o Google" : "Reconecte o Google",
+          description,
           variant: "destructive",
         });
         startGoogleConnect();
