@@ -23,3 +23,6 @@ verify_jwt = false
 
 [functions.send-via-gmail]
 verify_jwt = false
+
+[functions.sync-ferias-calendar]
+verify_jwt = false
