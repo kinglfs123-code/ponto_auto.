@@ -1,86 +1,60 @@
 
 
-## Plano: melhorar e-mail do holerite + ajustes Documentos/Férias
+## Plano: não sincronizar contrato sem arquivo + limpar resíduos
 
-### 1. Template profissional anti-SPAM no `send-via-gmail` (modo holerite)
+### Comportamento atual (bug visível no print)
+Mesmo com "Nenhum arquivo" no Contrato de Trabalho, a tela mostra:
+- Card de análise (Admissão, Tipo, Vencimento, Prorrogação, Próximas férias)
+- Alertas "Sincronizado" no Google Agenda
 
-**Assunto novo:** `Holerite [MM/AAAA] - [Nome da Empresa]` (ex.: `Holerite 04/2026 - Espaço Família`).
+Isso acontece porque:
+1. O componente `AnaliseContrato` é montado mesmo sem contrato e exibe a última análise salva.
+2. A limpeza ao excluir contrato só foi adicionada depois — registros antigos (e os eventos correspondentes no Google Agenda) continuam lá.
+3. Ao excluir o último contrato, hoje só removemos do banco; os eventos no Google Agenda ficam órfãos.
 
-**Anexo renomeado:**
-formato `Holerite_[NomeColaborador]_[Mes]_[Ano].pdf`, com helper que remove acentos, troca espaços por `_` e descarta caracteres especiais.
-Ex.: `Holerite_JoaoVitor_Abril_2026.pdf`.
+### Regra nova
+**Se não houver arquivo de contrato anexado, não há análise e não há sincronização.** Tudo o que existir é considerado resíduo e deve ser apagado (banco + Google Agenda).
 
-**Corpo HTML profissional** (CSS 100% inline, fonte Arial/Helvetica, cores neutras `#0066cc`/`#333`/`#666`, largura máx 600px, responsivo):
+### Mudanças
 
-- Cabeçalho com nome da empresa em destaque + linha divisória.
-- Saudação personalizada `Olá [Nome do Colaborador],` (puxado de `funcionarios.nome_completo`).
-- Mensagem: "Segue em anexo seu holerite referente ao mês de [Mês/Ano]." + orientação para falar com RH.
-- Bloco de assinatura com: nome da empresa, "Recursos Humanos", e-mail do remetente (conta Gmail conectada) e CNPJ formatado da empresa (campos disponíveis hoje em `empresas`).
-- Rodapé: "Este é um e-mail automático. Por favor, não responda."
+**1. `src/pages/FuncionarioDetalhe.tsx` — não montar análise sem contrato**
+Na aba Documentos, só renderizar `<AnaliseContrato />` quando `documentos.filter(d => d.categoria === "contrato").length > 0`. Sem contrato → nenhum card de análise, nenhum card de alertas.
 
-> Observação: a tabela `empresas` hoje só tem `nome`, `cnpj` e `jornada_padrao`. Telefone/endereço/e-mail de contato não existem como coluna. Para não inventar dados (o que aumentaria SPAM), a assinatura usará apenas o que já existe (nome, CNPJ, e-mail do remetente). Quando o usuário quiser exibir telefone/endereço, basta pedir e adicionamos esses campos depois.
+**2. `src/pages/FuncionarioDetalhe.tsx → handleDeleteDoc` — limpar Google Agenda também**
+Quando o último contrato for excluído:
+- Buscar `contrato_alertas` do funcionário com `google_event_id` preenchido **antes** do delete.
+- Chamar a edge function nova `delete-calendar-alerts` com a lista de `google_event_id`s para apagar do Google Agenda.
+- Em seguida apagar `contrato_alertas` e `contratos_analise` (já feito hoje).
 
-**Versão alternativa em texto puro** (`multipart/alternative` + `multipart/mixed`):
-mesmo conteúdo sem HTML — exigência clássica de anti-SPAM (Gmail/Outlook/Apple Mail dão score melhor quando há `text/plain` + `text/html`).
+**3. Nova edge function `supabase/functions/delete-calendar-alerts/index.ts`**
+Espelha o padrão de `delete-ferias-calendar`:
+- Recebe `{ event_ids: string[] }`.
+- Autentica usuário, pega `access_token` válido (mesma lógica `getValidAccessToken` reaproveitada).
+- Para cada `eventId`: `DELETE https://www.googleapis.com/calendar/v3/calendars/primary/events/{eventId}` (ignora 404/410 — evento já não existe).
+- Retorna `{ deleted: n }`.
+- Registrar em `supabase/config.toml` se necessário.
 
-**Headers anti-SPAM adicionados ao MIME:**
-- `Content-Type: multipart/mixed; boundary=...` (externo) com `multipart/alternative` interno
-- `MIME-Version: 1.0`
-- `X-Mailer: Ponto_auto. - [Nome da Empresa]`
-- `Reply-To: [e-mail do remetente]` (a própria conta Gmail conectada — assim respostas chegam ao RH que enviou)
-- `Importance: Normal`
-- `X-Priority: 3`
-- `Date:` no formato RFC 2822
-- `Message-ID:` único (`<uuid@gmail.com>`)
+**4. `src/components/AnaliseContrato.tsx` — auto-limpeza defensiva**
+No `useEffect` de carga, se `contratos.length === 0`:
+- Pular a análise.
+- Se existir `analise` no banco, disparar limpeza (apagar `contrato_alertas` + `contratos_analise` + chamar `delete-calendar-alerts` com os event ids encontrados).
+- Setar `analise` e `alertas` para vazio.
+Isso garante que, ao abrir a tela do funcionário do print **sem precisar excluir nada manualmente**, os resíduos antigos somem do banco e do Google Agenda automaticamente.
 
-### 2. Limpeza ao apagar contrato (aba Documentos)
-
-Em `FuncionarioDetalhe.tsx → handleDeleteDoc`: quando o documento excluído for da categoria `contrato`, antes/depois do delete também:
-1. Apagar registros de `contrato_alertas` desse `funcionario_id`.
-2. Apagar registros de `contratos_analise` desse `funcionario_id`.
-3. Resetar o ref `autoAnalyzedRef` em `AnaliseContrato` para que, se restarem outros contratos, a análise seja refeita; se não restar nenhum, o card de admissão/tipo/vencimento simplesmente some.
-
-Resultado: ao excluir o contrato, "Admissão", "Tipo", "Vencimento", "Prorrogação", "Próximas férias" e os alertas no Google Agenda ficam limpos automaticamente.
-
-### 3. Marcação de férias só nas datas-limite (início e fim)
-
-Em `sync-ferias-calendar/index.ts`:
-em vez de criar **um único evento all-day** cobrindo todos os dias entre `data_inicio` e `data_fim`, passar a criar/atualizar **dois eventos all-day distintos**:
-
-- `Início das férias — [Nome]` no dia `data_inicio`
-- `Fim das férias — [Nome]` no dia `data_fim`
-
-Mudanças técnicas:
-- Tabela `funcionario_ferias` ganha colunas `google_event_id_inicio` e `google_event_id_fim` (nova migração). A coluna antiga `google_event_id` é mantida; se já houver evento, ele é deletado na primeira sync para evitar duplicidade.
-- A função sincroniza os dois eventos (cria/atualiza/deleta conforme mudança das datas) e grava os dois IDs.
-- Ao excluir as férias (`handleDeleteFerias`), os dois eventos também são removidos do Calendar.
-
-### 4. Remover envio de documentos por e-mail
-
-**Frontend (`FuncionarioDetalhe.tsx`):**
-- Remover botão "Enviar documentos por e-mail" da aba Documentos.
-- Remover `handleSendDocumentosEmail`, `sendingDocsEmail` e o import `Mail` se não for mais usado.
-- O envio por e-mail continua existindo apenas na aba Holerites (botão "Enviar" por holerite).
-
-**Backend (`send-via-gmail/index.ts`):**
-- Manter por enquanto o suporte ao `kind: "documentos"` no edge function (não causa dano e evita quebrar caches/links), mas marcado como deprecado nos logs. A UI nunca mais o aciona.
-  - Alternativa: removê-lo por completo. Como o usuário pediu apenas remoção da opção na UI, manteremos a função mais enxuta e não chamável pela interface.
-
-### Detalhes técnicos resumidos
-
-| Arquivo | Mudança |
-|--------|--------|
-| `supabase/functions/send-via-gmail/index.ts` | Novo MIME `multipart/alternative` + headers anti-SPAM; novo HTML do holerite; nome de anexo dinâmico; assunto novo; busca `empresas.cnpj` |
-| `supabase/functions/sync-ferias-calendar/index.ts` | Cria 2 eventos (início/fim), gerencia ambos os IDs, deleta evento antigo único |
-| `supabase/migrations/...sql` | `ALTER TABLE funcionario_ferias ADD COLUMN google_event_id_inicio text, ADD COLUMN google_event_id_fim text` |
-| `src/types/index.ts` | Acrescentar campos `google_event_id_inicio`, `google_event_id_fim` em `FuncionarioFerias` |
-| `src/pages/FuncionarioDetalhe.tsx` | `handleDeleteDoc`: limpar `contrato_alertas` + `contratos_analise` quando categoria=`contrato`; remover botão e handler "Enviar documentos por e-mail"; deletar 2 eventos do Calendar em `handleDeleteFerias` |
-| `src/components/AnaliseContrato.tsx` | Reset do `autoAnalyzedRef` quando lista de contratos fica vazia, para sumir o card |
-| Deploy | Redeploy de `send-via-gmail` e `sync-ferias-calendar` |
+**5. Bloquear auto-sync sem contrato**
+No `useEffect` de auto-sync de `AnaliseContrato`, sair cedo se `contratos.length === 0` (cinto e suspensório, em paralelo ao item 4).
 
 ### Resultado esperado
+- Funcionário sem contrato anexado: aba Documentos mostra só o card "Contrato de Trabalho — Nenhum arquivo" e o botão "Anexar". Sem análise, sem alertas, sem chamadas ao Google.
+- Ao abrir o funcionário do print, o card de análise e os 3 alertas sumirão da tela; os 3 eventos correspondentes serão removidos do Google Agenda automaticamente.
+- Ao excluir o último contrato no futuro: análise, alertas e eventos no Google Agenda são apagados juntos.
+- Quando um novo contrato for anexado, a análise é refeita do zero e novos eventos são criados.
 
-- E-mails de holerite com cara profissional, bem mais difíceis de cair em SPAM (HTML+texto, headers completos, anexo nomeado, assunto descritivo).
-- Excluir contrato limpa de fato a análise e os alertas (inclusive no Google Agenda na próxima sync).
-- Google Agenda passa a ter só 2 marcações por férias (início e fim), sem ocupar o mês inteiro.
-- Aba Documentos sem botão de envio por e-mail; envio por e-mail só existe na aba Holerites.
+### Arquivos
+| Arquivo | Mudança |
+|---|---|
+| `src/pages/FuncionarioDetalhe.tsx` | Render condicional de `AnaliseContrato`; chamar `delete-calendar-alerts` antes de limpar tabelas no `handleDeleteDoc` |
+| `src/components/AnaliseContrato.tsx` | Auto-limpeza quando `contratos.length === 0`; bloquear auto-sync sem contrato |
+| `supabase/functions/delete-calendar-alerts/index.ts` (novo) | Apaga eventos do Google Agenda por ID |
+| `supabase/config.toml` | Registro da nova função (se necessário) |
+
