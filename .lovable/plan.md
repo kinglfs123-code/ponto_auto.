@@ -1,79 +1,82 @@
 
+## Plano: dock inferior centralizado + controles separados, sem título, com grid Apple 8pt
 
-## Plano: aplicar visual "Liquid Glass" (estilo dock do macOS) nas barras de navegação
+### O que muda na navegação (desktop e mobile unificados)
 
-### Onde
-1. **`src/components/NavBar.tsx`** — barra superior (desktop) e barra inferior (mobile), além do header mobile.
-2. **`src/components/ui/tabs.tsx`** — `TabsList` / `TabsTrigger` (usado nas abas de Colaborador: Resumo, Folhas, Documentos, Férias…).
-3. **`src/index.css`** — novas utilidades `.liquid-glass` e `.liquid-pill` para reproduzir o efeito do dock.
+1. **Remover** o texto "FOLHA DE PONTO" de todos os lugares (header mobile e barra desktop).
+2. **Mover** a navegação principal (Início, Empresas, Colaboradores, Ponto, Holerites, Relatórios) para o **rodapé**, centralizada, em formato de **dock liquid glass** — em desktop e mobile.
+3. **Separar** os botões de ação (tema dark/light e sair) em **duas pílulas independentes** no rodapé:
+   - Pílula 1: tema (sol/lua)
+   - Pílula 2: sair
+   - As duas pílulas ficam **separadas** do dock principal (com gap entre elas), também na parte de baixo.
+4. **Remover** o header superior por completo (já não há título nem nav lá).
 
-Não mexo em outras telas: o app já usa `glass`/`glass-subtle` por toda parte; a mudança é centralizada nos botões de navegação.
+### Layout do rodapé (mesmo em desktop e mobile)
 
-### Visual de referência (macOS dock)
-- Cápsula com bordas bem arredondadas (~24–28px), fundo translúcido com forte blur + saturação.
-- Borda interna fina clara + sombra externa difusa pra "flutuar".
-- Highlight sutil no topo (gradiente branco→transparente) que dá a sensação de vidro.
-- Item ativo: pílula clara com leve ampliação e sombrinha; hover: leve "pop" (scale-105) com brilho.
-- Ícones coloridos preservam contraste; rótulo só aparece em ativo (mobile) ou em todos (desktop, como hoje).
-
-### Mudanças no CSS (`src/index.css`)
-Adicionar ao bloco `@layer utilities`:
-
-```css
-.liquid-glass {
-  background: linear-gradient(180deg,
-    color-mix(in srgb, var(--glass-bg) 70%, white 12%) 0%,
-    var(--glass-bg) 100%);
-  border: 1px solid var(--glass-border);
-  box-shadow:
-    0 10px 30px rgba(0,0,0,0.25),
-    0 1px 0 rgba(255,255,255,0.18) inset,
-    0 -1px 0 rgba(0,0,0,0.15) inset;
-  backdrop-filter: blur(28px) saturate(1.9);
-  -webkit-backdrop-filter: blur(28px) saturate(1.9);
-  border-radius: 22px;
-}
-
-.liquid-pill-active {
-  background: linear-gradient(180deg,
-    rgba(255,255,255,0.18),
-    rgba(255,255,255,0.06));
-  box-shadow:
-    0 4px 14px rgba(0,0,0,0.22),
-    0 1px 0 rgba(255,255,255,0.35) inset;
-  border-radius: 16px;
-}
-
-.liquid-hover { transition: transform .25s cubic-bezier(.2,.8,.2,1), background-color .2s; }
-.liquid-hover:hover { transform: translateY(-2px) scale(1.05); }
+```text
+                  ┌───────────────────────────────────────┐
+                  │  🏠  🏢  👥  🕐  🧾  📄              │   ← dock principal (centralizado)
+                  └───────────────────────────────────────┘
+                                                              gap 16px
+                              ┌────┐    ┌──────────┐
+                              │ 🌙 │    │ ⎋  Sair  │   ← duas pílulas separadas
+                              └────┘    └──────────┘
 ```
 
-(Usa as variáveis `--glass-bg` / `--glass-border` que já existem nos temas light e dark.)
+- Tudo `fixed bottom-*`, centralizado com `left-1/2 -translate-x-1/2`.
+- Linha 1 (dock de navegação) acima da linha 2 (controles), separadas por `gap-3` (12px) ou `gap-4` (16px).
+- Em telas muito estreitas, dock e controles podem aparecer na **mesma linha** centralizados; quando não couber, quebram naturalmente em duas linhas centradas (`flex-wrap justify-center`).
 
-### Mudanças no `NavBar.tsx`
-- **Mobile bottom nav**: trocar `glass border-t` por **dock flutuante**: container `fixed bottom-3 left-1/2 -translate-x-1/2` com `liquid-glass` (cápsula que não ocupa toda a largura). Itens ganham `liquid-hover`; ativo recebe `liquid-pill-active` + ícone com `drop-shadow` colorido.
-- **Mobile header**: mantém `sticky` mas usa `liquid-glass` com cantos inferiores arredondados.
-- **Desktop top nav**: o `<div>` com os links vira uma **pílula** independente (`liquid-glass` + `px-2 py-1.5 rounded-full`), centralizada; cada link com `liquid-hover` e ativo usando `liquid-pill-active` no lugar do atual `bg-primary/12`.
-- Botões de tema/sair também ficam dentro de uma pílula `liquid-glass` no canto direito (desktop) e no header (mobile).
-- Mantém toda a lógica existente (`workflow`, `enabled`, `Lock`, `handleNavClick`).
+### Padrão Apple 8pt aplicado a TODAS as abas/ícones
 
-### Mudanças no `tabs.tsx`
-- `TabsList`: remover `bg-muted`, aplicar `liquid-glass rounded-2xl p-1.5`.
-- `TabsTrigger`: ativo passa de `bg-background` para `liquid-pill-active text-foreground`; inativo `text-muted-foreground hover:text-foreground`. Adicionar `liquid-hover`.
-- Reflete automaticamente nas abas de `FuncionarioDetalhe` (Resumo/Folhas/Documentos/Férias) sem alterar a página.
+Aplico múltiplos de 8 (com 4 permitido como meio-passo) em todos os pontos de navegação:
 
-### Compatibilidade
-- Funciona em dark e light (usa as variáveis CSS já tematizadas).
-- `backdrop-filter` tem fallback automático: navegadores sem suporte caem para o `background` translúcido — visual aceitável.
-- Sem mudança de comportamento, apenas estética. Sem novos pacotes.
+**Dock principal (NavBar)**
+- Padding interno do container dock: `px-2 py-2` (8px).
+- Cada item: `px-3 py-2` (12/8) — toque mínimo confortável.
+- Ícone: `h-6 w-6` (24px, múltiplo de 8).
+- Gap entre item e label: `gap-1` (4px).
+- Label: `text-[11px]` com `leading-4` (16px).
+- Gap entre itens do dock: `gap-1` (4px) — ritmo visual igual ao dock do iOS.
+- Raio do dock: `rounded-[28px]` (múltiplo de 4, look iOS).
+- Raio da pílula ativa: `rounded-2xl` (16px).
+- Distância do fundo da tela: `bottom-4` (16px) + `env(safe-area-inset-bottom)`.
+
+**Pílulas de controle (tema / sair)**
+- Padding: `px-3 py-2` (12/8).
+- Ícone: `h-5 w-5` (20px) — secundário, menor que os do dock.
+- Gap interno (sair, com label): `gap-2` (8px).
+- Gap entre as duas pílulas: `gap-3` (12px).
+
+**Tabs internas (`src/components/ui/tabs.tsx`) — Resumo / Folhas / Holerites / Documentos / Férias**
+- `TabsList`: `p-2` (8px), `gap-1` (4px) entre triggers, `rounded-[22px]`.
+- `TabsTrigger`: `px-4 py-2` (16/8), `text-sm`, `rounded-2xl`, ícone (quando houver) `h-5 w-5` com `gap-2`.
+- Ativo: `liquid-pill-active` (já existe).
+
+**Safe area / bordas**
+- Dock e controles respeitam `env(safe-area-inset-bottom)` no mobile.
+- Margem horizontal mínima de **16px** das bordas da tela (regra Apple).
+- Conteúdo principal (`<main>`) ganha `pb-32` (128px) para nunca ficar coberto pelo dock + linha de controles.
+
+### Comportamento responsivo
+
+- **Mobile (< 768px)**: dock e controles no rodapé como descrito; sem header.
+- **Desktop (≥ 768px)**: mesmo layout — também no rodapé, centralizado. Some a top bar atual.
+- O dock encolhe naturalmente: em telas muito largas mantém o tamanho compacto centralizado (não estica).
 
 ### Arquivos
+
 | Arquivo | Mudança |
 |---|---|
-| `src/index.css` | Adiciona utilidades `.liquid-glass`, `.liquid-pill-active`, `.liquid-hover` |
-| `src/components/NavBar.tsx` | Top bar desktop e bottom bar mobile viram pílulas dock; header mobile com liquid glass |
-| `src/components/ui/tabs.tsx` | `TabsList`/`TabsTrigger` com visual dock liquid glass |
+| `src/components/NavBar.tsx` | Remove header/top bar e título "FOLHA DE PONTO". Cria dock inferior único + duas pílulas separadas (tema, sair). Mesmo render para mobile e desktop. Aplica espaçamentos múltiplos de 8. |
+| `src/components/ui/tabs.tsx` | Ajusta `TabsList`/`TabsTrigger` para padding/gap múltiplos de 8 e ícone 20px. |
+| `src/App.tsx` (ou layout que envolve `<main>`) | Adiciona `pb-32` no container de conteúdo para liberar espaço do dock+controles. |
+| `src/index.css` | Sem novas utilidades (reusa `.liquid-glass`, `.liquid-pill-active`, `.liquid-hover`). Pequeno ajuste de raio se necessário. |
 
 ### Resultado esperado
-Navegação principal (topo no desktop, dock inferior no mobile) e abas internas com a mesma cara de cápsula de vidro do dock do macOS mostrado na referência: translúcido, com brilho no topo, item ativo destacado como pílula clara e leve animação de "pop" no hover.
 
+- Sem título no topo, sem barra superior.
+- Um dock translúcido único embaixo, centralizado, com os 6 ícones de navegação no padrão iOS.
+- Logo abaixo (ou ao lado em telas largas), duas pílulas separadas: tema e sair.
+- Espaçamentos consistentes em múltiplos de 8 em todos os ícones e abas internas.
+- Respeita safe area e mantém o look "liquid glass" do dock do macOS/iOS.
