@@ -86,7 +86,7 @@ export default function Funcionarios() {
     setListLoading(true);
     supabase
       .from("funcionarios")
-      .select("*")
+      .select("id, empresa_id, nome_completo, cpf, email, data_nascimento, cargo, horario_entrada, horario_saida, intervalo")
       .eq("empresa_id", empresa.id)
       .order("nome_completo")
       .then(({ data, error }) => {
@@ -128,7 +128,7 @@ export default function Funcionarios() {
       if (error) throw error;
       toast({ title: editId ? "Colaborador atualizado" : "Colaborador cadastrado" });
       resetForm();
-      const { data } = await supabase.from("funcionarios").select("*").eq("empresa_id", empresa.id).order("nome_completo");
+      const { data } = await supabase.from("funcionarios").select("id, empresa_id, nome_completo, cpf, email, data_nascimento, cargo, horario_entrada, horario_saida, intervalo").eq("empresa_id", empresa.id).order("nome_completo");
       setFuncionarios(sortAlfabetico((data as Funcionario[]) || []));
     } catch (err) {
       toast({ title: "Erro ao salvar", description: friendlyError(err), variant: "destructive" });

@@ -57,7 +57,7 @@ const App = () => (
                   <Route path="/funcionarios/:id" element={<AuthGuard><FuncionarioDetalhe /></AuthGuard>} />
                   <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
                   <Route path="/holerites" element={<AuthGuard><Holerites /></AuthGuard>} />
-                  <Route path="/unsubscribe" element={<Unsubscribe /></>} />
+                  <Route path="/unsubscribe" element={<Unsubscribe />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
               </Suspense>
