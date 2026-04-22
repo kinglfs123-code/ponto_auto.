@@ -681,6 +681,20 @@ export default function FuncionarioDetalhe() {
 
           {/* DOCUMENTOS */}
           <TabsContent value="documentos" className="space-y-3 mt-4">
+            {documentos.length > 0 && (
+              <div className="flex justify-end">
+                <Button
+                  size="sm"
+                  onClick={handleSendDocumentosEmail}
+                  disabled={sendingDocsEmail || !func?.email}
+                  className="gap-1.5"
+                  title={!func?.email ? "Cadastre um e-mail para o colaborador" : undefined}
+                >
+                  {sendingDocsEmail ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Mail className="h-3.5 w-3.5" />}
+                  Enviar documentos por e-mail
+                </Button>
+              </div>
+            )}
             {CATEGORIAS.map((cat) => {
               const docs = docsByCategoria(cat.value);
               const isUp = uploadingCat === cat.value;
