@@ -79,6 +79,25 @@ export function validateCPF(cpf: string): boolean {
   return d.length === 11;
 }
 
+/** Mascara um CPF mantendo apenas os 3 primeiros e os 2 últimos dígitos: 123.***.***-00 */
+export function maskCpfSensitive(v: string | null | undefined): string {
+  if (!v) return "—";
+  const d = v.replace(/\D/g, "");
+  if (d.length < 11) return maskCPF(v);
+  return `${d.slice(0, 3)}.***.***-${d.slice(9, 11)}`;
+}
+
+/** Mascara um e-mail mantendo apenas a 1ª letra do usuário: j****@dominio.com */
+export function maskEmailSensitive(v: string | null | undefined): string {
+  if (!v) return "—";
+  const at = v.indexOf("@");
+  if (at < 1) return "****";
+  const user = v.slice(0, at);
+  const domain = v.slice(at);
+  const first = user[0];
+  return `${first}${"*".repeat(Math.max(3, user.length - 1))}${domain}`;
+}
+
 /** Normalize a name for fuzzy comparison: remove accents, lowercase, trim */
 export function normalizeName(s: string): string {
   return s

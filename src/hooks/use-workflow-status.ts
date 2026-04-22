@@ -41,8 +41,8 @@ const requirements: Record<RouteKey, (s: WorkflowStatus) => boolean> = {
   "/empresas": () => true,
   "/funcionarios": (s) => s.temEmpresa,
   "/ponto": (s) => s.temFuncionario,
-  "/holerites": (s) => s.temFolha,
-  "/relatorios": (s) => s.temFolha,
+  "/holerites": () => true,
+  "/relatorios": () => true,
 };
 
 const messages: Record<RouteKey, string> = {
