@@ -71,10 +71,6 @@ export default function Login() {
         }}
       />
 
-      
-        </p>
-      </div>
-
       {/* Center-bottom: avatar + login */}
       <div className="absolute inset-x-0 bottom-0 z-10 flex flex-col items-center pb-12 sm:pb-20 px-6">
         <form onSubmit={handleSubmit} className="flex flex-col items-center gap-3 w-full max-w-[320px]">
