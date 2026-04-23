@@ -59,11 +59,17 @@ function NavBarBase() {
 
   return (
     <div
-      className="fixed inset-x-0 bottom-0 z-50 flex flex-col items-center gap-3 px-4 pb-4 pointer-events-none"
+      className="group fixed inset-x-0 bottom-0 z-50 flex flex-col items-center gap-3 px-4 pb-4 pointer-events-none"
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
     >
-      {/* Dock principal de navegação */}
-      <nav className="liquid-glass pointer-events-auto !rounded-[28px]">
+      {/* Hover zone — invisible strip at bottom that triggers reveal */}
+      <div className="pointer-events-auto absolute inset-x-0 bottom-0 h-20" aria-hidden="true" />
+
+      {/* Dock principal de navegação — hidden by default, revealed on hover/focus */}
+      <nav
+        className="liquid-glass pointer-events-auto !rounded-[28px] opacity-0 translate-y-6 transition-all duration-300 ease-out group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0 data-[open=true]:opacity-100 data-[open=true]:translate-y-0"
+        data-open={settingsOpen}
+      >
         <div className="flex items-center gap-1 px-2 py-2">
           {links.map((l) => {
             const Icon = l.icon;
