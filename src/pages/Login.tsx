@@ -90,6 +90,9 @@ export default function Login() {
             style={{
               background: "rgba(255,255,255,0.18)",
               border: "1px solid rgba(255,255,255,0.35)",
+              backdropFilter: "blur(20px) saturate(180%)",
+              WebkitBackdropFilter: "blur(20px) saturate(180%)",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35)",
             }}
             aria-hidden="true"
           >
@@ -139,16 +142,19 @@ export default function Login() {
                 type="submit"
                 disabled={loading}
                 aria-label={isSignUp ? "Cadastrar" : "Entrar"}
-                className="btn-press mr-1.5 my-1 h-8 w-8 rounded-full flex items-center justify-center text-white disabled:opacity-50"
+                className="btn-press mr-1.5 my-1 h-9 w-9 rounded-full flex items-center justify-center text-white disabled:opacity-50 transition-colors hover:bg-white/30"
                 style={{
-                  background: "rgba(255,255,255,0.25)",
-                  border: "1px solid rgba(255,255,255,0.35)",
+                  background: "rgba(255,255,255,0.22)",
+                  border: "1px solid rgba(255,255,255,0.40)",
+                  backdropFilter: "blur(20px) saturate(180%)",
+                  WebkitBackdropFilter: "blur(20px) saturate(180%)",
+                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.4), 0 1px 2px rgba(0,0,0,0.08)",
                 }}
               >
                 {loading ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+                  <Loader2 className="h-[18px] w-[18px] animate-spin" />
                 ) : (
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-[18px] w-[18px]" strokeWidth={2.5} />
                 )}
               </button>
             </div>
