@@ -71,13 +71,7 @@ export default function Login() {
         }}
       />
 
-      {/* Top: date */}
-      <div className="absolute inset-x-0 top-0 z-10 pt-10 sm:pt-14 flex flex-col items-center text-white">
-        <p
-          className="text-base sm:text-lg font-light tracking-wide"
-          style={{ textShadow: "0 1px 12px rgba(0,0,0,0.35)" }}
-        >
-          {today}
+      
         </p>
       </div>
 
