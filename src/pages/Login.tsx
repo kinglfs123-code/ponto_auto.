@@ -90,6 +90,9 @@ export default function Login() {
             style={{
               background: "rgba(255,255,255,0.18)",
               border: "1px solid rgba(255,255,255,0.35)",
+              backdropFilter: "blur(20px) saturate(180%)",
+              WebkitBackdropFilter: "blur(20px) saturate(180%)",
+              boxShadow: "inset 0 1px 0 rgba(255,255,255,0.35)",
             }}
             aria-hidden="true"
           >
