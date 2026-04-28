@@ -108,7 +108,7 @@ export default function Contas() {
     const ok = await confirm({
       title: "Excluir lançamento?",
       description: `${supplierName(p.supplier_id)} — ${formatBRL(p.amount)} — venc. ${formatDateBR(p.due_date)}`,
-      confirmText: "Excluir",
+      confirmLabel: "Excluir",
       variant: "danger",
     });
     if (ok) remove.mutate(p.id);

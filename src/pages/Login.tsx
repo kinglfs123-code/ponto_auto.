@@ -40,7 +40,7 @@ export default function Login() {
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        navigate("/");
+        navigate("/selecionar-empresa");
       }
     } catch (err: unknown) {
       toast({

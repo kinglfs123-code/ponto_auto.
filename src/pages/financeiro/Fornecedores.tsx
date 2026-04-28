@@ -135,7 +135,7 @@ export default function Fornecedores() {
     const ok = await confirm({
       title: "Excluir fornecedor?",
       description: s.name,
-      confirmText: "Excluir",
+      confirmLabel: "Excluir",
       variant: "danger",
     });
     if (ok) remove.mutate(s.id);
