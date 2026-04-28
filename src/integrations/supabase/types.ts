@@ -576,6 +576,51 @@ export type Database = {
           },
         ]
       }
+      payables: {
+        Row: {
+          amount: number
+          arrival_date: string
+          created_at: string
+          due_date: string
+          empresa_id: string
+          id: string
+          item_code: string
+          paid_at: string | null
+          payment_method: string
+          status: string
+          supplier_id: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          arrival_date: string
+          created_at?: string
+          due_date: string
+          empresa_id: string
+          id?: string
+          item_code: string
+          paid_at?: string | null
+          payment_method: string
+          status?: string
+          supplier_id: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          arrival_date?: string
+          created_at?: string
+          due_date?: string
+          empresa_id?: string
+          id?: string
+          item_code?: string
+          paid_at?: string | null
+          payment_method?: string
+          status?: string
+          supplier_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       registros_ponto: {
         Row: {
           atraso_minutos: number
@@ -675,6 +720,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      suppliers: {
+        Row: {
+          cnpj: string
+          created_at: string
+          default_due_days: number | null
+          default_item_code: string | null
+          default_payment_method: string | null
+          empresa_id: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          cnpj: string
+          created_at?: string
+          default_due_days?: number | null
+          default_item_code?: string | null
+          default_payment_method?: string | null
+          empresa_id: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          cnpj?: string
+          created_at?: string
+          default_due_days?: number | null
+          default_item_code?: string | null
+          default_payment_method?: string | null
+          empresa_id?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       suppressed_emails: {
         Row: {

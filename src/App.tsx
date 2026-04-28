@@ -20,6 +20,12 @@ const FuncionarioDetalhe = lazy(() => import("@/pages/FuncionarioDetalhe"));
 const Holerites = lazy(() => import("@/pages/Holerites"));
 const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
+const SelecionarEmpresa = lazy(() => import("@/pages/SelecionarEmpresa"));
+const SelecionarModulo = lazy(() => import("@/pages/SelecionarModulo"));
+const FinanceiroHome = lazy(() => import("@/pages/financeiro/Home"));
+const LancamentoRapido = lazy(() => import("@/pages/financeiro/LancamentoRapido"));
+const Contas = lazy(() => import("@/pages/financeiro/Contas"));
+const Fornecedores = lazy(() => import("@/pages/financeiro/Fornecedores"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -49,6 +55,12 @@ const App = () => (
               <Suspense fallback={<RouteFallback />}>
                 <Routes>
                   <Route path="/login" element={<Login />} />
+
+                  {/* Pós-login: escolher empresa, depois módulo */}
+                  <Route path="/selecionar-empresa" element={<AuthGuard><SelecionarEmpresa /></AuthGuard>} />
+                  <Route path="/selecionar-modulo" element={<AuthGuard><SelecionarModulo /></AuthGuard>} />
+
+                  {/* Módulo RH (rotas existentes mantidas) */}
                   <Route path="/" element={<AuthGuard><Dashboard /></AuthGuard>} />
                   <Route path="/empresas" element={<AuthGuard><Empresas /></AuthGuard>} />
                   <Route path="/ponto" element={<AuthGuard><Ponto /></AuthGuard>} />
@@ -57,6 +69,13 @@ const App = () => (
                   <Route path="/funcionarios/:id" element={<AuthGuard><FuncionarioDetalhe /></AuthGuard>} />
                   <Route path="/relatorios" element={<AuthGuard><Relatorios /></AuthGuard>} />
                   <Route path="/holerites" element={<AuthGuard><Holerites /></AuthGuard>} />
+
+                  {/* Módulo Financeiro */}
+                  <Route path="/financeiro" element={<AuthGuard><FinanceiroHome /></AuthGuard>} />
+                  <Route path="/financeiro/lancamento" element={<AuthGuard><LancamentoRapido /></AuthGuard>} />
+                  <Route path="/financeiro/contas" element={<AuthGuard><Contas /></AuthGuard>} />
+                  <Route path="/financeiro/fornecedores" element={<AuthGuard><Fornecedores /></AuthGuard>} />
+
                   <Route path="/unsubscribe" element={<Unsubscribe />} />
                   <Route path="*" element={<NotFound />} />
                 </Routes>
