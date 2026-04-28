@@ -136,7 +136,7 @@ export default function Fornecedores() {
       title: "Excluir fornecedor?",
       description: s.name,
       confirmText: "Excluir",
-      variant: "destructive",
+      variant: "danger",
     });
     if (ok) remove.mutate(s.id);
   };

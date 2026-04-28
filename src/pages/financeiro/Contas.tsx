@@ -109,7 +109,7 @@ export default function Contas() {
       title: "Excluir lançamento?",
       description: `${supplierName(p.supplier_id)} — ${formatBRL(p.amount)} — venc. ${formatDateBR(p.due_date)}`,
       confirmText: "Excluir",
-      variant: "destructive",
+      variant: "danger",
     });
     if (ok) remove.mutate(p.id);
   };
