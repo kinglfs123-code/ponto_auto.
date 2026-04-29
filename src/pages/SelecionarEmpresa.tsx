@@ -15,10 +15,7 @@ export default function SelecionarEmpresa() {
   const { data: empresas = [], isLoading } = useQuery({
     queryKey: ["empresas-selector-list"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("empresas")
-        .select("id, cnpj, nome, jornada_padrao")
-        .order("nome");
+      const { data } = await supabase.from("empresas").select("id, cnpj, nome, jornada_padrao").order("nome");
       return (data ?? []) as Empresa[];
     },
     staleTime: 30_000,
@@ -34,9 +31,7 @@ export default function SelecionarEmpresa() {
       <div className="w-full max-w-2xl space-y-8 animate-fade-in">
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">Escolha a empresa</h1>
-          <p className="text-muted-foreground text-sm">
-            Cada CNPJ tem seus próprios dados de RH e Financeiro.
-          </p>
+          <p className="text-muted-foreground text-sm"></p>
         </div>
 
         {isLoading ? (
