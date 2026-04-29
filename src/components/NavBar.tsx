@@ -65,7 +65,7 @@ function NavBarBase() {
                   active && enabled ? "dock-tile-active" : ""
                 } ${!enabled ? "dock-tile-disabled" : ""}`}
               >
-                <Icon className="h-7 w-7" strokeWidth={2} />
+                <Icon className="h-[22px] w-[22px]" strokeWidth={2} />
                 {!enabled && (
                   <span className="absolute -top-1 -right-1 inline-flex items-center justify-center h-4 w-4 rounded-full bg-background/90 border border-border">
                     <Lock className="h-2.5 w-2.5 text-muted-foreground" />

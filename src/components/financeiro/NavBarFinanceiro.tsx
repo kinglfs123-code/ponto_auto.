@@ -43,7 +43,7 @@ function NavBarFinanceiroBase() {
                   active ? "dock-tile-active" : ""
                 }`}
               >
-                <Icon className="h-7 w-7" strokeWidth={2} />
+                <Icon className="h-[22px] w-[22px]" strokeWidth={2} />
               </Link>
             );
           })}
