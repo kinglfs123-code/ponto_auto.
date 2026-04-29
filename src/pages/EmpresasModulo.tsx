@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Building2 } from "lucide-react";
 import { useEmpresa } from "@/contexts/EmpresaContext";
-import BackButton from "@/components/ui/back-button";
+import AppHeader from "@/components/AppHeader";
 
 export default function EmpresasModulo() {
   const navigate = useNavigate();
@@ -13,11 +13,11 @@ export default function EmpresasModulo() {
   }, [empresa, hydrating, navigate]);
 
   return (
-    <div className="min-h-screen bg-background p-4">
-      <div className="absolute top-4 left-4">
-        <BackButton fallback="/selecionar-modulo" label="Módulos" />
+    <div className="min-h-screen bg-background">
+      <div className="max-w-4xl mx-auto px-4">
+        <AppHeader module="empresas" backFallback="/selecionar-modulo" backLabel="Módulos" />
       </div>
-      <div className="flex items-center justify-center min-h-[80vh]">
+      <div className="p-4 flex items-center justify-center min-h-[70vh]">
         <div className="w-full max-w-lg space-y-6 animate-fade-in text-center">
           <div className="liquid-glass !rounded-3xl p-10 space-y-5">
             <div className="h-16 w-16 mx-auto rounded-2xl bg-primary/10 flex items-center justify-center text-primary">
