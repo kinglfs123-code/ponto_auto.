@@ -21,6 +21,8 @@ import {
   Mail, Briefcase, Cake, Clock, FileText, Upload, Trash2, Download, Send, Plus, Calendar, Loader2, Pencil,
 } from "lucide-react";
 import { maskCPF, maskCpfSensitive, maskEmailSensitive, validateCPF, validateEmail } from "@/lib/ponto-rules";
+import { formatDateBR } from "@/lib/format";
+import { toBrMonth, currentMonth } from "@/lib/utils";
 import { SensitiveText } from "@/components/SensitiveText";
 import { cn } from "@/lib/utils";
 import type { Funcionario, Folha, Holerite, FuncionarioDocumento, CategoriaDocumento, FuncionarioFerias, StatusFerias } from "@/types";
@@ -39,24 +41,12 @@ const STATUS_FERIAS: { value: StatusFerias; label: string; color: string }[] = [
   { value: "concluida", label: "Concluída", color: "bg-green-500/15 text-green-600 border-green-500/30" },
 ];
 
-const formatDate = (d?: string | null) => {
-  if (!d) return "—";
-  const [y, m, day] = d.split("-");
-  return `${day}/${m}/${y}`;
-};
+const formatDate = (d?: string | null) => (d ? formatDateBR(d) || "—" : "—");
 
-const formatMes = (m: string) => {
-  const [y, mm] = m.split("-");
-  return `${mm}/${y}`;
-};
+const formatMes = (m: string) => toBrMonth(m);
 
 const initials = (nome: string) =>
   nome.split(" ").filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
-
-const currentMonth = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-};
 
 type EditForm = {
   nome_completo: string;

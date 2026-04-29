@@ -11,6 +11,7 @@ import { toast } from "@/hooks/use-toast";
 import { useConfirm } from "@/hooks/use-confirm";
 import { friendlyError } from "@/lib/error-messages";
 import { maskCNPJ, validateCNPJ, maskHM } from "@/lib/ponto-rules";
+import { formatCNPJ } from "@/lib/format";
 import { Trash2, Building2, Pencil } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import AppHeader from "@/components/AppHeader";
@@ -238,7 +239,7 @@ export default function Empresas() {
                     <div className="min-w-0">
                       <p className="font-semibold text-sm truncate">{emp.nome}</p>
                       <p className="text-xs text-muted-foreground truncate">
-                        CNPJ: {maskCNPJ(emp.cnpj)} · Jornada: {emp.jornada_padrao}
+                        CNPJ: {formatCNPJ(emp.cnpj)} · Jornada: {emp.jornada_padrao}
                       </p>
                     </div>
                   </div>

@@ -46,9 +46,7 @@ export default function AppHeader({
         </div>
 
         <div className="flex-1 flex justify-end">
-          {!hideSettings && (
-            <SettingsMenu showTrocarModulo={false} className="" />
-          )}
+          {!hideSettings && <SettingsMenu />}
         </div>
       </div>
     </div>

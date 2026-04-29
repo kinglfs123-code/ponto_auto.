@@ -29,11 +29,10 @@ export default function SelecionarEmpresa() {
 
   return (
     <div className="relative min-h-screen bg-background p-4 flex items-center justify-center">
-      <SettingsMenu showTrocarModulo={false} />
+      <SettingsMenu className="absolute top-4 right-4 z-40" />
       <div className="w-full max-w-2xl space-y-8 animate-fade-in">
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">Escolha a empresa</h1>
-          <p className="text-muted-foreground text-sm"></p>
         </div>
 
         {isLoading ? (

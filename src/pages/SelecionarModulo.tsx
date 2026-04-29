@@ -41,10 +41,10 @@ export default function SelecionarModulo() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4">
+      <div className="max-w-4xl mx-auto p-4">
         <AppHeader backFallback="/selecionar-empresa" backLabel="Empresas" />
       </div>
-      <div className="p-4 flex items-center justify-center">
+      <div className="px-4 pb-8 flex items-center justify-center">
         <div className="w-full max-w-3xl space-y-8 animate-fade-in">
           <div className="text-center space-y-3">
             <div className="inline-flex items-center gap-2 text-xs text-muted-foreground liquid-glass !rounded-full px-3 py-1.5">
