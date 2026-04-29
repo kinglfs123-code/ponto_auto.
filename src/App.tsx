@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { EmpresaProvider } from "@/contexts/EmpresaContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
+import { WallpaperProvider } from "@/contexts/WallpaperContext";
 import { ConfirmProvider } from "@/hooks/use-confirm";
 import AuthGuard from "@/components/AuthGuard";
 import Login from "@/pages/Login"; // eager: lock screen must load instantly
@@ -52,6 +53,7 @@ const RouteFallback = () => (
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
+      <WallpaperProvider>
       <TooltipProvider>
         <Toaster />
         <BrowserRouter>
@@ -98,6 +100,7 @@ const App = () => (
           </EmpresaProvider>
         </BrowserRouter>
       </TooltipProvider>
+      </WallpaperProvider>
     </ThemeProvider>
   </QueryClientProvider>
 );
