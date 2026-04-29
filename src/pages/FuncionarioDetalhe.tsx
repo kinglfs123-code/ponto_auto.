@@ -18,7 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { SpinnerButton } from "@/components/ui/spinner-button";
 import { ToastAction } from "@/components/ui/toast";
 import {
-  ArrowLeft, Mail, Briefcase, Cake, Clock, FileText, Upload, Trash2, Download, Send, Plus, Calendar, Loader2, Pencil,
+  Mail, Briefcase, Cake, Clock, FileText, Upload, Trash2, Download, Send, Plus, Calendar, Loader2, Pencil,
 } from "lucide-react";
 import { maskCPF, maskCpfSensitive, maskEmailSensitive, validateCPF, validateEmail } from "@/lib/ponto-rules";
 import { SensitiveText } from "@/components/SensitiveText";
