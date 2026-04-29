@@ -148,6 +148,7 @@ export default function Contas() {
       toast({ title: "Conta excluída" });
       qc.invalidateQueries({ queryKey: ["payables"] });
       qc.invalidateQueries({ queryKey: ["financeiro-summary"] });
+      qc.invalidateQueries({ queryKey: ["cmv-purchases"] });
     },
     onError: (e: Error) => toast({ title: "Erro", description: e.message, variant: "destructive" }),
   });
@@ -218,6 +219,7 @@ export default function Contas() {
       toast({ title: "Lançamento atualizado" });
       qc.invalidateQueries({ queryKey: ["payables"] });
       qc.invalidateQueries({ queryKey: ["financeiro-summary"] });
+      qc.invalidateQueries({ queryKey: ["cmv-purchases"] });
       setEditing(null);
     },
     onError: (e: Error) =>

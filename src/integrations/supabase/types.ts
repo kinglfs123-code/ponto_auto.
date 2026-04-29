@@ -103,6 +103,42 @@ export type Database = {
         }
         Relationships: []
       }
+      cmv_daily_sales: {
+        Row: {
+          convenio_almoco: number
+          convenio_jantar: number
+          created_at: string
+          empresa_id: string
+          entry_date: string
+          id: string
+          updated_at: string
+          vendas_almoco: number
+          vendas_jantar: number
+        }
+        Insert: {
+          convenio_almoco?: number
+          convenio_jantar?: number
+          created_at?: string
+          empresa_id: string
+          entry_date: string
+          id?: string
+          updated_at?: string
+          vendas_almoco?: number
+          vendas_jantar?: number
+        }
+        Update: {
+          convenio_almoco?: number
+          convenio_jantar?: number
+          created_at?: string
+          empresa_id?: string
+          entry_date?: string
+          id?: string
+          updated_at?: string
+          vendas_almoco?: number
+          vendas_jantar?: number
+        }
+        Relationships: []
+      }
       contrato_alertas: {
         Row: {
           contrato_id: string
