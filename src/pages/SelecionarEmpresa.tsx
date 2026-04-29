@@ -5,7 +5,8 @@ import { Building2, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEmpresa } from "@/contexts/EmpresaContext";
-import { maskCNPJ } from "@/lib/ponto-rules";
+import { formatCNPJ } from "@/lib/format";
+import SettingsMenu from "@/components/SettingsMenu";
 import type { Empresa } from "@/types";
 
 export default function SelecionarEmpresa() {
@@ -27,7 +28,8 @@ export default function SelecionarEmpresa() {
   };
 
   return (
-    <div className="min-h-screen bg-background p-4 flex items-center justify-center">
+    <div className="relative min-h-screen bg-background p-4 flex items-center justify-center">
+      <SettingsMenu showTrocarModulo={false} />
       <div className="w-full max-w-2xl space-y-8 animate-fade-in">
         <div className="text-center space-y-2">
           <h1 className="text-3xl font-semibold tracking-tight">Escolha a empresa</h1>
@@ -61,7 +63,7 @@ export default function SelecionarEmpresa() {
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold truncate">{e.nome}</div>
-                  <div className="text-xs text-muted-foreground font-mono">{maskCNPJ(e.cnpj)}</div>
+                  <div className="text-xs text-muted-foreground font-mono">{formatCNPJ(e.cnpj)}</div>
                 </div>
                 <div className="text-muted-foreground group-hover:text-primary transition-colors">→</div>
               </button>
