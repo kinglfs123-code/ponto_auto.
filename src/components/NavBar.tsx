@@ -3,7 +3,6 @@ import { Link, useLocation } from "react-router-dom";
 
 // Prefetch route chunks on hover/focus to avoid waiting for download on click
 const prefetchers: Record<string, () => Promise<unknown>> = {
-  "/": () => import("@/pages/Dashboard"),
   "/empresas": () => import("@/pages/Empresas"),
   "/funcionarios": () => import("@/pages/Funcionarios"),
   "/ponto": () => import("@/pages/Ponto"),
@@ -14,7 +13,6 @@ import {
   Building2,
   ClipboardList,
   FileText,
-  Home,
   Users,
   Receipt,
   Lock,
@@ -23,7 +21,6 @@ import { useWorkflowStatus, isRouteEnabled, getRouteMessage } from "@/hooks/use-
 import { toast } from "@/hooks/use-toast";
 
 const links = [
-  { to: "/", label: "Início", icon: Home },
   { to: "/empresas", label: "Empresas", icon: Building2 },
   { to: "/funcionarios", label: "Colaboradores", icon: Users },
   { to: "/ponto", label: "Ponto", icon: ClipboardList },
@@ -57,7 +54,7 @@ function NavBarBase() {
         <div className="flex items-center gap-1 px-2 py-2">
           {links.map((l) => {
             const Icon = l.icon;
-            const active = pathname === l.to || (l.to !== "/" && pathname.startsWith(l.to));
+            const active = pathname.startsWith(l.to);
             const enabled = isRouteEnabled(l.to, workflow);
             return (
               <Link

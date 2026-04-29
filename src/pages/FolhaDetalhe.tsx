@@ -6,7 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { formatHours } from "@/lib/ponto-rules";
 import NavBar from "@/components/NavBar";
-import BackButton from "@/components/ui/back-button";
+import AppHeader from "@/components/AppHeader";
 import { CheckCircle2 } from "lucide-react";
 
 interface Folha {
@@ -116,7 +116,7 @@ export default function FolhaDetalhe() {
     <div className="min-h-screen bg-background">
       <NavBar />
       <div className="max-w-6xl mx-auto p-4 space-y-4">
-        <BackButton fallback="/ponto" />
+        <AppHeader module="rh" backFallback="/ponto" />
 
         {/* Cabeçalho da folha */}
         <Card>

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import NavBar from "@/components/NavBar";
-import BackButton from "@/components/ui/back-button";
+import AppHeader from "@/components/AppHeader";
 import EmpresaSelector from "@/components/EmpresaSelector";
 import FuncionarioSelector, { type FuncionarioOption } from "@/components/FuncionarioSelector";
 
@@ -388,7 +388,7 @@ export default function Ponto() {
     <div className="min-h-screen bg-background pb-20 md:pb-4">
       <NavBar />
       <div className="max-w-6xl mx-auto p-4 space-y-4">
-        <BackButton fallback="/" />
+        <AppHeader module="rh" backFallback="/" />
         <h1 className="text-2xl font-bold text-foreground tracking-tight animate-fade-in">Importar Folha de Ponto</h1>
 
         {/* Company selector + info */}
