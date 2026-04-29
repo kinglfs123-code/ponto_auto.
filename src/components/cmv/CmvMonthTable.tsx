@@ -63,7 +63,7 @@ export default function CmvMonthTable({ rows }: Props) {
       };
       const { error } = await supabase
         .from("cmv_daily_sales")
-        .upsert(payload, { onConflict: "empresa_id,entry_date" });
+        .upsert([payload], { onConflict: "empresa_id,entry_date" });
       if (error) throw error;
     },
     onSuccess: () => {
