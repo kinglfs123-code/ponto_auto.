@@ -12,6 +12,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { SpinnerButton } from "@/components/ui/spinner-button";
 import { ToastAction } from "@/components/ui/toast";
 import NavBar from "@/components/NavBar";
+import BackButton from "@/components/ui/back-button";
 import EmpresaSelector from "@/components/EmpresaSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useEmpresa } from "@/contexts/EmpresaContext";
@@ -241,6 +242,7 @@ export default function Holerites() {
     <div className="min-h-screen bg-background pb-44">
       <NavBar />
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6 animate-fade-in">
+        <BackButton fallback="/" />
         <h1 className="text-2xl font-bold text-foreground tracking-tight">Holerites</h1>
 
         {/* Filters */}
