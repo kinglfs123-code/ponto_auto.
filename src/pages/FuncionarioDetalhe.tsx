@@ -5,6 +5,7 @@ import { toast } from "@/hooks/use-toast";
 import { useConfirm } from "@/hooks/use-confirm";
 import { friendlyError } from "@/lib/error-messages";
 import NavBar from "@/components/NavBar";
+import BackButton from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
