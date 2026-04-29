@@ -266,11 +266,11 @@ export default function Fornecedores() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label htmlFor="f-code">Código padrão</Label>
-                <Input
-                  id="f-code"
-                  value={form.default_item_code}
-                  onChange={(e) => setForm({ ...form, default_item_code: e.target.value })}
+                <Label>Código padrão</Label>
+                <ItemCodeCombobox
+                  value={selectedCodeId}
+                  onChange={(c) => setForm({ ...form, default_item_code: c?.code ?? "" })}
+                  placeholder="Nenhum"
                 />
               </div>
               <div className="space-y-1.5">
