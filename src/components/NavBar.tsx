@@ -1,5 +1,5 @@
-import { memo, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { memo } from "react";
+import { Link, useLocation } from "react-router-dom";
 
 // Prefetch route chunks on hover/focus to avoid waiting for download on click
 const prefetchers: Record<string, () => Promise<unknown>> = {
@@ -10,22 +10,15 @@ const prefetchers: Record<string, () => Promise<unknown>> = {
   "/holerites": () => import("@/pages/Holerites"),
   "/relatorios": () => import("@/pages/Relatorios"),
 };
-import { supabase } from "@/integrations/supabase/client";
 import {
   Building2,
   ClipboardList,
   FileText,
-  LogOut,
   Home,
   Users,
   Receipt,
-  Sun,
-  Moon,
   Lock,
-  Settings,
 } from "lucide-react";
-import { useTheme } from "@/contexts/ThemeContext";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useWorkflowStatus, isRouteEnabled, getRouteMessage } from "@/hooks/use-workflow-status";
 import { toast } from "@/hooks/use-toast";
 
@@ -40,15 +33,7 @@ const links = [
 
 function NavBarBase() {
   const { pathname } = useLocation();
-  const navigate = useNavigate();
-  const { theme, toggleTheme } = useTheme();
   const workflow = useWorkflowStatus();
-  const [settingsOpen, setSettingsOpen] = useState(false);
-
-  const logout = async () => {
-    await supabase.auth.signOut();
-    navigate("/login");
-  };
 
   const handleNavClick = (e: React.MouseEvent, to: string) => {
     if (!isRouteEnabled(to, workflow)) {
