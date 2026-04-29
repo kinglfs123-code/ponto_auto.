@@ -24,7 +24,8 @@ const SelecionarEmpresa = lazy(() => import("@/pages/SelecionarEmpresa"));
 const SelecionarModulo = lazy(() => import("@/pages/SelecionarModulo"));
 const EmpresasModuloCobrancas = lazy(() => import("@/pages/empresas-modulo/Cobrancas"));
 const EmpresasModuloClientes = lazy(() => import("@/pages/empresas-modulo/Clientes"));
-const Cmv = lazy(() => import("@/pages/Cmv"));
+const CmvHome = lazy(() => import("@/pages/cmv/Home"));
+const CmvTabela = lazy(() => import("@/pages/cmv/Tabela"));
 const FinanceiroHome = lazy(() => import("@/pages/financeiro/Home"));
 const LancamentoRapido = lazy(() => import("@/pages/financeiro/LancamentoRapido"));
 const Contas = lazy(() => import("@/pages/financeiro/Contas"));
@@ -85,8 +86,9 @@ const App = () => (
                   <Route path="/empresas-modulo" element={<AuthGuard><EmpresasModuloCobrancas /></AuthGuard>} />
                   <Route path="/empresas-modulo/clientes" element={<AuthGuard><EmpresasModuloClientes /></AuthGuard>} />
 
-                  {/* Módulo CMV (placeholder) */}
-                  <Route path="/cmv" element={<AuthGuard><Cmv /></AuthGuard>} />
+                  {/* Módulo CMV */}
+                  <Route path="/cmv" element={<AuthGuard><CmvHome /></AuthGuard>} />
+                  <Route path="/cmv/tabela" element={<AuthGuard><CmvTabela /></AuthGuard>} />
 
                   <Route path="/unsubscribe" element={<Unsubscribe />} />
                   <Route path="*" element={<NotFound />} />
