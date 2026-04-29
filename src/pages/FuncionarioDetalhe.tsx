@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { maskCPF, maskCpfSensitive, maskEmailSensitive, validateCPF, validateEmail } from "@/lib/ponto-rules";
 import { formatDateBR } from "@/lib/format";
-import { toBrMonth } from "@/lib/utils";
+import { toBrMonth, currentMonth } from "@/lib/utils";
 import { SensitiveText } from "@/components/SensitiveText";
 import { cn } from "@/lib/utils";
 import type { Funcionario, Folha, Holerite, FuncionarioDocumento, CategoriaDocumento, FuncionarioFerias, StatusFerias } from "@/types";
@@ -43,17 +43,10 @@ const STATUS_FERIAS: { value: StatusFerias; label: string; color: string }[] = [
 
 const formatDate = (d?: string | null) => (d ? formatDateBR(d) || "—" : "—");
 
-const formatMes = (m: string) => {
-  return toBrMonth(m);
-};
+const formatMes = (m: string) => toBrMonth(m);
 
 const initials = (nome: string) =>
   nome.split(" ").filter(Boolean).slice(0, 2).map((s) => s[0]?.toUpperCase()).join("");
-
-const currentMonth = () => {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-};
 
 type EditForm = {
   nome_completo: string;
