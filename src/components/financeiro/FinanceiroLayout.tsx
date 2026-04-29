@@ -2,16 +2,17 @@ import { memo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import NavBarFinanceiro from "./NavBarFinanceiro";
-import { maskCNPJ } from "@/lib/ponto-rules";
-import { ArrowLeft, ArrowLeftRight } from "lucide-react";
+import BackButton from "@/components/ui/back-button";
+import { formatCNPJ } from "@/lib/format";
 
 interface Props {
   children: React.ReactNode;
   title?: string;
-  showBackToHome?: boolean;
+  /** When true (default for inner pages), shows the standard BackButton. Disable on the module home. */
+  showBack?: boolean;
 }
 
-function FinanceiroLayoutBase({ children, title, showBackToHome = true }: Props) {
+function FinanceiroLayoutBase({ children, title, showBack = true }: Props) {
   const { empresa, hydrating } = useEmpresa();
   const navigate = useNavigate();
 
@@ -25,31 +26,15 @@ function FinanceiroLayoutBase({ children, title, showBackToHome = true }: Props)
     <div className="min-h-screen bg-background pb-24">
       <NavBarFinanceiro />
       <div className="max-w-4xl mx-auto p-4 space-y-5">
-        <header className="flex items-center justify-between gap-3 animate-fade-in">
-          <div className="flex items-center gap-3 min-w-0">
-            {showBackToHome && (
-              <button
-                onClick={() => navigate("/financeiro")}
-                aria-label="Voltar ao início"
-                className="liquid-glass liquid-hover !rounded-full h-9 w-9 flex items-center justify-center text-muted-foreground hover:text-foreground shrink-0"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </button>
-            )}
-            <div className="min-w-0">
-              {title && <h1 className="text-2xl font-semibold tracking-tight truncate">{title}</h1>}
-              <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
-                <span className="font-medium text-foreground/80 truncate">{empresa.nome}</span>
-                <span className="font-mono">{maskCNPJ(empresa.cnpj)}</span>
-              </div>
+        {showBack && <BackButton fallback="/financeiro" />}
+        <header className="animate-fade-in">
+          <div className="min-w-0">
+            {title && <h1 className="text-2xl font-bold tracking-tight text-foreground truncate">{title}</h1>}
+            <div className="text-xs text-muted-foreground flex items-center gap-2 mt-0.5">
+              <span className="font-medium text-foreground/80 truncate">{empresa.nome}</span>
+              <span className="font-mono">{formatCNPJ(empresa.cnpj)}</span>
             </div>
           </div>
-          <button
-            onClick={() => navigate("/selecionar-modulo")}
-            className="liquid-glass liquid-hover !rounded-full px-3 py-1.5 text-xs flex items-center gap-1.5 text-muted-foreground hover:text-foreground shrink-0"
-          >
-            <ArrowLeftRight className="h-3.5 w-3.5" /> Módulo
-          </button>
         </header>
         {children}
       </div>
