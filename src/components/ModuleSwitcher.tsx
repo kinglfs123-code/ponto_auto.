@@ -1,14 +1,15 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Wallet, Building2, ChevronDown, ArrowLeftRight, Check } from "lucide-react";
+import { Users, Wallet, Building2, ChevronDown, ArrowLeftRight, Check, Calculator } from "lucide-react";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
-export type ModuleKey = "rh" | "financeiro" | "empresas";
+export type ModuleKey = "rh" | "financeiro" | "empresas" | "cmv";
 
 const MODULES: Record<ModuleKey, { label: string; to: string; icon: typeof Users }> = {
   rh: { label: "Recursos Humanos", to: "/", icon: Users },
   financeiro: { label: "Financeiro", to: "/financeiro", icon: Wallet },
   empresas: { label: "Empresas", to: "/empresas-modulo", icon: Building2 },
+  cmv: { label: "CMV", to: "/cmv", icon: Calculator },
 };
 
 interface Props {
