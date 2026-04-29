@@ -1,9 +1,8 @@
 import { memo } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Home, PlusCircle, ListChecks, Truck, Hash } from "lucide-react";
+import { PlusCircle, ListChecks, Truck, Hash } from "lucide-react";
 
 const prefetchers: Record<string, () => Promise<unknown>> = {
-  "/financeiro": () => import("@/pages/financeiro/Home"),
   "/financeiro/lancamento": () => import("@/pages/financeiro/LancamentoRapido"),
   "/financeiro/contas": () => import("@/pages/financeiro/Contas"),
   "/financeiro/codigos": () => import("@/pages/financeiro/Codigos"),
@@ -11,7 +10,6 @@ const prefetchers: Record<string, () => Promise<unknown>> = {
 };
 
 const links = [
-  { to: "/financeiro", label: "Início", icon: Home, exact: true },
   { to: "/financeiro/lancamento", label: "Lançar", icon: PlusCircle },
   { to: "/financeiro/contas", label: "Contas", icon: ListChecks },
   { to: "/financeiro/codigos", label: "Códigos", icon: Hash },
@@ -34,7 +32,7 @@ function NavBarFinanceiroBase() {
         <div className="flex items-center gap-1 px-2 py-2">
           {links.map((l) => {
             const Icon = l.icon;
-            const active = l.exact ? pathname === l.to : pathname.startsWith(l.to);
+            const active = pathname.startsWith(l.to);
             return (
               <Link
                 key={l.to}
