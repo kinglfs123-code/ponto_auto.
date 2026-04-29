@@ -3,14 +3,15 @@ import { useNavigate } from "react-router-dom";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import NavBarFinanceiro from "./NavBarFinanceiro";
 import { maskCNPJ } from "@/lib/ponto-rules";
-import { ArrowLeftRight } from "lucide-react";
+import { ArrowLeft, ArrowLeftRight } from "lucide-react";
 
 interface Props {
   children: React.ReactNode;
   title?: string;
+  showBackToHome?: boolean;
 }
 
-function FinanceiroLayoutBase({ children, title }: Props) {
+function FinanceiroLayoutBase({ children, title, showBackToHome = true }: Props) {
   const { empresa, hydrating } = useEmpresa();
   const navigate = useNavigate();
 
