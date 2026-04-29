@@ -31,25 +31,17 @@ export default function CmvSummaryCards({ vendasAlmoco, vendasJantar, convenios,
         ))}
       </div>
 
-      <div className="liquid-glass !rounded-2xl p-4 flex items-center justify-between gap-4">
-        <div>
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">CMV do mês</div>
-          <div
-            className={`mt-1 text-3xl font-bold tabular-nums ${
-              cmvPct == null ? "text-muted-foreground" : overTarget ? "text-destructive" : "text-success"
-            }`}
-          >
-            {cmvPct == null ? "—" : `${(cmvPct * 100).toFixed(2)}%`}
-          </div>
-          <div className="text-xs text-muted-foreground mt-1">
-            Meta: ≤ {(CMV_TARGET * 100).toFixed(0)}%
-          </div>
+      <div className="liquid-glass !rounded-2xl p-4">
+        <div className="text-[10px] uppercase tracking-wider text-muted-foreground">CMV do mês</div>
+        <div
+          className={`mt-1 text-3xl font-bold tabular-nums ${
+            cmvPct == null ? "text-muted-foreground" : overTarget ? "text-destructive" : "text-success"
+          }`}
+        >
+          {cmvPct == null ? "—" : `${(cmvPct * 100).toFixed(2)}%`}
         </div>
-        <div className="text-right">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Total vendas</div>
-          <div className="mt-1 text-lg font-semibold tabular-nums">{formatBRL(totalVendas)}</div>
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground mt-2">Compras</div>
-          <div className="text-lg font-semibold tabular-nums">{formatBRL(compras)}</div>
+        <div className="text-xs text-muted-foreground mt-1">
+          Meta: ≤ {(CMV_TARGET * 100).toFixed(0)}%
         </div>
       </div>
     </div>

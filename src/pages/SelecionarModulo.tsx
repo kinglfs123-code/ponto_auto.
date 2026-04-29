@@ -4,6 +4,7 @@ import { Users, Wallet, Building2, Calculator } from "lucide-react";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { formatCNPJ } from "@/lib/format";
 import AppHeader from "@/components/AppHeader";
+import WallpaperBackground from "@/components/WallpaperBackground";
 
 export default function SelecionarModulo() {
   const navigate = useNavigate();
@@ -48,6 +49,7 @@ export default function SelecionarModulo() {
 
   return (
     <div className="min-h-screen bg-background">
+      <WallpaperBackground />
       <div className="max-w-4xl mx-auto p-4">
         <AppHeader backFallback="/selecionar-empresa" backLabel="Empresas" />
       </div>
@@ -58,7 +60,6 @@ export default function SelecionarModulo() {
               <span className="font-medium text-foreground">{empresa.nome}</span>
               <span className="font-mono">{formatCNPJ(empresa.cnpj)}</span>
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-foreground">Escolha o módulo</h1>
           </div>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
