@@ -35,3 +35,12 @@ export interface Payable {
   created_at: string;
   updated_at: string;
 }
+
+export interface ItemCode {
+  id: string;
+  empresa_id: string;
+  code: string;
+  description: string;
+  created_at: string;
+  updated_at: string;
+}
