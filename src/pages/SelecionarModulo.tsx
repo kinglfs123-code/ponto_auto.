@@ -52,8 +52,8 @@ export default function SelecionarModulo() {
               <ArrowLeftRight className="h-3 w-3" /> trocar
             </button>
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight">O que você vai fazer?</h1>
-          <p className="text-muted-foreground text-sm">Escolha o módulo para continuar.</p>
+          <h1 className="text-3xl font-semibold tracking-tight"></h1>
+          <p className="text-muted-foreground text-sm"></p>
         </div>
 
         <div className="grid sm:grid-cols-3 gap-4">
