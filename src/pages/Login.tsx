@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { ArrowRight, User, Loader2 } from "lucide-react";
 import loginBg from "@/assets/login-bg.webp";
+import { useWallpaper } from "@/contexts/WallpaperContext";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -11,6 +12,8 @@ export default function Login() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const { wallpaper } = useWallpaper();
+  const bgSrc = wallpaper ?? loginBg;
 
   const today = useMemo(() => {
     const d = new Date();
@@ -57,7 +60,7 @@ export default function Login() {
     <div className="min-h-screen w-full relative overflow-hidden">
       {/* Background image */}
       <img
-        src={loginBg}
+        src={bgSrc}
         alt=""
         aria-hidden="true"
         className="absolute inset-0 h-full w-full object-cover scale-[1.05]"
