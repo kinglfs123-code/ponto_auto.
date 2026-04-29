@@ -13,7 +13,7 @@ import { friendlyError } from "@/lib/error-messages";
 import { maskCNPJ, validateCNPJ, maskHM } from "@/lib/ponto-rules";
 import { Trash2, Building2, Pencil } from "lucide-react";
 import NavBar from "@/components/NavBar";
-import BackButton from "@/components/ui/back-button";
+import AppHeader from "@/components/AppHeader";
 import { cn } from "@/lib/utils";
 import type { Empresa } from "@/types";
 
@@ -154,7 +154,7 @@ export default function Empresas() {
     <div className="min-h-screen bg-background pb-44">
       <NavBar />
       <div className="max-w-2xl mx-auto p-4 space-y-4">
-        <BackButton fallback="/" />
+        <AppHeader module="rh" backFallback="/" />
         <h1 className="text-2xl font-bold text-foreground tracking-tight animate-fade-in">Empresas</h1>
 
         <Card className="animate-fade-in">
