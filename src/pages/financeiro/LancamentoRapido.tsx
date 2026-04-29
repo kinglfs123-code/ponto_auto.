@@ -95,6 +95,7 @@ export default function LancamentoRapido() {
     toast({ title: "Lançamento criado" });
     qc.invalidateQueries({ queryKey: ["financeiro-summary"] });
     qc.invalidateQueries({ queryKey: ["payables"] });
+    qc.invalidateQueries({ queryKey: ["cmv-purchases"] });
     navigate("/financeiro");
   };
 
