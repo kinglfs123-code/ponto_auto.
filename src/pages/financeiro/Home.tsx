@@ -75,7 +75,7 @@ export default function FinanceiroHome() {
   ];
 
   return (
-    <FinanceiroLayout title="Financeiro" showBackToHome={false}>
+    <FinanceiroLayout title="Financeiro" showBack={false}>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         {cards.map((c) => {
           const Icon = c.icon;

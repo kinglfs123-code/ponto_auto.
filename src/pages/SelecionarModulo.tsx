@@ -1,8 +1,9 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Wallet, Building2, ArrowLeftRight } from "lucide-react";
+import { Users, Wallet, Building2 } from "lucide-react";
 import { useEmpresa } from "@/contexts/EmpresaContext";
-import { maskCNPJ } from "@/lib/ponto-rules";
+import { formatCNPJ } from "@/lib/format";
+import BackButton from "@/components/ui/back-button";
 
 export default function SelecionarModulo() {
   const navigate = useNavigate();
@@ -41,19 +42,15 @@ export default function SelecionarModulo() {
   return (
     <div className="min-h-screen bg-background p-4 flex items-center justify-center">
       <div className="w-full max-w-3xl space-y-8 animate-fade-in">
+        <div className="absolute top-4 left-4">
+          <BackButton fallback="/selecionar-empresa" label="Empresas" />
+        </div>
         <div className="text-center space-y-3">
           <div className="inline-flex items-center gap-2 text-xs text-muted-foreground liquid-glass !rounded-full px-3 py-1.5">
             <span className="font-medium text-foreground">{empresa.nome}</span>
-            <span className="font-mono">{maskCNPJ(empresa.cnpj)}</span>
-            <button
-              onClick={() => navigate("/selecionar-empresa")}
-              className="ml-1 inline-flex items-center gap-1 text-primary hover:underline"
-            >
-              <ArrowLeftRight className="h-3 w-3" /> trocar
-            </button>
+            <span className="font-mono">{formatCNPJ(empresa.cnpj)}</span>
           </div>
-          <h1 className="text-3xl font-semibold tracking-tight"></h1>
-          <p className="text-muted-foreground text-sm"></p>
+          <h1 className="text-2xl font-bold tracking-tight text-foreground">Escolha o módulo</h1>
         </div>
 
         <div className="grid sm:grid-cols-3 gap-4">

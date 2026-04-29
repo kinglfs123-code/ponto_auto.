@@ -5,6 +5,7 @@ import { toast } from "@/hooks/use-toast";
 import { useConfirm } from "@/hooks/use-confirm";
 import { friendlyError } from "@/lib/error-messages";
 import NavBar from "@/components/NavBar";
+import BackButton from "@/components/ui/back-button";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +18,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { SpinnerButton } from "@/components/ui/spinner-button";
 import { ToastAction } from "@/components/ui/toast";
 import {
-  ArrowLeft, Mail, Briefcase, Cake, Clock, FileText, Upload, Trash2, Download, Send, Plus, Calendar, Loader2, Pencil,
+  Mail, Briefcase, Cake, Clock, FileText, Upload, Trash2, Download, Send, Plus, Calendar, Loader2, Pencil,
 } from "lucide-react";
 import { maskCPF, maskCpfSensitive, maskEmailSensitive, validateCPF, validateEmail } from "@/lib/ponto-rules";
 import { SensitiveText } from "@/components/SensitiveText";
@@ -736,9 +737,7 @@ export default function FuncionarioDetalhe() {
       <div className="min-h-screen bg-background">
         <NavBar />
         <div className="max-w-4xl mx-auto p-4">
-          <Button variant="ghost" onClick={() => navigate("/funcionarios")} className="gap-2">
-            <ArrowLeft className="h-4 w-4" /> Voltar
-          </Button>
+          <BackButton fallback="/funcionarios" label="Colaboradores" />
           <p className="text-center text-muted-foreground mt-8">Colaborador não encontrado.</p>
         </div>
       </div>
@@ -752,9 +751,7 @@ export default function FuncionarioDetalhe() {
       <NavBar />
       <div className="max-w-4xl mx-auto p-4 space-y-4 animate-fade-in">
         {/* Header */}
-        <Button variant="ghost" size="sm" onClick={() => navigate("/funcionarios")} className="gap-2 -ml-2">
-          <ArrowLeft className="h-4 w-4" /> Colaboradores
-        </Button>
+        <BackButton fallback="/funcionarios" label="Colaboradores" />
 
         <Card className="border-border/50">
           <CardContent className="py-5">

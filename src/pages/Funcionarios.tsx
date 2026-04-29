@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import NavBar from "@/components/NavBar";
+import BackButton from "@/components/ui/back-button";
 import EmpresaSelector from "@/components/EmpresaSelector";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -181,6 +182,8 @@ export default function Funcionarios() {
     <div className="min-h-screen bg-background pb-44">
       <NavBar />
       <div className="max-w-4xl mx-auto p-4 space-y-4">
+        <BackButton fallback="/" />
+        <h1 className="text-2xl font-bold text-foreground tracking-tight animate-fade-in">Colaboradores</h1>
         <div className="flex flex-wrap items-end gap-3 animate-fade-in">
           <div className="flex-1 min-w-[200px]">
             <Label className="text-xs text-muted-foreground">Empresa</Label>
