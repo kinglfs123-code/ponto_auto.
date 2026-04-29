@@ -576,6 +576,33 @@ export type Database = {
           },
         ]
       }
+      item_codes: {
+        Row: {
+          code: string
+          created_at: string
+          description: string
+          empresa_id: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description: string
+          empresa_id: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string
+          empresa_id?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       payables: {
         Row: {
           amount: number
