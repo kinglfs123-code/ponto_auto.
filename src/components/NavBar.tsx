@@ -52,8 +52,7 @@ function NavBarBase() {
 
       {/* Dock principal de navegação — hidden by default, revealed on hover/focus */}
       <nav
-        className="liquid-glass pointer-events-auto !rounded-[28px] opacity-0 translate-y-6 transition-all duration-300 ease-out group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0 data-[open=true]:opacity-100 data-[open=true]:translate-y-0"
-        data-open={settingsOpen}
+        className="liquid-glass pointer-events-auto !rounded-[28px] opacity-0 translate-y-6 transition-all duration-300 ease-out group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0"
       >
         <div className="flex items-center gap-1 px-2 py-2">
           {links.map((l) => {
@@ -96,64 +95,6 @@ function NavBarBase() {
             );
           })}
 
-          {/* Configurações */}
-          <Popover open={settingsOpen} onOpenChange={setSettingsOpen}>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                aria-label="Configurações"
-                className={`liquid-hover flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-2xl min-w-[3.5rem] ${
-                  settingsOpen ? "liquid-pill-active text-primary" : "text-muted-foreground"
-                }`}
-              >
-                <Settings
-                  className={`h-6 w-6 ${settingsOpen ? "drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]" : ""}`}
-                  strokeWidth={settingsOpen ? 2.2 : 1.8}
-                />
-                <span className={`text-[11px] leading-4 ${settingsOpen ? "font-semibold" : "font-normal opacity-80"}`}>
-                  Configurações
-                </span>
-              </button>
-            </PopoverTrigger>
-            <PopoverContent
-              side="top"
-              align="end"
-              sideOffset={12}
-              className="liquid-glass w-60 p-2 border-0 !rounded-2xl text-foreground"
-            >
-              <div className="px-3 pt-1 pb-2 text-[11px] uppercase tracking-wider text-muted-foreground">
-                Configurações
-              </div>
-
-              <button
-                type="button"
-                onClick={toggleTheme}
-                className="liquid-hover w-full flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm hover:bg-foreground/5"
-              >
-                <span className="flex items-center gap-3">
-                  {theme === "dark" ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
-                  <span>Tema</span>
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  {theme === "dark" ? "Escuro" : "Claro"}
-                </span>
-              </button>
-
-              <div className="my-1 h-px bg-border/60" />
-
-              <button
-                type="button"
-                onClick={() => {
-                  setSettingsOpen(false);
-                  logout();
-                }}
-                className="liquid-hover w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm text-destructive hover:bg-destructive/10"
-              >
-                <LogOut className="h-5 w-5" />
-                <span>Sair</span>
-              </button>
-            </PopoverContent>
-          </Popover>
         </div>
       </nav>
     </div>
