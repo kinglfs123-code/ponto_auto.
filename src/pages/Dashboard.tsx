@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { maskCNPJ } from "@/lib/ponto-rules";
 import NavBar from "@/components/NavBar";
+import AppHeader from "@/components/AppHeader";
 import { useWorkflowStatus, isRouteEnabled, getRouteMessage } from "@/hooks/use-workflow-status";
 import { toast } from "@/hooks/use-toast";
 import type { Empresa } from "@/types";
@@ -48,6 +49,7 @@ export default function Dashboard() {
     <div className="min-h-screen bg-background pb-20 md:pb-4">
       <NavBar />
       <div className="max-w-4xl mx-auto p-4 space-y-6">
+        <AppHeader module="rh" showBack={false} />
         <div className="animate-fade-in"></div>
 
         {/* Quick actions */}
