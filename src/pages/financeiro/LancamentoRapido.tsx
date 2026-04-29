@@ -5,13 +5,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import FinanceiroLayout from "@/components/financeiro/FinanceiroLayout";
 import SupplierCombobox from "@/components/financeiro/SupplierCombobox";
+import ItemCodeCombobox from "@/components/financeiro/ItemCodeCombobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { addDaysISO, maskCurrencyInput, parseBRL, todayISO } from "@/lib/currency";
-import { PAYMENT_METHODS, type PaymentMethod, type Supplier } from "@/types/financeiro";
+import { PAYMENT_METHODS, type PaymentMethod, type Supplier, type ItemCode } from "@/types/financeiro";
+import { useQuery } from "@tanstack/react-query";
 
 export default function LancamentoRapido() {
   const { empresa } = useEmpresa();
@@ -23,8 +25,22 @@ export default function LancamentoRapido() {
   const [amountMasked, setAmountMasked] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod | "">("");
-  const [itemCode, setItemCode] = useState("");
+  const [itemCode, setItemCode] = useState<ItemCode | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const { data: itemCodes = [] } = useQuery({
+    enabled: !!empresa,
+    queryKey: ["item-codes-combobox", empresa?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("item_codes")
+        .select("*")
+        .eq("empresa_id", empresa!.id)
+        .order("code");
+      return (data ?? []) as ItemCode[];
+    },
+    staleTime: 30_000,
+  });
 
   const handleSupplier = (s: Supplier | null) => {
     setSupplier(s);
@@ -33,7 +49,8 @@ export default function LancamentoRapido() {
       setPaymentMethod(s.default_payment_method);
     }
     if (s.default_item_code && !itemCode) {
-      setItemCode(s.default_item_code);
+      const match = itemCodes.find((c) => c.code === s.default_item_code);
+      if (match) setItemCode(match);
     }
     if (s.default_due_days != null && !dueDate && arrivalDate) {
       setDueDate(addDaysISO(arrivalDate, s.default_due_days));
@@ -45,7 +62,7 @@ export default function LancamentoRapido() {
     setAmountMasked("");
     setDueDate("");
     setPaymentMethod("");
-    setItemCode("");
+    setItemCode(null);
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -57,7 +74,7 @@ export default function LancamentoRapido() {
     if (!arrivalDate || !dueDate) return toast({ title: "Preencha as datas", variant: "destructive" });
     if (dueDate < arrivalDate) return toast({ title: "Vencimento não pode ser antes da chegada", variant: "destructive" });
     if (!paymentMethod) return toast({ title: "Escolha a forma de pagamento", variant: "destructive" });
-    if (!itemCode.trim()) return toast({ title: "Informe o código", variant: "destructive" });
+    if (!itemCode) return toast({ title: "Selecione um código", variant: "destructive" });
 
     setSaving(true);
     const { error } = await supabase.from("payables").insert({
@@ -67,7 +84,7 @@ export default function LancamentoRapido() {
       amount,
       due_date: dueDate,
       payment_method: paymentMethod,
-      item_code: itemCode.trim(),
+      item_code: itemCode.code,
       status: "pendente",
     });
     setSaving(false);
@@ -129,8 +146,8 @@ export default function LancamentoRapido() {
         </div>
 
         <div className="space-y-1.5">
-          <Label htmlFor="code">Código *</Label>
-          <Input id="code" value={itemCode} onChange={(e) => setItemCode(e.target.value)} placeholder="Código do item" />
+          <Label>Código *</Label>
+          <ItemCodeCombobox value={itemCode?.id ?? null} onChange={setItemCode} />
         </div>
 
         <div className="flex justify-end gap-2 pt-2">

@@ -22,10 +22,12 @@ const Unsubscribe = lazy(() => import("@/pages/Unsubscribe"));
 const NotFound = lazy(() => import("@/pages/NotFound"));
 const SelecionarEmpresa = lazy(() => import("@/pages/SelecionarEmpresa"));
 const SelecionarModulo = lazy(() => import("@/pages/SelecionarModulo"));
+const EmpresasModulo = lazy(() => import("@/pages/EmpresasModulo"));
 const FinanceiroHome = lazy(() => import("@/pages/financeiro/Home"));
 const LancamentoRapido = lazy(() => import("@/pages/financeiro/LancamentoRapido"));
 const Contas = lazy(() => import("@/pages/financeiro/Contas"));
 const Fornecedores = lazy(() => import("@/pages/financeiro/Fornecedores"));
+const Codigos = lazy(() => import("@/pages/financeiro/Codigos"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -75,6 +77,10 @@ const App = () => (
                   <Route path="/financeiro/lancamento" element={<AuthGuard><LancamentoRapido /></AuthGuard>} />
                   <Route path="/financeiro/contas" element={<AuthGuard><Contas /></AuthGuard>} />
                   <Route path="/financeiro/fornecedores" element={<AuthGuard><Fornecedores /></AuthGuard>} />
+                  <Route path="/financeiro/codigos" element={<AuthGuard><Codigos /></AuthGuard>} />
+
+                  {/* Módulo Empresas (placeholder) */}
+                  <Route path="/empresas-modulo" element={<AuthGuard><EmpresasModulo /></AuthGuard>} />
 
                   <Route path="/unsubscribe" element={<Unsubscribe />} />
                   <Route path="*" element={<NotFound />} />

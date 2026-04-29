@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Wallet, ArrowLeftRight } from "lucide-react";
+import { Users, Wallet, Building2, ArrowLeftRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { maskCNPJ } from "@/lib/ponto-rules";
@@ -30,6 +30,13 @@ export default function SelecionarModulo() {
       icon: Wallet,
       to: "/financeiro",
     },
+    {
+      key: "empresas",
+      label: "Empresas",
+      desc: "Gestão de empresas. Em breve.",
+      icon: Building2,
+      to: "/empresas-modulo",
+    },
   ];
 
   return (
@@ -50,7 +57,7 @@ export default function SelecionarModulo() {
           <p className="text-muted-foreground text-sm">Escolha o módulo para continuar.</p>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-4">
+        <div className="grid sm:grid-cols-3 gap-4">
           {modulos.map((m) => {
             const Icon = m.icon;
             return (
