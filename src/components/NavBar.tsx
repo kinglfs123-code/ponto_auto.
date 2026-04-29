@@ -54,7 +54,7 @@ function NavBarBase() {
         <div className="flex items-center gap-1 px-2 py-2">
           {links.map((l) => {
             const Icon = l.icon;
-            const active = pathname === l.to || (l.to !== "/" && pathname.startsWith(l.to));
+            const active = pathname.startsWith(l.to);
             const enabled = isRouteEnabled(l.to, workflow);
             return (
               <Link
