@@ -1,7 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Users, Wallet, Building2, ArrowLeftRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { maskCNPJ } from "@/lib/ponto-rules";
 
@@ -76,12 +75,6 @@ export default function SelecionarModulo() {
               </button>
             );
           })}
-        </div>
-
-        <div className="text-center">
-          <Button variant="ghost" size="sm" onClick={() => navigate("/selecionar-empresa")}>
-            ← Voltar para empresas
-          </Button>
         </div>
       </div>
     </div>

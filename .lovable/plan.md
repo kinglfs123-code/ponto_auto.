@@ -1,16 +1,4 @@
-## Objetivo
-Após salvar um lançamento com sucesso, redirecionar para a página inicial do Financeiro (`/financeiro`) em vez de apenas limpar o formulário.
+Remover o botão "← Voltar para empresas" da página de seleção de módulo.
 
 ## Mudança
-Em `src/pages/financeiro/LancamentoRapido.tsx`, na função `submit`, depois do `toast({ title: "Lançamento criado" })` e da invalidação das queries, trocar a chamada `reset()` por `navigate("/financeiro")`.
-
-```text
-toast(...) → invalidateQueries → navigate("/financeiro")
-```
-
-A função `reset()` pode ser removida, já que não será mais usada (o componente desmonta ao navegar).
-
-### Arquivo
-- editar `src/pages/financeiro/LancamentoRapido.tsx`
-
-Sem mudanças em banco de dados ou em outros componentes.
+- `src/pages/SelecionarModulo.tsx`: remover o bloco final com o `Button` "Voltar para empresas" (e o `import` do `Button` se não houver outro uso). O atalho "trocar" ao lado do CNPJ no topo já cobre essa navegação.
