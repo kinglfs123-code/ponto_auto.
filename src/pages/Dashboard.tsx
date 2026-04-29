@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Building2, ClipboardList, FileText, Plus, Users, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { maskCNPJ } from "@/lib/ponto-rules";
+import { formatCNPJ } from "@/lib/format";
 import NavBar from "@/components/NavBar";
 import AppHeader from "@/components/AppHeader";
 import { useWorkflowStatus, isRouteEnabled, getRouteMessage } from "@/hooks/use-workflow-status";
@@ -46,11 +46,10 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-20 md:pb-4">
+    <div className="min-h-screen bg-background pb-24">
       <NavBar />
       <div className="max-w-4xl mx-auto p-4 space-y-6">
         <AppHeader module="rh" showBack={false} />
-        <div className="animate-fade-in"></div>
 
         {/* Quick actions */}
         <div
@@ -78,9 +77,11 @@ export default function Dashboard() {
               >
                 {enabled ? (
                   <Link to={a.to}>
-                    <Icon className="h-4 w-4 text-primary" />
-                    <span className="text-xs">{a.label}</span>
-                    {isNext && <span className="text-[9px] text-primary font-medium">Próximo passo</span>}
+                    <span className="flex flex-col items-center gap-1.5">
+                      <Icon className="h-4 w-4 text-primary" />
+                      <span className="text-xs">{a.label}</span>
+                      {isNext && <span className="text-[9px] text-primary font-medium">Próximo passo</span>}
+                    </span>
                   </Link>
                 ) : (
                   <span className="flex flex-col items-center gap-1.5">
@@ -131,7 +132,7 @@ export default function Dashboard() {
                 >
                   <div>
                     <p className="font-medium text-sm text-foreground">{e.nome}</p>
-                    <p className="text-xs text-muted-foreground">CNPJ: {maskCNPJ(e.cnpj)}</p>
+                    <p className="text-xs text-muted-foreground">CNPJ: {formatCNPJ(e.cnpj)}</p>
                   </div>
                 </div>
               ))

@@ -1,30 +1,22 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Settings, Sun, Moon, LogOut, ArrowLeftRight } from "lucide-react";
+import { Settings, Sun, Moon, LogOut } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
-import { useEmpresa } from "@/contexts/EmpresaContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface Props {
-  /** Show the "Trocar módulo" entry. Defaults to true. */
-  showTrocarModulo?: boolean;
-  /** Optional className for positioning (e.g., "absolute top-4 right-4"). */
+  /** Optional className for positioning (e.g., "absolute top-4 right-4 z-40"). Defaults to no positioning. */
   className?: string;
 }
 
 /**
- * Floating settings button (gear icon) with a popover containing:
- *  - Theme toggle
- *  - Trocar módulo (optional)
- *  - Sair
- *
- * Designed to live in the top-right corner of entry screens (SelecionarEmpresa, etc).
+ * Settings button (gear icon) with a popover containing theme toggle and logout.
+ * Module switching lives in the central ModuleSwitcher (see AppHeader).
  */
-export default function SettingsMenu({ showTrocarModulo = true, className = "absolute top-4 right-4 z-40" }: Props) {
+export default function SettingsMenu({ className = "" }: Props) {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
-  const { empresa } = useEmpresa();
   const [open, setOpen] = useState(false);
 
   const logout = async () => {
@@ -55,20 +47,6 @@ export default function SettingsMenu({ showTrocarModulo = true, className = "abs
           <div className="px-3 pt-1 pb-2 text-[11px] uppercase tracking-wider text-muted-foreground">
             Configurações
           </div>
-
-          {showTrocarModulo && empresa && (
-            <button
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                navigate("/selecionar-modulo");
-              }}
-              className="liquid-hover w-full flex items-center gap-3 rounded-xl px-3 py-2 text-sm hover:bg-foreground/5"
-            >
-              <ArrowLeftRight className="h-5 w-5" />
-              <span>Trocar módulo</span>
-            </button>
-          )}
 
           <button
             type="button"
