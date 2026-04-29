@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/contexts/EmpresaContext";
@@ -83,23 +83,6 @@ export default function CmvMonthTable({ rows }: Props) {
     upsert.mutate({ date, field, value });
   };
 
-  const totals = useMemo(() => {
-    const t = rows.reduce(
-      (acc, r) => {
-        acc.vendas_almoco += r.vendas_almoco;
-        acc.convenio_almoco += r.convenio_almoco;
-        acc.vendas_jantar += r.vendas_jantar;
-        acc.convenio_jantar += r.convenio_jantar;
-        acc.compras += r.compras;
-        acc.total_vendas += r.total_vendas;
-        return acc;
-      },
-      { vendas_almoco: 0, convenio_almoco: 0, vendas_jantar: 0, convenio_jantar: 0, compras: 0, total_vendas: 0 },
-    );
-    const cmv = t.total_vendas > 0 ? t.compras / t.total_vendas : null;
-    return { ...t, cmv_pct: cmv, desvio: cmv == null ? null : cmv - CMV_TARGET };
-  }, [rows]);
-
   return (
     <div className="liquid-glass !rounded-2xl overflow-x-auto">
       <table className="w-full text-sm">
@@ -153,25 +136,6 @@ export default function CmvMonthTable({ rows }: Props) {
             </tr>
           ))}
         </tbody>
-        <tfoot>
-          <tr className="border-t-2 border-border/60 bg-muted/20 font-semibold">
-            <td className="px-3 py-2 text-xs uppercase tracking-wider text-muted-foreground">Total</td>
-            {FIELDS.map((f) => (
-              <td key={f.key} className="px-2 py-2 text-right tabular-nums text-xs">
-                {formatBRL(totals[f.key])}
-              </td>
-            ))}
-            <td className="px-2 py-2 text-right tabular-nums text-xs">{formatBRL(totals.compras)}</td>
-            <td className={`px-2 py-2 text-right tabular-nums text-xs ${pctClass(totals.cmv_pct)}`}>
-              {totals.cmv_pct == null ? "—" : `${(totals.cmv_pct * 100).toFixed(2)}%`}
-            </td>
-            <td className={`px-3 py-2 text-right tabular-nums text-xs ${pctClass(totals.cmv_pct)}`}>
-              {totals.desvio == null
-                ? "—"
-                : `${totals.desvio > 0 ? "+" : ""}${(totals.desvio * 100).toFixed(2)} p.p.`}
-            </td>
-          </tr>
-        </tfoot>
       </table>
     </div>
   );
