@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, type CSSProperties } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { PlusCircle, ListChecks, Truck, Hash } from "lucide-react";
 
@@ -10,10 +10,10 @@ const prefetchers: Record<string, () => Promise<unknown>> = {
 };
 
 const links = [
-  { to: "/financeiro/lancamento", label: "Lançar", icon: PlusCircle },
-  { to: "/financeiro/contas", label: "Contas", icon: ListChecks },
-  { to: "/financeiro/codigos", label: "Códigos", icon: Hash },
-  { to: "/financeiro/fornecedores", label: "Fornecedores", icon: Truck },
+  { to: "/financeiro/lancamento", label: "Lançar", icon: PlusCircle, color: "--success" },
+  { to: "/financeiro/contas", label: "Contas", icon: ListChecks, color: "--primary" },
+  { to: "/financeiro/codigos", label: "Códigos", icon: Hash, color: "--warning" },
+  { to: "/financeiro/fornecedores", label: "Fornecedores", icon: Truck, color: "--info" },
 ];
 
 function NavBarFinanceiroBase() {
@@ -21,18 +21,15 @@ function NavBarFinanceiroBase() {
 
   return (
     <div
-      className="group fixed inset-x-0 bottom-0 z-50 flex flex-col items-center gap-3 px-4 pb-4 pointer-events-none"
+      className="fixed inset-x-0 bottom-0 z-50 flex justify-center px-4 pb-4 pointer-events-none"
       style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
     >
-      <div className="pointer-events-auto absolute inset-x-0 bottom-0 h-20" aria-hidden="true" />
-
-      <nav
-        className="liquid-glass pointer-events-auto !rounded-[28px] opacity-0 translate-y-6 transition-all duration-300 ease-out group-hover:opacity-100 group-hover:translate-y-0 group-focus-within:opacity-100 group-focus-within:translate-y-0"
-      >
-        <div className="flex items-center gap-1 px-2 py-2">
+      <nav className="liquid-glass pointer-events-auto !rounded-[28px]">
+        <div className="flex items-center gap-2 px-3 py-3">
           {links.map((l) => {
             const Icon = l.icon;
             const active = pathname.startsWith(l.to);
+            const tileStyle = { "--tile-color": `var(${l.color})` } as CSSProperties;
             return (
               <Link
                 key={l.to}
@@ -40,17 +37,13 @@ function NavBarFinanceiroBase() {
                 onMouseEnter={() => prefetchers[l.to]?.().catch(() => {})}
                 onFocus={() => prefetchers[l.to]?.().catch(() => {})}
                 aria-label={l.label}
-                className={`liquid-hover flex flex-col items-center justify-center gap-1 px-3 py-2 rounded-2xl min-w-[3.5rem] ${
-                  active ? "liquid-pill-active text-primary" : "text-muted-foreground"
+                title={l.label}
+                style={tileStyle}
+                className={`dock-tile focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
+                  active ? "dock-tile-active" : ""
                 }`}
               >
-                <Icon
-                  className={`h-6 w-6 ${active ? "drop-shadow-[0_0_8px_hsl(var(--primary)/0.6)]" : ""}`}
-                  strokeWidth={active ? 2.2 : 1.8}
-                />
-                <span className={`text-[11px] leading-4 ${active ? "font-semibold" : "font-normal opacity-80"}`}>
-                  {l.label}
-                </span>
+                <Icon className="h-7 w-7" strokeWidth={2} />
               </Link>
             );
           })}
