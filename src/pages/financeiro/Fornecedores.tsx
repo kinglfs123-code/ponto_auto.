@@ -3,6 +3,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import FinanceiroLayout from "@/components/financeiro/FinanceiroLayout";
+import ItemCodeCombobox from "@/components/financeiro/ItemCodeCombobox";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,7 +19,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { useConfirm } from "@/hooks/use-confirm";
 import { Pencil, Plus, Trash2, Truck } from "lucide-react";
-import { PAYMENT_METHODS, type PaymentMethod, type Supplier } from "@/types/financeiro";
+import { PAYMENT_METHODS, type PaymentMethod, type Supplier, type ItemCode } from "@/types/financeiro";
+import { useQuery } from "@tanstack/react-query";
 
 const emptyForm = {
   name: "",
@@ -51,6 +53,25 @@ export default function Fornecedores() {
     },
     staleTime: 30_000,
   });
+
+  const { data: itemCodes = [] } = useQuery({
+    enabled: !!empresa,
+    queryKey: ["item-codes-combobox", empresa?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("item_codes")
+        .select("*")
+        .eq("empresa_id", empresa!.id)
+        .order("code");
+      return (data ?? []) as ItemCode[];
+    },
+    staleTime: 30_000,
+  });
+
+  const selectedCodeId = useMemo(
+    () => itemCodes.find((c) => c.code === form.default_item_code)?.id ?? null,
+    [itemCodes, form.default_item_code],
+  );
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
