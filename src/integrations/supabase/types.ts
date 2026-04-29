@@ -14,6 +14,95 @@ export type Database = {
   }
   public: {
     Tables: {
+      client_billings: {
+        Row: {
+          amount: number
+          billing_status: Database["public"]["Enums"]["billing_status"]
+          client_company_id: string
+          created_at: string
+          description: string | null
+          due_date: string | null
+          empresa_id: string
+          id: string
+          measurement_date: string | null
+          payment_status: Database["public"]["Enums"]["payment_status"]
+          received_date: string | null
+          reference_month: string
+          send_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          billing_status?: Database["public"]["Enums"]["billing_status"]
+          client_company_id: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          empresa_id: string
+          id?: string
+          measurement_date?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          received_date?: string | null
+          reference_month: string
+          send_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          billing_status?: Database["public"]["Enums"]["billing_status"]
+          client_company_id?: string
+          created_at?: string
+          description?: string | null
+          due_date?: string | null
+          empresa_id?: string
+          id?: string
+          measurement_date?: string | null
+          payment_status?: Database["public"]["Enums"]["payment_status"]
+          received_date?: string | null
+          reference_month?: string
+          send_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_billings_client_company_id_fkey"
+            columns: ["client_company_id"]
+            isOneToOne: false
+            referencedRelation: "client_companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_companies: {
+        Row: {
+          cnpj: string | null
+          created_at: string
+          empresa_id: string
+          id: string
+          name: string
+          notes: string | null
+          updated_at: string
+        }
+        Insert: {
+          cnpj?: string | null
+          created_at?: string
+          empresa_id: string
+          id?: string
+          name: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Update: {
+          cnpj?: string | null
+          created_at?: string
+          empresa_id?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contrato_alertas: {
         Row: {
           contrato_id: string
@@ -843,7 +932,13 @@ export type Database = {
       user_owns_relatorio: { Args: { _relatorio_id: string }; Returns: boolean }
     }
     Enums: {
+      billing_status: "aguardando_oc" | "faturado"
       folha_status: "rascunho" | "finalizada"
+      payment_status:
+        | "a_receber"
+        | "recebido"
+        | "recebido_com_atraso"
+        | "atrasado"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -971,7 +1066,14 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      billing_status: ["aguardando_oc", "faturado"],
       folha_status: ["rascunho", "finalizada"],
+      payment_status: [
+        "a_receber",
+        "recebido",
+        "recebido_com_atraso",
+        "atrasado",
+      ],
     },
   },
 } as const

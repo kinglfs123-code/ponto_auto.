@@ -125,17 +125,27 @@
     @apply border-border;
   }
 
-  body {
-    @apply bg-background text-foreground;
+  html {
+    scroll-behavior: smooth;
     font-family:
       "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: inherit;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     letter-spacing: -0.01em;
   }
 
-  html {
-    scroll-behavior: smooth;
+  button, input, optgroup, select, textarea {
+    font-family: inherit;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: inherit;
+    letter-spacing: -0.02em;
   }
 }
 
@@ -232,9 +242,9 @@
 
   /* iOS-style dock tile (squircle colored icon) */
   .dock-tile {
-    width: 52px;
-    height: 52px;
-    border-radius: 16px;
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
     background: linear-gradient(180deg,
       hsl(var(--tile-color)) 0%,
       hsl(var(--tile-color) / 0.82) 100%);

@@ -1,22 +1,18 @@
 import { memo, type CSSProperties } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { PlusCircle, ListChecks, Truck, Hash } from "lucide-react";
+import { Receipt, Building2 } from "lucide-react";
 
 const prefetchers: Record<string, () => Promise<unknown>> = {
-  "/financeiro/lancamento": () => import("@/pages/financeiro/LancamentoRapido"),
-  "/financeiro/contas": () => import("@/pages/financeiro/Contas"),
-  "/financeiro/codigos": () => import("@/pages/financeiro/Codigos"),
-  "/financeiro/fornecedores": () => import("@/pages/financeiro/Fornecedores"),
+  "/empresas-modulo": () => import("@/pages/empresas-modulo/Cobrancas"),
+  "/empresas-modulo/clientes": () => import("@/pages/empresas-modulo/Clientes"),
 };
 
 const links = [
-  { to: "/financeiro/lancamento", label: "Lançar", icon: PlusCircle, color: "--success" },
-  { to: "/financeiro/contas", label: "Contas", icon: ListChecks, color: "--primary" },
-  { to: "/financeiro/codigos", label: "Códigos", icon: Hash, color: "--warning" },
-  { to: "/financeiro/fornecedores", label: "Fornecedores", icon: Truck, color: "--info" },
+  { to: "/empresas-modulo", label: "Cobranças", icon: Receipt, color: "--success", exact: true },
+  { to: "/empresas-modulo/clientes", label: "Clientes", icon: Building2, color: "--primary", exact: false },
 ];
 
-function NavBarFinanceiroBase() {
+function NavBarEmpresasModuloBase() {
   const { pathname } = useLocation();
 
   return (
@@ -28,7 +24,7 @@ function NavBarFinanceiroBase() {
         <div className="flex items-center gap-2 px-3 py-3">
           {links.map((l) => {
             const Icon = l.icon;
-            const active = pathname.startsWith(l.to);
+            const active = l.exact ? pathname === l.to : pathname.startsWith(l.to);
             const tileStyle = { "--tile-color": `var(${l.color})` } as CSSProperties;
             return (
               <Link
@@ -53,5 +49,4 @@ function NavBarFinanceiroBase() {
   );
 }
 
-const NavBarFinanceiro = memo(NavBarFinanceiroBase);
-export default NavBarFinanceiro;
+export default memo(NavBarEmpresasModuloBase);

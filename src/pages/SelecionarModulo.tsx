@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Wallet, Building2 } from "lucide-react";
+import { Users, Wallet, Building2, Calculator } from "lucide-react";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { formatCNPJ } from "@/lib/format";
 import AppHeader from "@/components/AppHeader";
@@ -33,9 +33,16 @@ export default function SelecionarModulo() {
     {
       key: "empresas",
       label: "Empresas",
-      desc: "Gestão de empresas e convênio.",
+      desc: "Cobranças mensais e clientes.",
       icon: Building2,
       to: "/empresas-modulo",
+    },
+    {
+      key: "cmv",
+      label: "CMV",
+      desc: "Custo da mercadoria vendida.",
+      icon: Calculator,
+      to: "/cmv",
     },
   ];
 
@@ -54,7 +61,7 @@ export default function SelecionarModulo() {
             <h1 className="text-2xl font-bold tracking-tight text-foreground">Escolha o módulo</h1>
           </div>
 
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {modulos.map((m) => {
               const Icon = m.icon;
               return (
