@@ -6,6 +6,7 @@ import {
   PlusCircle,
   ListChecks,
   Truck,
+  Hash,
   Settings,
   Sun,
   Moon,
@@ -19,6 +20,7 @@ const prefetchers: Record<string, () => Promise<unknown>> = {
   "/financeiro": () => import("@/pages/financeiro/Home"),
   "/financeiro/lancamento": () => import("@/pages/financeiro/LancamentoRapido"),
   "/financeiro/contas": () => import("@/pages/financeiro/Contas"),
+  "/financeiro/codigos": () => import("@/pages/financeiro/Codigos"),
   "/financeiro/fornecedores": () => import("@/pages/financeiro/Fornecedores"),
 };
 
@@ -26,6 +28,7 @@ const links = [
   { to: "/financeiro", label: "Início", icon: Home, exact: true },
   { to: "/financeiro/lancamento", label: "Lançar", icon: PlusCircle },
   { to: "/financeiro/contas", label: "Contas", icon: ListChecks },
+  { to: "/financeiro/codigos", label: "Códigos", icon: Hash },
   { to: "/financeiro/fornecedores", label: "Fornecedores", icon: Truck },
 ];
 
