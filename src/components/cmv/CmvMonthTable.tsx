@@ -52,18 +52,21 @@ export default function CmvMonthTable({ rows }: Props) {
     mutationFn: async (params: { date: string; field: EditableField; value: number }) => {
       if (!empresa) throw new Error("Empresa não selecionada");
       const existing = rows.find((r) => r.date === params.date);
-      const payload = {
-        empresa_id: empresa.id,
-        entry_date: params.date,
+      const base = {
         vendas_almoco: existing?.vendas_almoco ?? 0,
         convenio_almoco: existing?.convenio_almoco ?? 0,
         vendas_jantar: existing?.vendas_jantar ?? 0,
         convenio_jantar: existing?.convenio_jantar ?? 0,
-        [params.field]: params.value,
+      };
+      base[params.field] = params.value;
+      const payload = {
+        empresa_id: empresa.id,
+        entry_date: params.date,
+        ...base,
       };
       const { error } = await supabase
         .from("cmv_daily_sales")
-        .upsert([payload], { onConflict: "empresa_id,entry_date" });
+        .upsert(payload, { onConflict: "empresa_id,entry_date" });
       if (error) throw error;
     },
     onSuccess: () => {
