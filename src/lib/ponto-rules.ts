@@ -1,6 +1,6 @@
 // Business rules for timesheet processing
 
-export function parseTimeToMinutes(s: string | null | undefined): number | null {
+function parseTimeToMinutes(s: string | null | undefined): number | null {
   if (!s || typeof s !== "string") return null;
   let c = s
     .trim()
@@ -150,7 +150,7 @@ export function maskEmailSensitive(v: string | null | undefined): string {
 }
 
 /** Normalize a name for fuzzy comparison: remove accents, lowercase, trim */
-export function normalizeName(s: string): string {
+function normalizeName(s: string): string {
   return s
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")

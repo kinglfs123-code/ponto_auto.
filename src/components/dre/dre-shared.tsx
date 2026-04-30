@@ -203,14 +203,7 @@ export function monthISO(year: number, monthIdx: number): string {
   return `${year}-${pad2(monthIdx + 1)}-01`;
 }
 
-export const MONTH_LABELS = [
-  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
-  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
-];
-
 export const MONTH_LABELS_SHORT = [
   "Jan", "Fev", "Mar", "Abr", "Mai", "Jun",
   "Jul", "Ago", "Set", "Out", "Nov", "Dez",
 ];
-
-export type { DreCategory };

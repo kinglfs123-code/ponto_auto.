@@ -11,18 +11,18 @@ function pad2(n: number) {
   return String(n).padStart(2, "0");
 }
 
-export function firstOfMonthISO(year: number, month: number) {
+function firstOfMonthISO(year: number, month: number) {
   return `${year}-${pad2(month + 1)}-01`;
 }
-export function lastOfMonthISO(year: number, month: number) {
+function lastOfMonthISO(year: number, month: number) {
   const d = new Date(year, month + 1, 0);
   return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 }
-export function monthLabel(d: Date) {
+function monthLabel(d: Date) {
   return d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
 }
 
-export interface MonthCursor {
+interface MonthCursor {
   y: number;
   m: number;
 }
