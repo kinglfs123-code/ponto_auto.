@@ -297,6 +297,36 @@ export type Database = {
           },
         ]
       }
+      dre_manual_entries: {
+        Row: {
+          amount: number
+          category_code: string
+          created_at: string
+          empresa_id: string
+          entry_month: string
+          id: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          category_code: string
+          created_at?: string
+          empresa_id: string
+          entry_month: string
+          id?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          category_code?: string
+          created_at?: string
+          empresa_id?: string
+          entry_month?: string
+          id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       email_send_log: {
         Row: {
           created_at: string
