@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { formatCNPJ } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -90,7 +91,7 @@ export default function ClientCompanyCombobox({ value, onChange, placeholder = "
                 <Check className={cn("h-4 w-4", value === c.id ? "opacity-100" : "opacity-0")} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate">{c.name}</div>
-                  {c.cnpj && <div className="text-xs text-muted-foreground font-mono truncate">{c.cnpj}</div>}
+                  {c.cnpj && <div className="text-xs text-muted-foreground font-mono truncate">{formatCNPJ(c.cnpj)}</div>}
                 </div>
               </button>
             ))

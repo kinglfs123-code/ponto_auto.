@@ -1,5 +1,7 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { maskCNPJ, validateCNPJ } from "@/lib/ponto-rules";
+import { formatCNPJ } from "@/lib/format";
 import { Check, ChevronsUpDown, Plus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/contexts/EmpresaContext";
@@ -94,7 +96,7 @@ export default function SupplierCombobox({ value, onChange }: Props) {
                   <Check className={cn("h-4 w-4", selected?.id === s.id ? "opacity-100" : "opacity-0")} />
                   <div className="flex-1 min-w-0">
                     <div className="truncate">{s.name}</div>
-                    <div className="text-xs text-muted-foreground font-mono">{s.cnpj}</div>
+                    <div className="text-xs text-muted-foreground font-mono">{formatCNPJ(s.cnpj)}</div>
                   </div>
                 </button>
               ))
@@ -152,10 +154,15 @@ function QuickCreateDialog({
       toast({ title: "Preencha nome e CNPJ", variant: "destructive" });
       return;
     }
+    if (!validateCNPJ(cnpj)) {
+      toast({ title: "CNPJ inválido", description: "Confira os 14 dígitos.", variant: "destructive" });
+      return;
+    }
     setSaving(true);
+    const rawCnpj = cnpj.replace(/\D/g, "");
     const { data, error } = await supabase
       .from("suppliers")
-      .insert({ empresa_id: empresa.id, name: name.trim(), cnpj: cnpj.trim() })
+      .insert({ empresa_id: empresa.id, name: name.trim(), cnpj: rawCnpj })
       .select("id")
       .single();
     setSaving(false);
@@ -183,7 +190,7 @@ function QuickCreateDialog({
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="qc-cnpj">CNPJ</Label>
-            <Input id="qc-cnpj" value={cnpj} onChange={(e) => setCnpj(e.target.value)} placeholder="00.000.000/0000-00" />
+            <Input id="qc-cnpj" value={cnpj} onChange={(e) => setCnpj(maskCNPJ(e.target.value))} placeholder="00.000.000/0000-00" />
           </div>
           <DialogFooter>
             <Button type="button" variant="ghost" onClick={onClose}>
