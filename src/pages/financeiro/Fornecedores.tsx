@@ -23,7 +23,6 @@ import { useConfirm } from "@/hooks/use-confirm";
 import { Pencil, Plus, Trash2, Truck } from "lucide-react";
 import { PAYMENT_METHODS, type PaymentMethod, type Supplier, type ItemCode } from "@/types/financeiro";
 
-
 const emptyForm = {
   name: "",
   cnpj: "",
