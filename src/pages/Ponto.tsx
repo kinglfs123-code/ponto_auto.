@@ -124,7 +124,7 @@ export default function Ponto() {
     setFuncionarios([]);
   };
 
-  // Fetch previous corrections for this company
+  
   const fetchCorrections = async (empresaId: string): Promise<Correcao[]> => {
     const { data } = await supabase
       .from("correcoes_ia")
@@ -135,7 +135,7 @@ export default function Ponto() {
     return (data || []) as Correcao[];
   };
 
-  // OCR from photo
+  
   const onPhoto = useCallback((f: File | undefined) => {
     if (!f) return;
     const r = new FileReader();
@@ -160,7 +160,7 @@ export default function Ponto() {
       setStep("Processando resultados...");
       if (result.nome) {
         setFuncionario(result.nome);
-        // Try to match with registered employees
+        
         const matched = matchFuncionario(result.nome, funcionarios);
         if (matched) {
           setFuncionarioSel(matched);
@@ -171,10 +171,10 @@ export default function Ponto() {
       if (result.mes) setMesRef(result.mes);
 
       if (result.registros?.length > 0) {
-        // Save originals for correction tracking
+        
         setAiOriginals(result.registros);
 
-        // Build confidence map with levels (single pass)
+        
         const confMap: Record<number, string> = {};
         let lowConfCount = 0;
         result.registros.forEach((r) => {
@@ -240,7 +240,7 @@ export default function Ponto() {
     setRegistros(u);
   };
 
-  // Save corrections to correcoes_ia table
+  
   const saveCorrections = async (folhaId: string) => {
     if (!empresa || aiOriginals.length === 0) return;
 
@@ -333,7 +333,7 @@ export default function Ponto() {
       const { error: rErr } = await supabase.from("registros_ponto").insert(regs);
       if (rErr) throw rErr;
 
-      // Save AI corrections for learning
+      
       await saveCorrections(folha.id);
 
       toast({ title: "Folha de ponto salva!" });
@@ -374,9 +374,9 @@ export default function Ponto() {
   const setExcecao = (i: number, tipo: string | null) => {
     const u = [...registros];
     u[i] = { ...u[i], tipo_excecao: tipo, corrigido_manualmente: true };
-    // Re-apply calculations to zero out hours for falta/atestado
+    
     const processed = applyToleranceAndDetect(u[i], jornada, horarioEntrada, horarioSaida, intervalo);
-    // Keep the manually set exception
+    
     processed.tipo_excecao = tipo;
     processed.corrigido_manualmente = true;
     u[i] = processed;
