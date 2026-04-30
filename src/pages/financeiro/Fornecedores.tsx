@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { maskCNPJ, validateCNPJ } from "@/lib/ponto-rules";
+import { formatCNPJ } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import FinanceiroLayout from "@/components/financeiro/FinanceiroLayout";
@@ -87,7 +89,7 @@ export default function Fornecedores() {
   const startEdit = (s: Supplier) => {
     setForm({
       name: s.name,
-      cnpj: s.cnpj,
+      cnpj: maskCNPJ(s.cnpj),
       default_payment_method: (s.default_payment_method as PaymentMethod) ?? "",
       default_item_code: s.default_item_code ?? "",
       default_due_days: s.default_due_days != null ? String(s.default_due_days) : "",
@@ -104,10 +106,12 @@ export default function Fornecedores() {
     mutationFn: async () => {
       if (!empresa) throw new Error("Empresa não selecionada");
       if (!form.name.trim() || !form.cnpj.trim()) throw new Error("Nome e CNPJ são obrigatórios");
+      if (!validateCNPJ(form.cnpj)) throw new Error("CNPJ inválido. Confira os 14 dígitos.");
+      const rawCnpj = form.cnpj.replace(/\D/g, "");
       const payload = {
         empresa_id: empresa.id,
         name: form.name.trim(),
-        cnpj: form.cnpj.trim(),
+        cnpj: rawCnpj,
         default_payment_method: form.default_payment_method || null,
         default_item_code: form.default_item_code.trim() || null,
         default_due_days: form.default_due_days ? parseInt(form.default_due_days, 10) : null,
@@ -194,7 +198,7 @@ export default function Fornecedores() {
             <div key={s.id} className="liquid-glass !rounded-2xl p-4 flex items-center gap-3">
               <div className="flex-1 min-w-0">
                 <div className="font-medium truncate">{s.name}</div>
-                <div className="text-xs text-muted-foreground font-mono">{s.cnpj}</div>
+                <div className="text-xs text-muted-foreground font-mono">{formatCNPJ(s.cnpj)}</div>
                 <div className="text-xs text-muted-foreground mt-1 flex flex-wrap gap-x-3">
                   {s.default_payment_method && (
                     <span>
@@ -242,7 +246,7 @@ export default function Fornecedores() {
               <Input
                 id="f-cnpj"
                 value={form.cnpj}
-                onChange={(e) => setForm({ ...form, cnpj: e.target.value })}
+                onChange={(e) => setForm({ ...form, cnpj: maskCNPJ(e.target.value) })}
                 placeholder="00.000.000/0000-00"
               />
             </div>
