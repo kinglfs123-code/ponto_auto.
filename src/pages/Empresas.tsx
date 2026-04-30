@@ -47,6 +47,13 @@ export default function Empresas() {
   const errors = validateForm({ nome, cnpj, jornada });
   const hasErrors = Object.keys(errors).length > 0;
 
+  // Detect duplicate CNPJs
+  const duplicateCnpjs = useMemo(() => {
+    const counts: Record<string, number> = {};
+    empresas.forEach((e) => { counts[e.cnpj] = (counts[e.cnpj] || 0) + 1; });
+    return Object.entries(counts).filter(([, c]) => c > 1).map(([cnpjVal]) => cnpjVal);
+  }, [empresas]);
+
   // Edit state
   const [editOpen, setEditOpen] = useState(false);
   const [editEmpresa, setEditEmpresa] = useState<Empresa | null>(null);
