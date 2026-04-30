@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import DreLayout from "@/components/dre/DreLayout";
 import { useDreYear, useYearCursor, YearSelector, monthISO, MONTH_LABELS_SHORT, quarterValue, ytdValue, yearValue, pctOfReceita } from "@/components/dre/dre-shared";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DRE_CATEGORIES } from "@/lib/dre-categories";
+import { DRE_CATEGORIES, DRE_BAND_BG } from "@/lib/dre-categories";
 import { Input } from "@/components/ui/input";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { formatBRL, maskCurrencyInput, parseBRL } from "@/lib/format";
@@ -88,15 +88,16 @@ export default function DreMensal() {
               {DRE_CATEGORIES.map((cat) => {
                 const months = matrix[cat.code] ?? new Array(12).fill(0);
                 const isSub = !!cat.is_subtotal;
+                const bandBg = isSub && cat.band ? DRE_BAND_BG[cat.band] : "";
                 const rowClass = isSub
-                  ? "bg-muted/40 font-semibold"
+                  ? `${bandBg} font-semibold`
                   : "hover:bg-muted/20";
+                const stickyBg = isSub && bandBg ? bandBg : "bg-background/95";
+                const indentClass = cat.indent === 2 ? "pl-10" : cat.indent === 1 ? "pl-6" : "";
                 return (
                   <tr key={cat.code} className={`border-b border-border/20 ${rowClass}`}>
                     <td
-                      className={`sticky left-0 z-10 bg-background/95 backdrop-blur px-3 py-1.5 ${
-                        cat.indent === 1 ? "pl-6" : ""
-                      }`}
+                      className={`sticky left-0 z-10 ${stickyBg} backdrop-blur px-3 py-1.5 ${indentClass}`}
                     >
                       <span className="text-muted-foreground font-mono mr-2">[{cat.sign}]</span>
                       <span className="text-muted-foreground font-mono mr-2 text-[10px]">{cat.code}</span>
