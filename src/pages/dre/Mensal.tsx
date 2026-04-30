@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import DreLayout from "@/components/dre/DreLayout";
@@ -21,6 +21,8 @@ export default function DreMensal() {
   const { matrix, manualMask, isLoading } = useDreYear(year);
   const { empresa } = useEmpresa();
   const qc = useQueryClient();
+  const tableRef = useRef<HTMLDivElement>(null);
+  const monthRefs = useRef<(HTMLTableCellElement | null)[]>([]);
 
   // drafts: key `${code}|${monthIdx}` -> masked string
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -64,15 +66,39 @@ export default function DreMensal() {
     upsert.mutate({ code, monthIdx, value });
   };
 
+  const scrollToMonth = (monthIdx: number) => {
+    const el = monthRefs.current[monthIdx];
+    if (el && tableRef.current) {
+      tableRef.current.scrollTo({
+        left: el.offsetLeft - 300,
+        behavior: "smooth",
+      });
+    }
+  };
+
   const receita = matrix["1.00"] ?? new Array(12).fill(0);
 
   return (
     <DreLayout title="DRE — Tabela mensal" wide>
       <YearSelector year={year} onChange={setYear} />
+
+      {/* Month navigation bar */}
+      <div className="flex items-center gap-1 overflow-x-auto pb-1">
+        {MONTH_LABELS_SHORT.map((label, i) => (
+          <button
+            key={i}
+            onClick={() => scrollToMonth(i)}
+            className="px-3 py-1.5 text-xs font-medium rounded-full liquid-glass hover:bg-primary/20 transition-colors whitespace-nowrap"
+          >
+            {label}
+          </button>
+        ))}
+      </div>
+
       {isLoading ? (
         <Skeleton className="h-96" />
       ) : (
-        <div className="liquid-glass !rounded-2xl overflow-x-auto">
+        <div ref={tableRef} className="liquid-glass !rounded-2xl overflow-x-auto">
           <table className="text-xs border-collapse">
             <thead className="text-[10px] uppercase tracking-wider text-muted-foreground">
               <tr className="border-b border-border/40">
@@ -80,7 +106,7 @@ export default function DreMensal() {
                   Descrição
                 </th>
                 {[0, 1, 2, 3].map((q) => (
-                  <QuarterHeader key={q} q={q} />
+                  <QuarterHeader key={q} q={q} monthRefs={monthRefs} />
                 ))}
               </tr>
             </thead>
@@ -150,14 +176,21 @@ export default function DreMensal() {
   );
 }
 
-function QuarterHeader({ q }: { q: number }) {
+function QuarterHeader({ q, monthRefs }: { q: number; monthRefs: React.MutableRefObject<(HTMLTableCellElement | null)[]> }) {
   return (
     <>
-      {[0, 1, 2].map((i) => (
-        <th key={i} className="px-2 py-2 font-medium text-center min-w-[90px]">
-          {MONTH_LABELS_SHORT[q * 3 + i]}
-        </th>
-      ))}
+      {[0, 1, 2].map((i) => {
+        const mIdx = q * 3 + i;
+        return (
+          <th
+            key={i}
+            ref={(el) => { monthRefs.current[mIdx] = el; }}
+            className="px-2 py-2 font-medium text-center min-w-[90px]"
+          >
+            {MONTH_LABELS_SHORT[mIdx]}
+          </th>
+        );
+      })}
       <th className="px-2 py-2 font-medium text-center bg-muted/30 min-w-[90px] border-l border-border/40">
         {q + 1}º Trim.
       </th>
