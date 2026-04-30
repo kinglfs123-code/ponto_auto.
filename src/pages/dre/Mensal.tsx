@@ -216,39 +216,6 @@ function QuarterHeader({ q, monthRefs }: { q: number; monthRefs: React.MutableRe
     </>
   );
 }
-function QuarterHeader({ q }: { q: number }) {
-  return (
-    <>
-      {[0, 1, 2].map((i) => (
-        <th key={i} className="px-2 py-2 font-medium text-center min-w-[90px]">
-          {MONTH_LABELS_SHORT[q * 3 + i]}
-        </th>
-      ))}
-      <th className="px-2 py-2 font-medium text-center bg-muted/30 min-w-[90px] border-l border-border/40">
-        {q + 1}º Trim.
-      </th>
-      <th className="px-2 py-2 font-medium text-center text-[9px] text-muted-foreground bg-muted/30 min-w-[55px]">
-        % Rec.
-      </th>
-      <th className="px-2 py-2 font-medium text-center bg-muted/40 min-w-[90px] border-l border-border/40">
-        Acum.
-      </th>
-      <th className="px-2 py-2 font-medium text-center text-[9px] text-muted-foreground bg-muted/40 min-w-[55px]">
-        % Rec.
-      </th>
-      {q === 3 && (
-        <>
-          <th className="px-2 py-2 font-medium text-center bg-muted/60 min-w-[100px] border-l border-border/40">
-            Ano
-          </th>
-          <th className="px-2 py-2 font-medium text-center text-[9px] text-muted-foreground bg-muted/60 min-w-[55px]">
-            % Rec.
-          </th>
-        </>
-      )}
-    </>
-  );
-}
 
 interface QuarterCellsProps {
   q: number;
