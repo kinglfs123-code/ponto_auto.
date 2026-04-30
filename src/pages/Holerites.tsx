@@ -50,12 +50,12 @@ export default function Holerites() {
     }
   }, [empresaId, mesRef]);
 
-  // Auto-load when empresa or month changes
+  
   useEffect(() => {
     if (empresaId && mesRef) loadData();
   }, [empresaId, mesRef, loadData]);
 
-  // Detecta retorno do OAuth com erro de escopo faltando
+  
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("google") === "error" && params.get("reason") === "missing_scopes") {
@@ -67,7 +67,7 @@ export default function Holerites() {
           : `Escopos faltando: ${missing}. Reconecte e autorize todas as permissões.`,
         variant: "destructive",
       });
-      // limpa querystring
+      
       window.history.replaceState({}, "", window.location.pathname);
     } else if (params.get("google") === "ok") {
       toast({ title: "Google conectado!" });
