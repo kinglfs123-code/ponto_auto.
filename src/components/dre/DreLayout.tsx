@@ -26,7 +26,7 @@ function DreLayoutBase({ children, title, showBack = true, wide = false }: Props
     <div className="min-h-screen bg-background pb-24">
       <NavBarDre />
       <div className={`${wide ? "max-w-[1400px]" : "max-w-5xl"} mx-auto p-4 space-y-5`}>
-        <AppHeader showBack={showBack} backFallback="/dre" />
+        <AppHeader module="dre" showBack={showBack} backFallback="/dre" />
         <header className="animate-fade-in">
           <div className="min-w-0">
             {title && (
