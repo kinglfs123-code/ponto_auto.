@@ -41,7 +41,7 @@ export default function CmvSummaryCards({ vendasAlmoco, vendasJantar, convenios,
           {cmvPct == null ? "—" : `${(cmvPct * 100).toFixed(2)}%`}
         </div>
         <div className="text-xs text-muted-foreground mt-1">
-          Meta: ≤ {(CMV_TARGET * 100).toFixed(0)}%
+          Meta:  {(CMV_TARGET * 100).toFixed(0)}%
         </div>
       </div>
     </div>
