@@ -1,7 +1,7 @@
 import DreLayout from "@/components/dre/DreLayout";
 import { useDreYear, useYearCursor, YearSelector, quarterValue, ytdValue, yearValue, pctOfReceita } from "@/components/dre/dre-shared";
 import { Skeleton } from "@/components/ui/skeleton";
-import { DRE_CATEGORIES } from "@/lib/dre-categories";
+import { DRE_CATEGORIES, DRE_BAND_BG } from "@/lib/dre-categories";
 import { formatBRL } from "@/lib/format";
 
 export default function DreAnual() {
@@ -39,14 +39,15 @@ export default function DreAnual() {
               {DRE_CATEGORIES.map((cat) => {
                 const months = matrix[cat.code] ?? new Array(12).fill(0);
                 const isSub = !!cat.is_subtotal;
-                const rowClass = isSub ? "bg-muted/40 font-semibold" : "hover:bg-muted/20";
+                const bandBg = isSub && cat.band ? DRE_BAND_BG[cat.band] : "";
+                const rowClass = isSub ? `${bandBg} font-semibold` : "hover:bg-muted/20";
+                const stickyBg = isSub && bandBg ? bandBg : "bg-background/95";
+                const indentClass = cat.indent === 2 ? "pl-10" : cat.indent === 1 ? "pl-6" : "";
                 const total = yearValue(months);
                 return (
                   <tr key={cat.code} className={`border-b border-border/20 ${rowClass}`}>
                     <td
-                      className={`sticky left-0 z-10 bg-background/95 backdrop-blur px-3 py-1.5 ${
-                        cat.indent === 1 ? "pl-6" : ""
-                      }`}
+                      className={`sticky left-0 z-10 ${stickyBg} backdrop-blur px-3 py-1.5 ${indentClass}`}
                     >
                       <span className="text-muted-foreground font-mono mr-2">[{cat.sign}]</span>
                       <span className="text-muted-foreground font-mono mr-2 text-[10px]">{cat.code}</span>
@@ -60,13 +61,13 @@ export default function DreAnual() {
                         </td>
                       );
                     })}
-                    <td className={`px-3 py-1.5 text-right tabular-nums bg-muted/30 ${ytdValue(months, 3) < 0 ? "text-destructive" : ""}`}>
+                    <td className={`px-3 py-1.5 text-right tabular-nums ${isSub ? "" : "bg-muted/30"} ${ytdValue(months, 3) < 0 ? "text-destructive" : ""}`}>
                       {fmt(ytdValue(months, 3))}
                     </td>
-                    <td className={`px-3 py-1.5 text-right tabular-nums bg-muted/60 ${total < 0 ? "text-destructive" : ""}`}>
+                    <td className={`px-3 py-1.5 text-right tabular-nums font-semibold ${isSub ? "" : "bg-muted/60"} ${total < 0 ? "text-destructive" : ""}`}>
                       {fmt(total)}
                     </td>
-                    <td className="px-3 py-1.5 text-right tabular-nums text-[10px] text-muted-foreground bg-muted/60">
+                    <td className={`px-3 py-1.5 text-right tabular-nums text-[10px] text-muted-foreground ${isSub ? "" : "bg-muted/60"}`}>
                       {pct(total, yearValue(receita))}
                     </td>
                   </tr>

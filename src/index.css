@@ -60,6 +60,17 @@
     --sidebar-accent-foreground: 0 0% 85%;
     --sidebar-border: 0 0% 16%;
     --sidebar-ring: 211 100% 50%;
+
+    /* DRE band colors — dark theme (low luminosity tints) */
+    --dre-band-receita:     145 30% 14%;
+    --dre-band-deducoes:    220 18% 16%;
+    --dre-band-impostos:     30 35% 16%;
+    --dre-band-cmv:           0 30% 16%;
+    --dre-band-despesas:    220 12% 15%;
+    --dre-band-ebit:        210 45% 18%;
+    --dre-band-financeiras: 260 25% 18%;
+    --dre-band-lucro:        45 55% 18%;
+    --dre-band-caixa:       180 30% 14%;
   }
 
   .light {
@@ -117,6 +128,17 @@
     --sidebar-accent-foreground: 222 16% 24%;
     --sidebar-border: 220 13% 90%;
     --sidebar-ring: 211 100% 50%;
+
+    /* DRE band colors — light theme (soft tints) */
+    --dre-band-receita:     145 25% 92%;
+    --dre-band-deducoes:    220 15% 90%;
+    --dre-band-impostos:     30 35% 92%;
+    --dre-band-cmv:           0 30% 94%;
+    --dre-band-despesas:    220 10% 92%;
+    --dre-band-ebit:        210 45% 90%;
+    --dre-band-financeiras: 260 25% 92%;
+    --dre-band-lucro:        45 65% 88%;
+    --dre-band-caixa:       180 30% 90%;
   }
 }
 

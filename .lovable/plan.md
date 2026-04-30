@@ -1,150 +1,132 @@
+# Ajustar DRE — estrutura 100% da planilha + faixas neutras por bloco
 
-# Cadastro de empresa, módulo DRE e módulo Marketing
+## Objetivo
 
-Três entregas em um único bloco, alinhadas ao padrão do CMV (mesma navegação dock, mesmo layout glass, mesmo seletor mensal).
+1. Renomear/adicionar/remover linhas em `src/lib/dre-categories.ts` para bater **exatamente** com a planilha `DRE_p_automação-2.xlsx` (incluindo o bloco final de Movimentação de Caixa).
+2. Aplicar **faixas neutras por bloco** nas tabelas Mensal e Anual: cada bloco (Receita, Deduções, Impostos, CMV, Despesas, EBIT, Financeiras, Lucro, Movimentação de Caixa) ganha um tom de cinza/azul suave em sua linha de subtotal, mantendo o estilo Liquid Glass.
 
----
+## Estrutura final de linhas (espelho da planilha)
 
-## 1. Mover cadastro de "Nova empresa" para Configurações
+```
+1.00 (=) Receita Bruta
+  1.01 (+) Vendas Varejo
+  1.02 (+) Vendas Empresas
+  1.03–1.06 (+) Linhas livres
 
-### Em `src/components/SettingsMenu.tsx`
-- Adicionar novo item **"Empresas"** (ícone `Building2`) acima do bloco de tema, abrindo a rota `/empresas` (página de cadastro/listagem que já existe).
-- Texto secundário: "Gerenciar".
+2.00 (-) Deduções de Vendas (var)
+  2.01 (-) Devoluções
+  2.02 (-) Perdas de Inadimplência
 
-### Em `src/pages/SelecionarEmpresa.tsx`
-- **Remover** o botão `+ Nova empresa` que aparece sob a lista de empresas.
-- **Manter** apenas o card "Nenhuma empresa cadastrada ainda" (com botão "Cadastrar primeira empresa") como fallback de estado vazio — quando já existe pelo menos uma empresa, o cadastro só é acessível pela engrenagem.
+3.00 (=) Receita (1 − 2)
 
-Não muda nada em `src/pages/Empresas.tsx`.
+4.00 (-) Impostos sobre Vendas (var)
+  201 (-) Simples              [auto: 201]
+  4.02 (-) Provisão para Impostos (=Receita*9% − Simples)
+  4.03 (-) COFINS
+  4.04–4.07 (-) Linhas livres
 
----
+5.00 (-) CMV (var)
+  5.01 (+) Estoque Inicial
+  301 (-) Matéria-Prima, Bebidas e Produtos   [auto: 301]
+  302 (-) ICMS                                 [auto: 302]
+  303 (-) Gás                                  [auto: 303]
+  304 (-) Energia                              [auto: 304]
+  305 (-) Água                                 [auto: 305]
+  5.07 (+) Custos (var) — Impostos sobre compras
+    5.07.01..05 (+) ICMS, PIS, COFINS, livres
+  5.08 (+) Custos c/ pessoal prod, execução (var)
+    5.08.01 Mão de Obra Própria + provisões 13º/Férias/FGTS/INSS (% sobre 5.08.01)
+  5.09 (-) Estoque Final
+  5.10 (+) Custos c/ pessoal prod, execução (fix)
+    5.10.01..20 (Salário Bruto + provisões + benefícios + pró-labore)
+  5.11 (+) Custos c/ veículos (fix) — combustível, manutenção, seguro, IPVA/DPVAT/TRLAV
+  5.12 (+) Demais custos produção, execução (fix) — água, energia, gás, aluguel, IPTU, condomínio, conservação, manutenção, seguro, depreciação, outros
 
-## 2. Novo módulo "DRE" (réplica completa da planilha)
+6.00 (=) Lucro Bruto
 
-Espelha o CMV: rota `/dre`, dock próprio, layout glass, seletor mensal e tabela densa estilo planilha.
+7.00 (-) Despesas Variáveis c/ Vendas (var)
+  401 Comissões, 402 Entregas, 403 Couvert, 498 Taxas Cartão (=1.80% Vendas Varejo), 499 Outras [auto]
 
-### Card no menu de módulos
-`src/pages/SelecionarModulo.tsx` — adicionar quinto card **DRE** (ícone `LineChart`) apontando para `/dre`.
+8.00 (-) Despesas c/ pessoal comercial (var)  — comissões + provisões
+9.00 (-) Despesas c/ pessoal comercial (fix)  — salários + provisões + benefícios
+10.00 (-) Despesas Fixas c/ Colaboradores — 501..599 [auto]
+11.00 (-) Despesas c/ Concessionárias (fix) — telefone, energia, água, livres
+12.00 (-) Despesas c/ veículos (fix)
+13.00 (-) Despesas c/ marketing (fix)
+14.00 (-) Despesas c/ serviços de Terceiros (fix)
+15.00 (-) Despesas Adm/Gerais (fix)  — 601..699 [auto] + Depreciações
 
-### Rotas (`src/App.tsx`)
-- `/dre` → visão geral (mês corrente, totais e indicadores principais).
-- `/dre/mensal` → tabela mês a mês completa (12 meses + trimestres + acumulados + % Receita) — formato da planilha.
-- `/dre/anual` → mesma visão consolidada por ano (filtro de ano), igual ao layout original.
+16.00 (=) Lucro Operacional (EBIT)
 
-### Estrutura de pastas (espelha `src/components/cmv` e `src/pages/cmv`)
-```text
-src/components/dre/
-  DreLayout.tsx              # idêntico ao CmvLayout, com NavBarDre
-  NavBarDre.tsx              # dock com 3 ícones: Visão, Mensal, Anual
-  DreSummaryCards.tsx        # Receita Bruta, Lucro Bruto, EBIT, Lucro Líquido, % margem
-  DreTable.tsx               # tabela larga mês×categoria (sticky col esquerda)
-  dre-shared.ts              # categorias, hooks, cálculos
-src/pages/dre/
-  Home.tsx
-  Mensal.tsx
-  Anual.tsx
-src/types/dre.ts
-src/lib/dre-categories.ts    # estrutura fiel da planilha (códigos, sinais, descrições)
+17.00 (-) Despesas Financeiras Fixas — 702 Juros Fornecedores, 703 Juros Empréstimos, 704 IOF, 799 Outras
+18.00 (-) Despesas Financeiras Variáveis — 18.01..18.04 livres
+19.00 (+) Receitas Financeiras — 701 Receitas Financeiras, 19.02 Juros de clientes, 19.03 Descontos Recebidos
+20.00 (+) Outras Receitas — Venda de imobilizado, Rec. juros/multas atraso, livre
+21.00 (-) Outras Despesas — Outras despesas, Perda de Estoque, livre
+
+22.00 (=) Lucro antes do IRPJ e CSLL
+  22.01 (-) IRPJ
+  22.02 (-) CSLL
+  22.03 (-) Adicional de IR
+
+23.00 (=) Lucro Líquido
+
+— Bloco extra: fluxo de caixa do sócio —
+24.00 (=) Destinação de Lucros / Movimentação de Caixa
+  Movimentação dos Sócios
+    801 (-) Distribuição de Lucros
+    899 (-) Outras Movimentações de Sócios
+  Entradas de Caixa
+    901 Aporte de Capital, 902 Crédito Financiamento, 903 Empréstimos Obtidos,
+    904 Resgate Aplicação, 905 Venda Imobilizado, 906 Receb. Empréstimos Concedidos,
+    999 Outras Entradas
+  Saídas de Caixa
+    (linhas livres seguindo o que houver na planilha)
 ```
 
-### Categorias (idênticas à planilha enviada)
-Definidas em `dre-categories.ts` como uma árvore — cada nó tem `code`, `sign` (+/−/=), `label`, `parent_code` opcional, `auto_from` (mapa para códigos do plano de contas/Financeiro) e `is_subtotal`.
+Linhas com `auto_from` continuam puxando do Financeiro pelo `item_code`. As demais ficam editáveis em `/dre/mensal`.
 
-Seções e subtotais que serão criados (exatamente como a planilha):
-- **1.00 Receita Bruta (=)** → 1.01 Vendas Varejo (+), 1.02 Vendas Empresas (+), 1.03–1.06 (linhas vazias para expansão).
-- **2.00 Deduções de Vendas (−)** → Devoluções, Perdas de Inadimplência.
-- **3.00 Receita Líquida (=) = 1 − 2**.
-- **4.00 Impostos sobre Vendas (−)** → Simples (201), Provisão para Impostos, COFINS (4.03), e linhas livres 4.04–4.07.
-- **5.00 CMV (−)** → Estoque Inicial (5.01), Matéria-Prima/Bebidas/Produtos (301), ICMS (302), Gás (303), Energia (304), Água (305), e os blocos 5.07 Impostos sobre compras, 5.08 Custos com pessoal produção (var), 5.09 Estoque Final, 5.10 Custos com pessoal produção (fix) com todos os subitens (salário, 13º, férias, FGTS, vale-transporte, refeição, cesta, seguro, plano de saúde, pró-labore, INSS empresa, retirada complementar/produtos…), 5.11 Custos com veículos (fix) e 5.12 Demais custos produção (fix).
-- **6.00 Lucro Bruto (=) = 3 − 4 − 5**.
-- **7.00 Despesas Variáveis com Vendas (−)** → Comissões (401), Entregas (402), Couvert (403), Taxas de Cartão 1,80% (498), Outras (499).
-- **8.00 Despesas com pessoal comercial (var)** e **9.00 Despesas com pessoal comercial (fix)** com todos os subitens.
-- **10.00 Despesas Fixas com Colaboradores** → Folha (501), Encargos (502), Pró-labore (503), Provisão 13º (599).
-- **11.00 Concessionárias** (Telefone/TV/Internet, Energia, Água + livres).
-- **12.00 Veículos** (Combustível, Manutenção, Seguros e Taxas, Outros).
-- **13.00 Marketing** (Propaganda + livres).
-- **14.00 Serviços de Terceiros** (Terceiros, Segurança/alarme, Sistema + livres).
-- **15.00 Despesas Adm/Gerais** (601 Aluguel/condomínio/IPTU/Alvará, 602 Telefone/Internet/TV, 603 Material escritório/limpeza, 604 Sistemas, 605 Honorários contábeis/advocatícios, 606 Consultorias/treinamentos, 607 Manutenção máquinas/mobiliário, 608 Manutenção instalações, 609 Despesas Comerciais/Mkt, 610 Veículos, 611 Segurança, 612 Tarifas bancárias, 699 Outras + Depreciações).
-- **16.00 Lucro Operacional EBIT (=)**.
-- **17.00 Despesas Financeiras Fixas** (702, 703, 704 IOF, 799).
-- **18.00 Despesas Financeiras Variáveis** (mesmos códigos).
-- **19.00 Receitas Financeiras**.
-- **20.00 Lucro Antes do IR (=)**.
-- **21.00 IRPJ/CSLL (−)**.
-- **22.00 Lucro Líquido (=)**.
+## Faixas neutras por bloco (cores)
 
-### Origem dos números (auto + manual)
-Cada categoria com `auto_from = ["301","302","305"…]` puxa do `payables` (mesmo padrão do CMV: soma de `amount` por mês onde `item_code` ∈ lista). Categorias sem `auto_from` (Receitas, ajustes, provisões) são manuais.
+Adicionar tokens HSL semânticos em `src/index.css`:
 
-Categorias **com auto_from podem ser sobrescritas manualmente** — se houver valor em `dre_manual_entries`, ele substitui o automático no mês (caso útil quando o usuário quer ajustar). Na UI a célula manual ganha indicador discreto.
+- `--dre-band-receita`        (verde suave, ~`145 25% 92%`)
+- `--dre-band-deducoes`       (cinza azulado, ~`220 15% 90%`)
+- `--dre-band-impostos`       (laranja suave, ~`30 30% 92%`)
+- `--dre-band-cmv`            (vermelho suave, ~`0 25% 93%`)
+- `--dre-band-despesas`       (cinza neutro, ~`220 10% 92%`)
+- `--dre-band-ebit`           (azul, ~`210 40% 90%`)
+- `--dre-band-financeiras`    (roxo suave, ~`260 20% 92%`)
+- `--dre-band-lucro`          (dourado, ~`45 60% 88%`)
+- `--dre-band-caixa`          (teal, ~`180 25% 90%`)
 
-### Tabela `dre_manual_entries` (nova)
-- `empresa_id` (FK lógica)
-- `category_code` (text, ex.: `1.01`, `599`, `5.10.15`)
-- `entry_month` (date, sempre dia 1)
-- `amount` (numeric, default 0)
-- timestamps + RLS (`user_owns_empresa`) seguindo o mesmo padrão de `cmv_daily_sales`
-- UNIQUE `(empresa_id, category_code, entry_month)` para suportar `upsert`.
+Versão dark com mesmas tonalidades em luminosidade baixa.
 
-### Cálculos (front, em `dre-shared.ts`)
-- Hook `useDreYear(year)` busca:
-  - `dre_manual_entries` do ano inteiro (12 meses).
-  - `payables` do ano inteiro (`arrival_date` entre `YYYY-01-01` e `YYYY-12-31`), agrupados por mês × `item_code`.
-- Monta matriz `[categoryCode][month] = number` aplicando: manual override → senão soma de `auto_from` no mês → senão 0.
-- Subtotais (`is_subtotal`) calculados sob demanda a partir das fórmulas declaradas (ex.: `3.00 = 1.00 + 2.00`, `6.00 = 3.00 - 4.00 - 5.00`, `16.00 = 6.00 - 7..15`, `22.00 = 20.00 - 21.00`). Sinais respeitam a coluna B (=, +, −).
-- Trimestres e acumulados são derivados (1ºT = J+F+M, Acum = soma do início do ano até o trimestre, Resultado = soma anual).
-- `% Receita` por célula = `valor / Receita Bruta do mesmo período` (ou 0 quando denominador = 0), idêntico à fórmula `=IF(D$5=0,0,(D6/D$5))` da planilha.
+Em `src/lib/dre-categories.ts`: adicionar campo `band?: string` (chave do token) em cada subtotal, p.ex. `band: "ebit"`.
 
-### UI
+Em `Mensal.tsx` e `Anual.tsx`: aplicar a classe `bg-[hsl(var(--dre-band-${band}))]` (via mapa estático para evitar purge do Tailwind) na `<tr>` do subtotal e em todas as células. Texto sempre `text-foreground` para contraste.
 
-**`Home.tsx`** — visão executiva
-- Seletor de mês.
-- Cards: Receita Bruta, Receita Líquida, Lucro Bruto, EBIT, Lucro Líquido (cada um com % da receita).
-- Mini "tabela vertical" com as principais linhas do mês.
+Resultado visual: blocos visivelmente separados sem poluir, mantendo Liquid Glass no card externo.
 
-**`Mensal.tsx`** — réplica visual da planilha
-- Seletor de ano.
-- Tabela densa com primeira coluna *sticky* (código + descrição) e cabeçalho *sticky* (Janeiro, %, Fevereiro, %, Março, %, **1º Trim.**, %, Abril…, **2º Trim.**, %, **Acumulado**, %, …, **Resultado**, %).
-- Linhas de subtotal em destaque (negrito + fundo `bg-muted/40`).
-- Células manuais editáveis (Input mascarado em moeda, igual ao CMV); células automáticas exibem o valor com tooltip "Vem do Financeiro · cód. 301".
-- Override: ao digitar em célula automática, abre confirmação "Substituir valor do Financeiro?"; após salvar, mostra um pontinho indicando override.
+## Arquivos a alterar
 
-**`Anual.tsx`** — visão simplificada
-- Mesma tabela mas só com colunas **Trimestres + Acumulado + Resultado** (sem meses individuais), útil para impressão/exportação futura.
-
-### Dock NavBar
-3 ícones com cores liquid-glass: `LayoutDashboard` (`/dre`), `Table2` (`/dre/mensal`), `BarChart3` (`/dre/anual`).
-
----
-
-## 3. Novo módulo "Marketing" (placeholder)
-
-### Card no menu (`SelecionarModulo.tsx`)
-Sexto card **Marketing** (ícone `Megaphone`) apontando para `/marketing`.
-
-### Rota e arquivos
-- `src/App.tsx`: `/marketing` → `MarketingHome`.
-- `src/components/marketing/MarketingLayout.tsx` e `NavBarMarketing.tsx` (dock com 1 ícone só por enquanto).
-- `src/pages/marketing/Home.tsx`: layout glass com card centralizado: ícone, título "Marketing" e mensagem "Em breve — defina aqui as métricas de campanhas e investimento."
-
-Sem tabelas no banco. Sem cálculos. Apenas estrutura pronta para ganhar conteúdo no próximo passo.
-
----
-
-## 4. Memória do projeto
-Adicionar duas referências em `mem://index.md`:
-- `[DRE Module](mem://features/dre)` — réplica fiel da planilha, mistura auto (códigos do Financeiro) com manual override em `dre_manual_entries`.
-- `[Marketing Module](mem://features/marketing)` — placeholder; conteúdo a definir.
-
----
+- `src/lib/dre-categories.ts` — reestruturar lista de categorias + adicionar `band` em subtotais.
+- `src/index.css` — adicionar 9 tokens `--dre-band-*` (light + dark).
+- `src/pages/dre/Mensal.tsx` — pintar linhas de subtotal pelo `band`.
+- `src/pages/dre/Anual.tsx` — idem (incluindo trimestres/acumulado).
+- `src/components/dre/DreSummaryCards.tsx` — pequeno ajuste se algum `DRE_HEADLINE_CODES` mudar de código (ex.: Lucro Líquido passa a ser `23.00`).
+- `mem://features/dre` — atualizar memória com a nova estrutura.
 
 ## Detalhes técnicos
 
-- **Migração**: criação de `dre_manual_entries` com RLS espelhando `cmv_daily_sales` (4 políticas usando `user_owns_empresa(empresa_id)`), índice em `(empresa_id, entry_month)`.
-- **Sem alteração** em `payables`, `item_codes`, `cmv_daily_sales`, `empresas`.
-- Componentes pesados (`Mensal.tsx`) serão `lazy()` no `App.tsx`, igual aos demais.
-- Formato monetário e máscaras reutilizam `formatBRL`/`maskCurrencyInput` de `src/lib/format.ts`.
-- Seletor de ano usa o mesmo padrão do `MonthSelector` (chevrons + label central).
-- Tudo respeita o tema glass existente (`liquid-glass`, `liquid-hover`, tokens semânticos — sem cores hardcoded).
-- Cobertura responsiva: a tabela do Mensal terá scroll horizontal em telas pequenas (a primeira coluna fica fixa).
-
+- Sem migração de banco — só dados de configuração no front. A tabela `dre_manual_entries` já aceita qualquer `category_code` string.
+- Mapa de bands → classes definido como objeto literal estático para o Tailwind detectar:
+  ```ts
+  const BAND_CLASS: Record<string,string> = {
+    receita:    "bg-[hsl(var(--dre-band-receita))]",
+    deducoes:   "bg-[hsl(var(--dre-band-deducoes))]",
+    // ...
+  };
+  ```
+- `DRE_HEADLINE_CODES` ajustado para `["1.00","3.00","6.00","16.00","22.00","23.00"]`.
+- Linhas com fórmula percentual (provisões, taxas de cartão) ficam computadas no front a partir das células-base, mantendo override manual quando o usuário editar.
