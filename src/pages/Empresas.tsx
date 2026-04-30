@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,7 +12,7 @@ import { useConfirm } from "@/hooks/use-confirm";
 import { friendlyError } from "@/lib/error-messages";
 import { maskCNPJ, validateCNPJ, maskHM } from "@/lib/ponto-rules";
 import { formatCNPJ } from "@/lib/format";
-import { Trash2, Building2, Pencil } from "lucide-react";
+import { Trash2, Building2, Pencil, AlertTriangle } from "lucide-react";
 import NavBar from "@/components/NavBar";
 import AppHeader from "@/components/AppHeader";
 import { cn } from "@/lib/utils";
