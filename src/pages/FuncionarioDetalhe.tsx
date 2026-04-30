@@ -72,16 +72,13 @@ export default function FuncionarioDetalhe() {
   const [editTouched, setEditTouched] = useState<{ nome_completo?: boolean; cpf?: boolean; email?: boolean }>({});
   const [uploadingCat, setUploadingCat] = useState<CategoriaDocumento | null>(null);
 
-  // Holerite upload
   const [holeriteMes, setHoleriteMes] = useState(currentMonth());
   const [uploadingHolerite, setUploadingHolerite] = useState(false);
   const holeriteInputRef = useRef<HTMLInputElement>(null);
 
-  // Folha
   const [folhaMes, setFolhaMes] = useState(currentMonth());
   const [creatingFolha, setCreatingFolha] = useState(false);
 
-  // Edit funcionario
   const [editOpen, setEditOpen] = useState(false);
   const [editForm, setEditForm] = useState<EditForm>({
     nome_completo: "", cpf: "", email: "", cargo: "", data_nascimento: "",
@@ -89,7 +86,6 @@ export default function FuncionarioDetalhe() {
   });
   const [savingEdit, setSavingEdit] = useState(false);
 
-  // Férias form (criar/editar)
   const [showFeriasForm, setShowFeriasForm] = useState(false);
   const [editingFeriasId, setEditingFeriasId] = useState<string | null>(null);
   const [feriasForm, setFeriasForm] = useState({ data_inicio: "", data_fim: "", status: "planejada" as StatusFerias, observacao: "" });
@@ -99,7 +95,6 @@ export default function FuncionarioDetalhe() {
   const [syncingFeriasId, setSyncingFeriasId] = useState<string | null>(null);
   const feriasFileInputRef = useRef<HTMLInputElement>(null);
 
-  // Conexão Google (para sync de férias)
   const [googleConnected, setGoogleConnected] = useState(false);
   useEffect(() => {
     supabase.from("google_calendar_tokens").select("scope").maybeSingle().then(({ data }) => {
@@ -158,7 +153,6 @@ export default function FuncionarioDetalhe() {
 
   useEffect(() => { loadAll(); }, [loadAll]);
 
-  // Detecta retorno do OAuth com erro de escopo faltando
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("google") === "error" && params.get("reason") === "missing_scopes") {
@@ -177,7 +171,6 @@ export default function FuncionarioDetalhe() {
     }
   }, []);
 
-  // ==== Documentos ====
   const handleUploadDoc = async (categoria: CategoriaDocumento, file: File) => {
     if (!func) return;
     if (file.size > 10 * 1024 * 1024) {
@@ -244,7 +237,6 @@ export default function FuncionarioDetalhe() {
       }
       toast({ title: `${files.length} arquivo(s) anexado(s)`, description: `Analisando ${files.length} arquivo(s) do contrato com IA…` });
       await loadAll();
-      // O AnaliseContrato vai auto-disparar a análise consolidada com todos os contratos.
     } catch (err: any) {
       toast({ title: "Erro no upload", description: err.message, variant: "destructive" });
     } finally {
@@ -274,7 +266,6 @@ export default function FuncionarioDetalhe() {
       const { error } = await supabase.from("funcionario_documentos").delete().eq("id", doc.id);
       if (error) throw error;
 
-      // Se for um contrato e não restarem mais contratos, limpar análise + alertas + eventos no Google Agenda
       if (doc.categoria === "contrato" && func) {
         const restantes = documentos.filter(
           (d) => d.id !== doc.id && d.categoria === "contrato",
@@ -294,7 +285,6 @@ export default function FuncionarioDetalhe() {
                 body: { event_ids: eventIds },
               });
             } catch {
-              // best-effort
             }
           }
 
@@ -310,7 +300,6 @@ export default function FuncionarioDetalhe() {
     }
   };
 
-  // ==== Holerites ====
   const handleUploadHolerite = async (file: File) => {
     if (!func) return;
     if (file.type !== "application/pdf") {
@@ -368,8 +357,6 @@ export default function FuncionarioDetalhe() {
       toast({ title: "Erro", description: err?.message || "Falha ao iniciar conexão", variant: "destructive" });
     }
   };
-
-  // Envio por e-mail acontece apenas na aba Holerites.
 
   const handleSendHolerite = async (h: Holerite) => {
     if (!func?.email) {
@@ -437,7 +424,6 @@ export default function FuncionarioDetalhe() {
     }
   };
 
-  // ==== Folhas ====
   const handleNovaFolha = async () => {
     if (!func) return;
     if (!folhaMes) { toast({ title: "Selecione o mês", variant: "destructive" }); return; }
@@ -483,7 +469,6 @@ export default function FuncionarioDetalhe() {
     }
   };
 
-  // ==== Editar funcionário ====
   const openEdit = () => {
     if (!func) return;
     setEditForm({
@@ -538,7 +523,6 @@ export default function FuncionarioDetalhe() {
     }
   };
 
-  // ==== Férias ====
   const calcDias = (ini: string, fim: string) => {
     if (!ini || !fim) return 0;
     const a = new Date(ini); const b = new Date(fim);
@@ -612,16 +596,13 @@ export default function FuncionarioDetalhe() {
       let documento_storage_path: string | null = existing?.documento_storage_path ?? null;
       let documento_nome: string | null = existing?.documento_nome ?? null;
 
-      // Remoção solicitada
       if (feriasRemoveDoc && existing?.documento_storage_path) {
         await supabase.storage.from("colaborador-arquivos").remove([existing.documento_storage_path]);
         documento_storage_path = null;
         documento_nome = null;
       }
 
-      // Upload novo arquivo
       if (feriasFile) {
-        // Remove antigo se houver
         if (existing?.documento_storage_path && !feriasRemoveDoc) {
           await supabase.storage.from("colaborador-arquivos").remove([existing.documento_storage_path]);
         }
@@ -664,7 +645,6 @@ export default function FuncionarioDetalhe() {
       setFeriasRemoveDoc(false);
       if (feriasFileInputRef.current) feriasFileInputRef.current.value = "";
 
-      // Sincroniza com Google Agenda automaticamente se conectado
       if (googleConnected) {
         await trySyncFeriasCalendar(ferias_id, true);
       }
@@ -698,7 +678,6 @@ export default function FuncionarioDetalhe() {
     if (fr?.documento_storage_path) {
       await supabase.storage.from("colaborador-arquivos").remove([fr.documento_storage_path]);
     }
-    // Remove eventos no Google Agenda (best-effort)
     if (fr?.google_event_id || fr?.google_event_id_inicio || fr?.google_event_id_fim) {
       try {
         await supabase.functions.invoke("delete-ferias-calendar", { body: { ferias_id: fid } });

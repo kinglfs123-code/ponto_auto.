@@ -1,5 +1,3 @@
-// Single source of truth for display formatting and validation across the app.
-// Re-exports existing utilities and adds standardized helpers (DD/MM/AAAA, etc).
 
 export { maskCNPJ as formatCNPJ } from "./ponto-rules";
 export { formatBRL, parseBRL, maskCurrencyInput, todayISO } from "./currency";
@@ -20,12 +18,10 @@ export function formatDateBR(input: string | Date | null | undefined): string {
     return `${d}/${m}/${y}`;
   }
   const s = String(input);
-  // Pure date "YYYY-MM-DD"
   const dateOnly = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
   if (dateOnly) {
     return `${dateOnly[3]}/${dateOnly[2]}/${dateOnly[1]}`;
   }
-  // Datetime ISO — extract date part to avoid TZ shifts
   const dateTime = s.match(/^(\d{4})-(\d{2})-(\d{2})T/);
   if (dateTime) {
     const dt = new Date(s);
@@ -35,7 +31,6 @@ export function formatDateBR(input: string | Date | null | undefined): string {
     const y = dt.getFullYear();
     return `${d}/${m}/${y}`;
   }
-  // Fallback
   const dt = new Date(s);
   if (isNaN(dt.getTime())) return "";
   const d = String(dt.getDate()).padStart(2, "0");
