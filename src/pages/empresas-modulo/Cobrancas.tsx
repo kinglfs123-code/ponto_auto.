@@ -234,7 +234,7 @@ export default function Cobrancas() {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
         {[
           { label: "Faturado", value: summary.totalFaturado, tone: "text-foreground" },
-          { label: "Recebido", value: summary.totalRecebido, tone: "text-success" },
+          { label: "Recebido", value: summary.totalRecebido, tone: "text-primary-foreground" },
           { label: "A receber", value: summary.totalAReceber, tone: "text-warning" },
           { label: "Atrasado", value: summary.totalAtrasado, tone: "text-destructive" },
         ].map((c) => (
