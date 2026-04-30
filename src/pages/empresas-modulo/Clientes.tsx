@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { maskCNPJ, validateCNPJ } from "@/lib/ponto-rules";
+import { formatCNPJ } from "@/lib/format";
 import { supabase } from "@/integrations/supabase/client";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import EmpresasModuloLayout from "@/components/empresas-modulo/EmpresasModuloLayout";
@@ -58,7 +60,7 @@ export default function Clientes() {
     setCreating(true);
   };
   const startEdit = (c: ClientCompany) => {
-    setForm({ name: c.name, cnpj: c.cnpj ?? "", notes: c.notes ?? "" });
+    setForm({ name: c.name, cnpj: c.cnpj ? maskCNPJ(c.cnpj) : "", notes: c.notes ?? "" });
     setCreating(false);
     setEditing(c);
   };
@@ -71,10 +73,12 @@ export default function Clientes() {
     mutationFn: async () => {
       if (!empresa) throw new Error("Empresa não selecionada");
       if (!form.name.trim()) throw new Error("Nome é obrigatório");
+      const rawCnpj = form.cnpj.replace(/\D/g, "");
+      if (rawCnpj && !validateCNPJ(form.cnpj)) throw new Error("CNPJ inválido. Confira os 14 dígitos.");
       const payload = {
         empresa_id: empresa.id,
         name: form.name.trim(),
-        cnpj: form.cnpj.trim() || null,
+        cnpj: rawCnpj || null,
         notes: form.notes.trim() || null,
       };
       if (editing) {
@@ -162,7 +166,7 @@ export default function Clientes() {
             <div key={c.id} className="liquid-glass !rounded-2xl p-4 flex items-center gap-3">
               <div className="flex-1 min-w-0">
                 <div className="font-medium truncate">{c.name}</div>
-                {c.cnpj && <div className="text-xs text-muted-foreground font-mono">{c.cnpj}</div>}
+                {c.cnpj && <div className="text-xs text-muted-foreground font-mono">{formatCNPJ(c.cnpj)}</div>}
                 {c.notes && <div className="text-xs text-muted-foreground mt-1 truncate">{c.notes}</div>}
               </div>
               <Button size="sm" variant="ghost" onClick={() => startEdit(c)}>
@@ -207,7 +211,7 @@ export default function Clientes() {
               <Input
                 id="c-cnpj"
                 value={form.cnpj}
-                onChange={(e) => setForm({ ...form, cnpj: e.target.value })}
+                onChange={(e) => setForm({ ...form, cnpj: maskCNPJ(e.target.value) })}
                 placeholder="00.000.000/0000-00"
               />
             </div>
