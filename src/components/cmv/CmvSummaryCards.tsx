@@ -17,7 +17,7 @@ export default function CmvSummaryCards({ vendasAlmoco, vendasJantar, convenios,
     { label: "Vendas Almoço", value: formatBRL(vendasAlmoco), tone: "text-foreground" },
     { label: "Vendas Jantar", value: formatBRL(vendasJantar), tone: "text-foreground" },
     { label: "Convênios", value: formatBRL(convenios), tone: "text-foreground" },
-    { label: "Compras (cód. 301)", value: formatBRL(compras), tone: "text-foreground" },
+    { label: "Compras", value: formatBRL(compras), tone: "text-foreground" },
   ];
 
   return (
