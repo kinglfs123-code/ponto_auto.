@@ -218,7 +218,7 @@ export default function Cobrancas() {
   };
 
   return (
-    <EmpresasModuloLayout title="Empresas — Cobranças">
+    <EmpresasModuloLayout title="Empresas">
       {/* Month selector */}
       <div className="flex items-center justify-between gap-2 liquid-glass !rounded-2xl px-3 py-2">
         <Button size="icon" variant="ghost" onClick={goPrev} aria-label="Mês anterior">
