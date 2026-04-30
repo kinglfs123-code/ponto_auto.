@@ -57,13 +57,9 @@ const sub = (
 
 export const DRE_CATEGORIES: DreCategory[] = [
   // ========== 1.00 Receita Bruta ==========
-  sub("1.00", "Receita Bruta", ["1.01", "1.02", "1.03", "1.04", "1.05", "1.06"], "receita"),
+  sub("1.00", "Receita Bruta", ["1.01", "1.02"], "receita"),
   { code: "1.01", label: "Vendas Varejo", sign: "+", indent: 1 },
   { code: "1.02", label: "Vendas Empresas", sign: "+", indent: 1 },
-  { code: "1.03", label: "Linha livre", sign: "+", indent: 1 },
-  { code: "1.04", label: "Linha livre", sign: "+", indent: 1 },
-  { code: "1.05", label: "Linha livre", sign: "+", indent: 1 },
-  { code: "1.06", label: "Linha livre", sign: "+", indent: 1 },
 
   // ========== 2.00 Deduções ==========
   sub("2.00", "Deduções de Vendas (var)", ["2.01", "2.02"], "deducoes"),
@@ -74,14 +70,10 @@ export const DRE_CATEGORIES: DreCategory[] = [
   sub("3.00", "Receita (1 − 2)", ["1.00", "-2.00"], "receita"),
 
   // ========== 4.00 Impostos sobre Vendas ==========
-  sub("4.00", "Impostos sobre Vendas (var)", ["201", "4.02", "4.03", "4.04", "4.05", "4.06", "4.07"], "impostos"),
+  sub("4.00", "Impostos sobre Vendas (var)", ["201", "4.02", "4.03"], "impostos"),
   { code: "201", label: "Simples", sign: "-", auto_from: ["201"], indent: 1 },
   { code: "4.02", label: "Provisão para Impostos", sign: "-", indent: 1 },
   { code: "4.03", label: "COFINS", sign: "-", indent: 1 },
-  { code: "4.04", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "4.05", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "4.06", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "4.07", label: "Linha livre", sign: "-", indent: 1 },
 
   // ========== 5.00 CMV ==========
   sub("5.00", "CMV (var)", [
@@ -96,12 +88,10 @@ export const DRE_CATEGORIES: DreCategory[] = [
   { code: "305", label: "Água", sign: "-", auto_from: ["305"], indent: 1 },
 
   // 5.07 Impostos sobre compras
-  sub("5.07", "Custos (var) — Impostos sobre compras", ["5.07.01", "5.07.02", "5.07.03", "5.07.04", "5.07.05"], "cmv"),
+  sub("5.07", "Custos (var) — Impostos sobre compras", ["5.07.01", "5.07.02", "5.07.03"], "cmv"),
   { code: "5.07.01", label: "ICMS", sign: "+", indent: 2 },
   { code: "5.07.02", label: "PIS", sign: "+", indent: 2 },
   { code: "5.07.03", label: "COFINS", sign: "+", indent: 2 },
-  { code: "5.07.04", label: "Linha livre", sign: "+", indent: 2 },
-  { code: "5.07.05", label: "Linha livre", sign: "+", indent: 2 },
 
   // 5.08 Pessoal produção variável
   sub("5.08", "Custos c/ pessoal prod, execução (var)", [
@@ -122,7 +112,7 @@ export const DRE_CATEGORIES: DreCategory[] = [
   sub("5.10", "Custos c/ pessoal prod, execução (fix)", [
     "5.10.01","5.10.02","5.10.03","5.10.04","5.10.05","5.10.06","5.10.08",
     "5.10.09","5.10.10","5.10.11","5.10.12","5.10.13","5.10.14",
-    "5.10.15","5.10.16","5.10.17","5.10.18","5.10.19","5.10.20",
+    "5.10.15","5.10.16","5.10.17","5.10.18","5.10.19",
   ], "cmv"),
   { code: "5.10.01", label: "SALÁRIO BRUTO", sign: "+", indent: 2 },
   { code: "5.10.02", label: "Provisão para 13º Salário", sign: "+", indent: 2 },
@@ -142,7 +132,6 @@ export const DRE_CATEGORIES: DreCategory[] = [
   { code: "5.10.17", label: "Retirada complementar", sign: "+", indent: 2 },
   { code: "5.10.18", label: "Plano de saúde (sócios)", sign: "+", indent: 2 },
   { code: "5.10.19", label: "Retirada em produtos", sign: "+", indent: 2 },
-  { code: "5.10.20", label: "Linha livre", sign: "+", indent: 2 },
 
   // 5.11 Veículos (produção)
   sub("5.11", "Custos c/ veículos (fix)", ["5.11.01", "5.11.02", "5.11.03", "5.11.04"], "cmv"),
@@ -179,44 +168,6 @@ export const DRE_CATEGORIES: DreCategory[] = [
   { code: "498", label: "Taxas de Cartão (1,80%)", sign: "-", auto_from: ["498"], indent: 1 },
   { code: "499", label: "Outras Despesas Variáveis com Vendas", sign: "-", auto_from: ["499"], indent: 1 },
 
-  // ========== 8.00 Pessoal comercial variável ==========
-  sub("8.00", "Despesas c/ pessoal comercial (var)", [
-    "8.01","8.02","8.03","8.04","8.05","8.06","8.08","8.09","8.10",
-  ], "despesas"),
-  { code: "8.01", label: "Comissões sobre vendas", sign: "-", indent: 1 },
-  { code: "8.02", label: "Provisão para 13º Salário", sign: "-", indent: 1 },
-  { code: "8.03", label: "Provisão para Férias", sign: "-", indent: 1 },
-  { code: "8.04", label: "FGTS", sign: "-", indent: 1 },
-  { code: "8.05", label: "Provisão de FGTS (13° e Férias)", sign: "-", indent: 1 },
-  { code: "8.06", label: "Provisão Multa Rescisória do FGTS", sign: "-", indent: 1 },
-  { code: "8.08", label: "Provisão INSS (13° e Férias)", sign: "-", indent: 1 },
-  { code: "8.09", label: "Outros gastos com pessoal", sign: "-", indent: 1 },
-  { code: "8.10", label: "Linha livre", sign: "-", indent: 1 },
-
-  // ========== 9.00 Pessoal comercial fixo ==========
-  sub("9.00", "Despesas c/ pessoal comercial (fix)", [
-    "9.01","9.02","9.03","9.04","9.05","9.06","9.07","9.08",
-    "9.09","9.10","9.11","9.12","9.13","9.14","9.15","9.16","9.17","9.18",
-  ], "despesas"),
-  { code: "9.01", label: "SALÁRIO BRUTO", sign: "-", indent: 1 },
-  { code: "9.02", label: "Provisão para 13º Salário", sign: "-", indent: 1 },
-  { code: "9.03", label: "Provisão para Férias", sign: "-", indent: 1 },
-  { code: "9.04", label: "FGTS", sign: "-", indent: 1 },
-  { code: "9.05", label: "Provisão de FGTS (13° e Férias)", sign: "-", indent: 1 },
-  { code: "9.06", label: "Provisão Multa Rescisória do FGTS", sign: "-", indent: 1 },
-  { code: "9.07", label: "INSS (CPP)", sign: "-", indent: 1 },
-  { code: "9.08", label: "Provisão INSS (13° e Férias)", sign: "-", indent: 1 },
-  { code: "9.09", label: "Vale Transporte", sign: "-", indent: 1 },
-  { code: "9.10", label: "Refeição", sign: "-", indent: 1 },
-  { code: "9.11", label: "Cesta básica", sign: "-", indent: 1 },
-  { code: "9.12", label: "Seguro de vida", sign: "-", indent: 1 },
-  { code: "9.13", label: "Plano de saúde", sign: "-", indent: 1 },
-  { code: "9.14", label: "Treinamento / desenvolvimento", sign: "-", indent: 1 },
-  { code: "9.15", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "9.16", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "9.17", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "9.18", label: "Linha livre", sign: "-", indent: 1 },
-
   // ========== 10.00 Despesas Fixas com Colaboradores ==========
   sub("10.00", "Despesas Fixas c/ Colaboradores (fix)", ["501", "502", "503", "599"], "despesas"),
   { code: "501", label: "Despesa com Folha de Pgto.", sign: "-", auto_from: ["501"], indent: 1 },
@@ -225,13 +176,10 @@ export const DRE_CATEGORIES: DreCategory[] = [
   { code: "599", label: "Provisão de 13º", sign: "-", auto_from: ["599"], indent: 1 },
 
   // ========== 11.00 Concessionárias ==========
-  sub("11.00", "Despesas c/ Concessionárias (fix)", ["11.01", "11.02", "11.03", "11.04", "11.05", "11.06"], "despesas"),
+  sub("11.00", "Despesas c/ Concessionárias (fix)", ["11.01", "11.02", "11.03"], "despesas"),
   { code: "11.01", label: "TELEFONE, TV E INTERNET", sign: "-", indent: 1 },
   { code: "11.02", label: "ENERGIA", sign: "-", indent: 1 },
   { code: "11.03", label: "ÁGUA", sign: "-", indent: 1 },
-  { code: "11.04", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "11.05", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "11.06", label: "Linha livre", sign: "-", indent: 1 },
 
   // ========== 12.00 Veículos (admin) ==========
   sub("12.00", "Despesas c/ veículos (fix)", ["12.01", "12.02", "12.03", "12.04"], "despesas"),
@@ -241,24 +189,14 @@ export const DRE_CATEGORIES: DreCategory[] = [
   { code: "12.04", label: "OUTROS", sign: "-", indent: 1 },
 
   // ========== 13.00 Marketing ==========
-  sub("13.00", "Despesas c/ marketing (fix)", ["13.01", "13.02", "13.03"], "despesas"),
+  sub("13.00", "Despesas c/ marketing (fix)", ["13.01"], "despesas"),
   { code: "13.01", label: "PROPAGANDA", sign: "-", indent: 1 },
-  { code: "13.02", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "13.03", label: "Linha livre", sign: "-", indent: 1 },
 
   // ========== 14.00 Serviços de Terceiros ==========
-  sub("14.00", "Despesas c/ serviços de Terceiros (fix)", [
-    "14.01","14.02","14.03","14.04","14.05","14.06","14.07","14.08","14.09",
-  ], "despesas"),
+  sub("14.00", "Despesas c/ serviços de Terceiros (fix)", ["14.01", "14.02", "14.03"], "despesas"),
   { code: "14.01", label: "SERVIÇOS DE TERCEIROS", sign: "-", indent: 1 },
   { code: "14.02", label: "Segurança (alarme)", sign: "-", indent: 1 },
   { code: "14.03", label: "Sistema", sign: "-", indent: 1 },
-  { code: "14.04", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "14.05", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "14.06", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "14.07", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "14.08", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "14.09", label: "Linha livre", sign: "-", indent: 1 },
 
   // ========== 15.00 Despesas Adm/Gerais ==========
   sub("15.00", "Despesas Adm/ Gerais (fix)", [
@@ -281,7 +219,7 @@ export const DRE_CATEGORIES: DreCategory[] = [
 
   // ========== 16.00 EBIT ==========
   sub("16.00", "Lucro Operacional (EBIT)", [
-    "6.00","-7.00","-8.00","-9.00","-10.00","-11.00","-12.00","-13.00","-14.00","-15.00",
+    "6.00","-7.00","-10.00","-11.00","-12.00","-13.00","-14.00","-15.00",
   ], "ebit"),
 
   // ========== 17.00 Despesas Financeiras Fixas ==========
@@ -291,34 +229,24 @@ export const DRE_CATEGORIES: DreCategory[] = [
   { code: "704", label: "IOF", sign: "-", auto_from: ["704"], indent: 1 },
   { code: "799", label: "Outras Despesas Financeiras", sign: "-", auto_from: ["799"], indent: 1 },
 
-  // ========== 18.00 Despesas Financeiras Variáveis ==========
-  sub("18.00", "Despesas Financeiras Variáveis (var)", ["18.01", "18.02", "18.03", "18.04"], "financeiras"),
-  { code: "18.01", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "18.02", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "18.03", label: "Linha livre", sign: "-", indent: 1 },
-  { code: "18.04", label: "Linha livre", sign: "-", indent: 1 },
-
   // ========== 19.00 Receitas Financeiras ==========
-  sub("19.00", "Receitas Financeiras", ["701", "19.02", "19.03"], "financeiras"),
+  sub("19.00", "Receitas Financeiras", ["701", "19.02"], "financeiras"),
   { code: "701", label: "Receitas Financeiras", sign: "+", auto_from: ["701"], indent: 1 },
   { code: "19.02", label: "Juros de clientes (atraso)", sign: "+", indent: 1 },
-  { code: "19.03", label: "Descontos Recebidos", sign: "+", indent: 1 },
 
   // ========== 20.00 Outras Receitas ==========
-  sub("20.00", "Outras Receitas", ["20.01", "20.02", "20.03"], "receita"),
+  sub("20.00", "Outras Receitas", ["20.01", "20.02"], "receita"),
   { code: "20.01", label: "Venda de ativos imobilizados (ganho)", sign: "+", indent: 1 },
   { code: "20.02", label: "Rec. Juros/multas atraso", sign: "+", indent: 1 },
-  { code: "20.03", label: "Linha livre", sign: "+", indent: 1 },
 
   // ========== 21.00 Outras Despesas ==========
-  sub("21.00", "Outras Despesas", ["21.01", "21.02", "21.03"], "despesas"),
+  sub("21.00", "Outras Despesas", ["21.01", "21.02"], "despesas"),
   { code: "21.01", label: "Outras despesas", sign: "-", indent: 1 },
   { code: "21.02", label: "Perda de Estoque", sign: "-", indent: 1 },
-  { code: "21.03", label: "Linha livre", sign: "-", indent: 1 },
 
   // ========== 22.00 Lucro antes do IRPJ e CSLL ==========
   sub("22.00", "Lucro (antes do IRPJ e da CSLL)", [
-    "16.00","-17.00","-18.00","19.00","20.00","-21.00",
+    "16.00","-17.00","19.00","20.00","-21.00",
   ], "lucro"),
   { code: "22.01", label: "Imposto Renda (IRPJ)", sign: "-", indent: 1 },
   { code: "22.02", label: "Contribuição Social (CSLL)", sign: "-", indent: 1 },
@@ -332,10 +260,8 @@ export const DRE_CATEGORIES: DreCategory[] = [
     "-801","-899",
     "901","902","903","904","905","906","999",
   ], "caixa"),
-  // Movimentação dos sócios
   { code: "801", label: "Distribuição de Lucros", sign: "-", indent: 1 },
   { code: "899", label: "Outras Movimentações de Sócios", sign: "-", indent: 1 },
-  // Entradas de caixa
   { code: "901", label: "Aporte de Capital", sign: "+", indent: 1 },
   { code: "902", label: "Crédito de Financiamento", sign: "+", indent: 1 },
   { code: "903", label: "Empréstimos Obtidos", sign: "+", indent: 1 },
@@ -368,4 +294,3 @@ export const DRE_BAND_BG: Record<DreBand, string> = {
   lucro:       "bg-[hsl(var(--dre-band-lucro))]",
   caixa:       "bg-[hsl(var(--dre-band-caixa))]",
 };
-
