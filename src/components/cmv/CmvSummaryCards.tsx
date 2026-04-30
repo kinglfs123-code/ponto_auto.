@@ -17,7 +17,7 @@ export default function CmvSummaryCards({ vendasAlmoco, vendasJantar, convenios,
     { label: "Vendas Almoço", value: formatBRL(vendasAlmoco), tone: "text-foreground" },
     { label: "Vendas Jantar", value: formatBRL(vendasJantar), tone: "text-foreground" },
     { label: "Convênios", value: formatBRL(convenios), tone: "text-foreground" },
-    { label: "Compras (cód. 301)", value: formatBRL(compras), tone: "text-foreground" },
+    { label: "Compras", value: formatBRL(compras), tone: "text-foreground" },
   ];
 
   return (
@@ -41,7 +41,7 @@ export default function CmvSummaryCards({ vendasAlmoco, vendasJantar, convenios,
           {cmvPct == null ? "—" : `${(cmvPct * 100).toFixed(2)}%`}
         </div>
         <div className="text-xs text-muted-foreground mt-1">
-          Meta: ≤ {(CMV_TARGET * 100).toFixed(0)}%
+          Meta:  {(CMV_TARGET * 100).toFixed(0)}%
         </div>
       </div>
     </div>

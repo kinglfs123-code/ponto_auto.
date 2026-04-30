@@ -90,12 +90,12 @@ export default function CmvMonthTable({ rows }: Props) {
           <tr className="border-b border-border/40">
             <th className="text-left px-3 py-2">Dia</th>
             {FIELDS.map((f) => (
-              <th key={f.key} className="text-right px-2 py-2 font-medium">
+              <th key={f.key} className="px-2 py-2 font-medium text-center">
                 {f.label}
               </th>
             ))}
-            <th className="text-right px-2 py-2 font-medium">Compras 301</th>
-            <th className="text-right px-2 py-2 font-medium">CMV %</th>
+            <th className="px-2 py-2 font-medium text-center">Compras</th>
+            <th className="px-2 py-2 font-medium text-center">CMV %</th>
             <th className="text-right px-3 py-2 font-medium">Desvio</th>
           </tr>
         </thead>
