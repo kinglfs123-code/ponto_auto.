@@ -3,14 +3,12 @@ import { Link, useLocation } from "react-router-dom";
 
 // Prefetch route chunks on hover/focus to avoid waiting for download on click
 const prefetchers: Record<string, () => Promise<unknown>> = {
-  "/empresas": () => import("@/pages/Empresas"),
   "/funcionarios": () => import("@/pages/Funcionarios"),
   "/ponto": () => import("@/pages/Ponto"),
   "/holerites": () => import("@/pages/Holerites"),
   "/relatorios": () => import("@/pages/Relatorios"),
 };
 import {
-  Building2,
   ClipboardList,
   FileText,
   Users,
@@ -21,7 +19,6 @@ import { useWorkflowStatus, isRouteEnabled, getRouteMessage } from "@/hooks/use-
 import { toast } from "@/hooks/use-toast";
 
 const links = [
-  { to: "/empresas", label: "Empresas", icon: Building2, color: "--primary" },
   { to: "/funcionarios", label: "Colaboradores", icon: Users, color: "--info" },
   { to: "/ponto", label: "Ponto", icon: ClipboardList, color: "--warning" },
   { to: "/holerites", label: "Holerites", icon: Receipt, color: "--success" },

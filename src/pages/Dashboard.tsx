@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Building2, ClipboardList, FileText, Plus, Users, Lock } from "lucide-react";
+import { Building2, ClipboardList, FileText, Users, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCNPJ } from "@/lib/format";
@@ -24,14 +24,13 @@ export default function Dashboard() {
   });
 
   const quickActions = [
-    { to: "/empresas", label: "Nova empresa", icon: Building2 },
     { to: "/funcionarios", label: "Colaboradores", icon: Users },
     { to: "/ponto", label: "Importar ponto", icon: ClipboardList },
     { to: "/relatorios", label: "Relatórios", icon: FileText },
   ];
 
   const getNextStep = (): string | null => {
-    if (!workflow.temEmpresa) return "/empresas";
+    if (!workflow.temEmpresa) return null;
     if (!workflow.temFuncionario) return "/funcionarios";
     if (!workflow.temFolha) return "/ponto";
     return null;
@@ -53,7 +52,7 @@ export default function Dashboard() {
 
         {/* Quick actions */}
         <div
-          className="grid grid-cols-2 sm:grid-cols-4 gap-2 animate-fade-in"
+          className="grid grid-cols-3 gap-2 animate-fade-in"
           style={{ animationDelay: "100ms", animationFillMode: "backwards" }}
         >
           {quickActions.map((a) => {
@@ -117,12 +116,7 @@ export default function Dashboard() {
                 <div className="mx-auto mb-3 h-12 w-12 rounded-2xl bg-muted flex items-center justify-center">
                   <Building2 className="h-6 w-6 text-muted-foreground" />
                 </div>
-                <p className="text-muted-foreground text-sm mb-3">Nenhuma empresa cadastrada</p>
-                <Button asChild size="sm">
-                  <Link to="/empresas" className="gap-1.5">
-                    <Plus className="h-4 w-4" /> Cadastrar empresa
-                  </Link>
-                </Button>
+                <p className="text-muted-foreground text-sm">Nenhuma empresa cadastrada</p>
               </div>
             ) : (
               empresas.map((e) => (
