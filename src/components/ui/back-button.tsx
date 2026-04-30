@@ -42,4 +42,4 @@ export function BackButton({ fallback, label = "Voltar", className }: BackButton
   );
 }
 
-export default BackButton;
+

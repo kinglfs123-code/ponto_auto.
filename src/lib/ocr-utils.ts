@@ -1,7 +1,7 @@
 // OCR utilities: validation, preprocessing config, confidence
 
 /** Confidence thresholds and color mapping */
-export const CONFIDENCE_CONFIG = {
+const CONFIDENCE_CONFIG = {
   thresholds: { high: 90, medium: 70, low: 0 },
   colors: {
     high: "hsl(var(--success))",
@@ -20,7 +20,7 @@ export const CONFIDENCE_CONFIG = {
   },
 } as const;
 
-export type ConfidenceLevel = "high" | "medium" | "low";
+type ConfidenceLevel = "high" | "medium" | "low";
 
 /** Get confidence level from a numeric score (0-100) or string */
 export function getConfidenceLevel(confidence: number | string | undefined): ConfidenceLevel {
@@ -38,7 +38,7 @@ export function getConfidenceLevel(confidence: number | string | undefined): Con
 }
 
 /** Preprocessing configuration */
-export const PREPROCESS_CONFIG = {
+const PREPROCESS_CONFIG = {
   maxWidth: 2048,
   maxHeight: 2048,
   quality: 0.9,

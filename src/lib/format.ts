@@ -1,8 +1,8 @@
 // Single source of truth for display formatting and validation across the app.
 // Re-exports existing utilities and adds standardized helpers (DD/MM/AAAA, etc).
 
-export { maskCNPJ as formatCNPJ, maskCPF as formatCPF, validateCNPJ, maskCNPJ, maskCPF, maskHM } from "./ponto-rules";
-export { formatBRL, parseBRL, maskCurrencyInput, todayISO, addDaysISO } from "./currency";
+export { maskCNPJ as formatCNPJ } from "./ponto-rules";
+export { formatBRL, parseBRL, maskCurrencyInput, todayISO } from "./currency";
 
 /**
  * Always returns DD/MM/AAAA. Accepts:
@@ -42,20 +42,4 @@ export function formatDateBR(input: string | Date | null | undefined): string {
   const m = String(dt.getMonth() + 1).padStart(2, "0");
   const y = dt.getFullYear();
   return `${d}/${m}/${y}`;
-}
-
-/** Validates CPF (11 digits with check digits). */
-export function validateCPF(cpf: string): boolean {
-  const d = cpf.replace(/\D/g, "");
-  if (d.length !== 11) return false;
-  if (/^(\d)\1{10}$/.test(d)) return false;
-  const calc = (base: string, factor: number) => {
-    let sum = 0;
-    for (let i = 0; i < base.length; i++) sum += parseInt(base[i], 10) * (factor - i);
-    const r = (sum * 10) % 11;
-    return r === 10 ? 0 : r;
-  };
-  const dv1 = calc(d.slice(0, 9), 10);
-  const dv2 = calc(d.slice(0, 10), 11);
-  return dv1 === parseInt(d[9], 10) && dv2 === parseInt(d[10], 10);
 }

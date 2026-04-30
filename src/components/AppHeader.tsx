@@ -1,4 +1,4 @@
-import BackButton from "@/components/ui/back-button";
+import { BackButton } from "@/components/ui/back-button";
 import SettingsMenu from "@/components/SettingsMenu";
 import ModuleSwitcher, { type ModuleKey } from "@/components/ModuleSwitcher";
 

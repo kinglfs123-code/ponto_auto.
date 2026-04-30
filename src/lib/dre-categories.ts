@@ -369,5 +369,3 @@ export const DRE_BAND_BG: Record<DreBand, string> = {
   caixa:       "bg-[hsl(var(--dre-band-caixa))]",
 };
 
-/** Versão sticky (mesmo bg, usado em colunas pinned). */
-export const DRE_BAND_BG_STICKY: Record<DreBand, string> = DRE_BAND_BG;
