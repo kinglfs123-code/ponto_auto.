@@ -40,7 +40,7 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
   const [googleConectado, setGoogleConectado] = useState<boolean | null>(null);
   const [connecting, setConnecting] = useState(false);
 
-  // refs para garantir disparo único por contexto
+  
   const autoAnalyzedRef = useRef<string | null>(null);
   const autoSyncedRef = useRef<string | null>(null);
 
@@ -86,7 +86,7 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [funcionarioId]);
 
-  // trata retorno do OAuth (?google=ok|error)
+  
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const g = params.get("google");
@@ -173,7 +173,7 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
     }
   };
 
-  // Auto-limpeza: se não há contratos anexados, apaga qualquer resíduo (DB + Google Agenda)
+  
   useEffect(() => {
     if (loading) return;
     if (contratoIds.length > 0) return;
@@ -207,7 +207,7 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, contratoIds.length]);
 
-  // Auto-análise quando o conjunto de contratos muda (novos arquivos anexados)
+  
   useEffect(() => {
     if (loading) return;
     if (contratoIds.length === 0) return;
@@ -218,7 +218,7 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, contratoKey, analyzing]);
 
-  // Auto-sync quando há alertas pendentes e Google conectado
+  
   useEffect(() => {
     if (loading) return;
     if (contratoIds.length === 0) return;
