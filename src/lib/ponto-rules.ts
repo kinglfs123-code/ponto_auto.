@@ -22,12 +22,6 @@ function parseTimeToMinutes(s: string | null | undefined): number | null {
   return h * 60 + m;
 }
 
-export function parseTimeToHours(s: string | null | undefined): number | null {
-  const mins = parseTimeToMinutes(s);
-  if (mins === null) return null;
-  return mins / 60;
-}
-
 export function formatHours(d: number | null | undefined): string {
   if (d == null || isNaN(d)) return "—";
   const s = d < 0 ? "-" : "";
@@ -107,27 +101,6 @@ export function validateEmail(v: string | null | undefined): boolean {
   if (s.length > 254) return false;
   // user@domain.tld (TLD ≥ 2 chars)
   return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(s);
-}
-
-/** Aplica máscara de telefone BR: (11) 91234-5678 ou (11) 1234-5678 */
-export function maskTelefoneBR(v: string): string {
-  const d = v.replace(/\D/g, "").slice(0, 11);
-  if (d.length === 0) return "";
-  if (d.length <= 2) return `(${d}`;
-  if (d.length <= 6) return `(${d.slice(0, 2)}) ${d.slice(2)}`;
-  if (d.length <= 10) return `(${d.slice(0, 2)}) ${d.slice(2, 6)}-${d.slice(6)}`;
-  return `(${d.slice(0, 2)}) ${d.slice(2, 7)}-${d.slice(7)}`;
-}
-
-/** Telefone BR válido: 10 ou 11 dígitos com DDD entre 11 e 99. Celular (11 dígitos) deve começar com 9. */
-export function validateTelefoneBR(v: string | null | undefined): boolean {
-  if (!v) return false;
-  const d = v.replace(/\D/g, "");
-  if (d.length !== 10 && d.length !== 11) return false;
-  const ddd = parseInt(d.slice(0, 2), 10);
-  if (ddd < 11 || ddd > 99) return false;
-  if (d.length === 11 && d[2] !== "9") return false;
-  return true;
 }
 
 /** Mascara um CPF mantendo apenas os 3 primeiros e os 2 últimos dígitos: 123.***.***-00 */
