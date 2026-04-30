@@ -211,6 +211,19 @@ export default function Empresas() {
           </CardContent>
         </Card>
 
+        {/* Duplicate CNPJ warning */}
+        {duplicateCnpjs.length > 0 && (
+          <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/10 p-3 flex items-start gap-2 text-sm">
+            <AlertTriangle className="h-4 w-4 text-yellow-500 mt-0.5 shrink-0" />
+            <div>
+              <p className="font-medium text-yellow-600 dark:text-yellow-400">CNPJs duplicados detectados</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                {duplicateCnpjs.map((c) => formatCNPJ(c)).join(", ")} — exclua a empresa duplicada para corrigir.
+              </p>
+            </div>
+          </div>
+        )}
+
         {listLoading ? (
           <div className="space-y-2">
             {[1, 2, 3].map((i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
@@ -224,43 +237,52 @@ export default function Empresas() {
           </div>
         ) : (
           <div className="space-y-2">
-            {empresas.map((emp, i) => (
-              <Card
-                key={emp.id}
-                className="animate-fade-in hover:shadow-md transition-all cursor-pointer"
-                style={{ animationDelay: `${i * 60}ms`, animationFillMode: "backwards" }}
-                onClick={() => openEdit(emp)}
-              >
-                <CardContent className="flex items-center justify-between py-3 px-4">
-                  <div className="flex items-center gap-3 min-w-0">
-                    <div className="h-9 w-9 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
-                      <Building2 className="h-4 w-4 text-primary" />
+            {empresas.map((emp, i) => {
+              const isDup = duplicateCnpjs.includes(emp.cnpj);
+              return (
+                <Card
+                  key={emp.id}
+                  className={cn(
+                    "animate-fade-in hover:shadow-md transition-all cursor-pointer",
+                    isDup && "border-yellow-500/40"
+                  )}
+                  style={{ animationDelay: `${i * 60}ms`, animationFillMode: "backwards" }}
+                  onClick={() => openEdit(emp)}
+                >
+                  <CardContent className="flex items-center justify-between py-3 px-4">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className={cn(
+                        "h-9 w-9 rounded-xl flex items-center justify-center shrink-0",
+                        isDup ? "bg-yellow-500/10" : "bg-primary/10"
+                      )}>
+                        {isDup ? <AlertTriangle className="h-4 w-4 text-yellow-500" /> : <Building2 className="h-4 w-4 text-primary" />}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm truncate">{emp.nome}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          CNPJ: {formatCNPJ(emp.cnpj)} · Jornada: {emp.jornada_padrao}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="font-semibold text-sm truncate">{emp.nome}</p>
-                      <p className="text-xs text-muted-foreground truncate">
-                        CNPJ: {formatCNPJ(emp.cnpj)} · Jornada: {emp.jornada_padrao}
-                      </p>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); openEdit(emp); }} className="h-11 w-11 sm:h-8 sm:w-8 text-muted-foreground hover:text-primary" aria-label={`Editar ${emp.nome}`}>
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => { e.stopPropagation(); remove(emp); }}
+                        disabled={removingId === emp.id}
+                        className="h-11 w-11 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
+                        aria-label={`Excluir ${emp.nome}`}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </div>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0">
-                    <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); openEdit(emp); }} className="h-11 w-11 sm:h-8 sm:w-8 text-muted-foreground hover:text-primary" aria-label={`Editar ${emp.nome}`}>
-                      <Pencil className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={(e) => { e.stopPropagation(); remove(emp); }}
-                      disabled={removingId === emp.id}
-                      className="h-11 w-11 sm:h-8 sm:w-8 text-muted-foreground hover:text-destructive"
-                      aria-label={`Excluir ${emp.nome}`}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+                  </CardContent>
+                </Card>
+              );
+            })}
           </div>
         )}
       </div>
