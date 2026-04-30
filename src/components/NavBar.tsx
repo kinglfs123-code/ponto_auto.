@@ -1,7 +1,7 @@
 import { memo, type CSSProperties } from "react";
 import { Link, useLocation } from "react-router-dom";
 
-// Prefetch route chunks on hover/focus to avoid waiting for download on click
+
 const prefetchers: Record<string, () => Promise<unknown>> = {
   "/funcionarios": () => import("@/pages/Funcionarios"),
   "/ponto": () => import("@/pages/Ponto"),
