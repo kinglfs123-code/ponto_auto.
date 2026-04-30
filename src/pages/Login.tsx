@@ -26,7 +26,6 @@ export default function Login() {
   }, []);
 
   const initial = useMemo(() => email.trim().charAt(0).toUpperCase(), [email]);
-  const displayName = email.trim() || "Entrar";
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -91,14 +90,6 @@ export default function Login() {
           >
             {initial ? initial : <User className="h-8 w-8" />}
           </div>
-
-          {/* Name / email preview */}
-          <p
-            className="text-white text-[15px] font-medium tracking-tight max-w-full truncate"
-            style={{ textShadow: "0 1px 8px rgba(0,0,0,0.35)" }}
-          >
-            {displayName}
-          </p>
 
           {/* Unified input pill (email + password) */}
           <div
