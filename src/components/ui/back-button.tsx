@@ -19,7 +19,7 @@ export function BackButton({ fallback, label = "Voltar", className }: BackButton
   const navigate = useNavigate();
 
   const handleClick = () => {
-    // window.history.length is 1 when the tab was opened directly on this URL
+    
     if (typeof window !== "undefined" && window.history.length > 1) {
       navigate(-1);
     } else {
@@ -41,5 +41,4 @@ export function BackButton({ fallback, label = "Voltar", className }: BackButton
     </Button>
   );
 }
-
 

@@ -191,19 +191,16 @@ function calcNightMinutes(entrada: number | null, saida: number | null): number 
   const NIGHT_END = 5 * 60; // 300
 
   let adjustedSaida = saida;
-  // Handle overnight: if exit <= entry, it crossed midnight
   if (saida <= entrada) {
     adjustedSaida = saida + 24 * 60;
   }
 
   let nightMinutes = 0;
 
-  // Check overlap with early morning period: 00:00 – 05:00
   if (entrada < NIGHT_END) {
     nightMinutes += Math.min(adjustedSaida, NIGHT_END) - entrada;
   }
 
-  // Check overlap with late night period: 22:00 – 29:00 (05:00 next day)
   const nightWindowEnd = NIGHT_END + 24 * 60; // 1740
   if (adjustedSaida > NIGHT_START) {
     const overlapStart = Math.max(entrada, NIGHT_START);
@@ -236,7 +233,6 @@ export function applyToleranceAndDetect(
   const ee = parseTimeToMinutes(registro.hora_entrada_extra);
   const es = parseTimeToMinutes(registro.hora_saida_extra);
 
-  // Detect exceptions from obs
   let tipo_excecao: string | null = registro.tipo_excecao || null;
   const manualExceptions = ["folga", "falta", "atestado"];
   const isManualException = tipo_excecao && manualExceptions.includes(tipo_excecao);
@@ -263,7 +259,6 @@ export function applyToleranceAndDetect(
     else if (isFolga) tipo_excecao = "folga";
   }
 
-  // If absence type (folga, atestado, falta from obs) → everything zero
   const isAbsence = tipo_excecao === "falta" || tipo_excecao === "atestado" || tipo_excecao === "folga";
   if (isAbsence) {
     return {
@@ -284,7 +279,6 @@ export function applyToleranceAndDetect(
     };
   }
 
-  // No records at all → falta
   if (me === null && ms === null && te === null && ts === null) {
     return {
       dia,
@@ -304,50 +298,38 @@ export function applyToleranceAndDetect(
     };
   }
 
-  // === NEW LOGIC: Compare punch times against standard schedule ===
-  // First entry and last exit of the day
   const primeiraEntrada = me ?? te ?? ee;
   const ultimaSaida = es ?? ts ?? ms;
 
   let extraMinutos = 0;
   let atrasoMinutos = 0;
 
-  // ENTRY: arrived before standard = extra, after = atraso (with 5min tolerance)
   if (primeiraEntrada !== null) {
     const diffEntrada = primeiraEntrada - entradaPadraoMin;
     if (diffEntrada < -TOLERANCE_MINUTES) {
-      // Arrived early → extra (amount before standard entry)
       extraMinutos += Math.abs(diffEntrada);
     } else if (diffEntrada > TOLERANCE_MINUTES) {
-      // Arrived late → atraso
       atrasoMinutos += diffEntrada;
     }
   }
 
-  // EXIT: left after standard = extra, before = atraso (with 5min tolerance)
   if (ultimaSaida !== null) {
     const diffSaida = ultimaSaida - saidaPadraoMin;
     if (diffSaida > TOLERANCE_MINUTES) {
-      // Left late → extra
       extraMinutos += diffSaida;
     } else if (diffSaida < -TOLERANCE_MINUTES) {
-      // Left early → atraso
       atrasoMinutos += Math.abs(diffSaida);
     }
   }
 
-  // Normal hours = standard workday (always, when they worked)
   const jornadaHours = jornadaMinutos / 60;
 
-  // Night hours calculation
   let nightMinutes = 0;
   nightMinutes += calcNightMinutes(me, ms);
   nightMinutes += calcNightMinutes(te, ts);
   nightMinutes += calcNightMinutes(ee, es);
 
-  // Detect exception type
   if (atrasoMinutos > 0 && extraMinutos > 0) {
-    // Has both delay and extra — unusual but possible
     tipo_excecao = null;
   } else if (atrasoMinutos > 0) {
     const hasEarlyExit = ultimaSaida !== null && ultimaSaida - saidaPadraoMin < -TOLERANCE_MINUTES;
@@ -397,7 +379,6 @@ export function calcularResumo(registros: RegistroPonto[]): ResumoCalculo {
     atraso += r.atraso_minutos || 0;
   }
 
-  // Saldo = extras(min) - atraso(min), converted to hours
   const extrasMin = Math.round(extras * 60);
   const saldo = (extrasMin - atraso) / 60;
 
@@ -410,3 +391,4 @@ export function calcularResumo(registros: RegistroPonto[]): ResumoCalculo {
     saldo: Math.round(saldo * 100) / 100,
   };
 }
+

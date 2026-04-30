@@ -1,4 +1,3 @@
-// OCR utilities: validation, preprocessing config, confidence
 
 /** Confidence thresholds and color mapping */
 const CONFIDENCE_CONFIG = {
@@ -68,7 +67,6 @@ export function preprocessImage(
       const ctx = c.getContext("2d")!;
       ctx.drawImage(img, 0, 0, w, h);
 
-      // Contrast boost
       const imageData = ctx.getImageData(0, 0, w, h);
       const d = imageData.data;
       for (let i = 0; i < d.length; i += 4) {
@@ -83,3 +81,4 @@ export function preprocessImage(
     img.src = dataUrl;
   });
 }
+

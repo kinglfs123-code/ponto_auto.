@@ -41,7 +41,6 @@ function FuncionarioSelectorBase({ empresaId, value, manualName, onSelect, onMan
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [funcionarios]);
 
-  // Fallback: empresa sem colaboradores cadastrados — input manual
   if (funcionarios.length === 0) {
     return (
       <Input
@@ -78,3 +77,4 @@ function FuncionarioSelectorBase({ empresaId, value, manualName, onSelect, onMan
 
 const FuncionarioSelector = memo(FuncionarioSelectorBase);
 export default FuncionarioSelector;
+
