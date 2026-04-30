@@ -40,7 +40,6 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
   const [googleConectado, setGoogleConectado] = useState<boolean | null>(null);
   const [connecting, setConnecting] = useState(false);
 
-  
   const autoAnalyzedRef = useRef<string | null>(null);
   const autoSyncedRef = useRef<string | null>(null);
 
@@ -86,7 +85,6 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [funcionarioId]);
 
-  
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const g = params.get("google");
@@ -173,7 +171,6 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
     }
   };
 
-  
   useEffect(() => {
     if (loading) return;
     if (contratoIds.length > 0) return;
@@ -207,7 +204,6 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, contratoIds.length]);
 
-  
   useEffect(() => {
     if (loading) return;
     if (contratoIds.length === 0) return;
@@ -218,7 +214,6 @@ export function AnaliseContrato({ funcionarioId, contratos }: Props) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loading, contratoKey, analyzing]);
 
-  
   useEffect(() => {
     if (loading) return;
     if (contratoIds.length === 0) return;
@@ -338,3 +333,4 @@ function Field({ label, value, className = "" }: { label: string; value: string;
     </div>
   );
 }
+

@@ -38,3 +38,4 @@ export function formatDateBR(input: string | Date | null | undefined): string {
   const y = dt.getFullYear();
   return `${d}/${m}/${y}`;
 }
+

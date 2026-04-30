@@ -391,3 +391,4 @@ export function calcularResumo(registros: RegistroPonto[]): ResumoCalculo {
     saldo: Math.round(saldo * 100) / 100,
   };
 }
+

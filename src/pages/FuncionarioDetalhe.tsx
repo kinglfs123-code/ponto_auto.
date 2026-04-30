@@ -1206,3 +1206,4 @@ function EmptyState({ icon: Icon, text }: { icon: any; text: string }) {
     </div>
   );
 }
+

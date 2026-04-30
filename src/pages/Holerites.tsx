@@ -50,12 +50,10 @@ export default function Holerites() {
     }
   }, [empresaId, mesRef]);
 
-  
   useEffect(() => {
     if (empresaId && mesRef) loadData();
   }, [empresaId, mesRef, loadData]);
 
-  
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     if (params.get("google") === "error" && params.get("reason") === "missing_scopes") {
@@ -433,3 +431,4 @@ export default function Holerites() {
     </div>
   );
 }
+

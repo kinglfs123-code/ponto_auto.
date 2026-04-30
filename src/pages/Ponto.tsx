@@ -124,7 +124,6 @@ export default function Ponto() {
     setFuncionarios([]);
   };
 
-  
   const fetchCorrections = async (empresaId: string): Promise<Correcao[]> => {
     const { data } = await supabase
       .from("correcoes_ia")
@@ -135,7 +134,6 @@ export default function Ponto() {
     return (data || []) as Correcao[];
   };
 
-  
   const onPhoto = useCallback((f: File | undefined) => {
     if (!f) return;
     const r = new FileReader();
@@ -174,7 +172,6 @@ export default function Ponto() {
         
         setAiOriginals(result.registros);
 
-        
         const confMap: Record<number, string> = {};
         let lowConfCount = 0;
         result.registros.forEach((r) => {
@@ -240,7 +237,6 @@ export default function Ponto() {
     setRegistros(u);
   };
 
-  
   const saveCorrections = async (folhaId: string) => {
     if (!empresa || aiOriginals.length === 0) return;
 
@@ -333,7 +329,6 @@ export default function Ponto() {
       const { error: rErr } = await supabase.from("registros_ponto").insert(regs);
       if (rErr) throw rErr;
 
-      
       await saveCorrections(folha.id);
 
       toast({ title: "Folha de ponto salva!" });
@@ -608,3 +603,4 @@ export default function Ponto() {
     </div>
   );
 }
+

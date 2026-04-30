@@ -1,7 +1,6 @@
 import { memo, type CSSProperties } from "react";
 import { Link, useLocation } from "react-router-dom";
 
-
 const prefetchers: Record<string, () => Promise<unknown>> = {
   "/funcionarios": () => import("@/pages/Funcionarios"),
   "/ponto": () => import("@/pages/Ponto"),
@@ -79,3 +78,4 @@ function NavBarBase() {
 
 const NavBar = memo(NavBarBase);
 export default NavBar;
+
