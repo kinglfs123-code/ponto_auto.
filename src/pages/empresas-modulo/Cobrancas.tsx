@@ -19,7 +19,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/hooks/use-toast";
 import { useConfirm } from "@/hooks/use-confirm";
-import { Pencil, Plus, Trash2, Receipt, ChevronLeft, ChevronRight } from "lucide-react";
+import { Pencil, Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatBRL, maskCurrencyInput, parseBRL, formatDateBR, todayISO } from "@/lib/format";
 import {
   BILLING_STATUS_LABELS,
@@ -258,7 +258,6 @@ export default function Cobrancas() {
         </div>
       ) : rows.length === 0 ? (
         <div className="liquid-glass !rounded-2xl p-8 text-center space-y-3">
-          <Receipt className="h-10 w-10 mx-auto text-muted-foreground" />
           <p className="text-sm text-muted-foreground">Nenhuma cobrança neste mês.</p>
           <Button variant="outline" onClick={startCreate}>
             <Plus className="h-4 w-4 mr-2" /> Lançar cobrança
