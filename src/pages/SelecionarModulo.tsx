@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Users, Wallet, Building2, Calculator } from "lucide-react";
+import { Users, Wallet, Building2, Calculator, LineChart, Megaphone } from "lucide-react";
 import { useEmpresa } from "@/contexts/EmpresaContext";
 import { formatCNPJ } from "@/lib/format";
 import AppHeader from "@/components/AppHeader";
@@ -44,6 +44,20 @@ export default function SelecionarModulo() {
       desc: "Custo da mercadoria vendida.",
       icon: Calculator,
       to: "/cmv",
+    },
+    {
+      key: "dre",
+      label: "DRE",
+      desc: "Demonstrativo de resultado mensal.",
+      icon: LineChart,
+      to: "/dre",
+    },
+    {
+      key: "marketing",
+      label: "Marketing",
+      desc: "Campanhas e investimento.",
+      icon: Megaphone,
+      to: "/marketing",
     },
   ];
 

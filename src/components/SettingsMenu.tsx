@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Settings, Sun, Moon, LogOut, Image as ImageIcon, Trash2 } from "lucide-react";
+import { Settings, Sun, Moon, LogOut, Image as ImageIcon, Trash2, Building2 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useWallpaper } from "@/contexts/WallpaperContext";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -75,6 +75,21 @@ export default function SettingsMenu({ className = "" }: Props) {
           <div className="px-3 pt-1 pb-2 text-[11px] uppercase tracking-wider text-muted-foreground">
             Configurações
           </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setOpen(false);
+              navigate("/empresas");
+            }}
+            className="liquid-hover w-full flex items-center justify-between gap-3 rounded-xl px-3 py-2 text-sm hover:bg-foreground/5"
+          >
+            <span className="flex items-center gap-3">
+              <Building2 className="h-5 w-5" />
+              <span>Empresas</span>
+            </span>
+            <span className="text-xs text-muted-foreground">Gerenciar</span>
+          </button>
 
           <button
             type="button"

@@ -69,10 +69,6 @@ export default function SelecionarEmpresa() {
                 <div className="text-muted-foreground group-hover:text-primary transition-colors">→</div>
               </button>
             ))}
-            <Button variant="outline" onClick={() => navigate("/empresas")} className="mt-2">
-              <Plus className="h-4 w-4 mr-2" />
-              Nova empresa
-            </Button>
           </div>
         )}
       </div>

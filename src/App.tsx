@@ -32,6 +32,10 @@ const LancamentoRapido = lazy(() => import("@/pages/financeiro/LancamentoRapido"
 const Contas = lazy(() => import("@/pages/financeiro/Contas"));
 const Fornecedores = lazy(() => import("@/pages/financeiro/Fornecedores"));
 const Codigos = lazy(() => import("@/pages/financeiro/Codigos"));
+const DreHome = lazy(() => import("@/pages/dre/Home"));
+const DreMensal = lazy(() => import("@/pages/dre/Mensal"));
+const DreAnual = lazy(() => import("@/pages/dre/Anual"));
+const MarketingHome = lazy(() => import("@/pages/marketing/Home"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -91,6 +95,14 @@ const App = () => (
                   {/* Módulo CMV */}
                   <Route path="/cmv" element={<AuthGuard><CmvHome /></AuthGuard>} />
                   <Route path="/cmv/tabela" element={<AuthGuard><CmvTabela /></AuthGuard>} />
+
+                  {/* Módulo DRE */}
+                  <Route path="/dre" element={<AuthGuard><DreHome /></AuthGuard>} />
+                  <Route path="/dre/mensal" element={<AuthGuard><DreMensal /></AuthGuard>} />
+                  <Route path="/dre/anual" element={<AuthGuard><DreAnual /></AuthGuard>} />
+
+                  {/* Módulo Marketing */}
+                  <Route path="/marketing" element={<AuthGuard><MarketingHome /></AuthGuard>} />
 
                   <Route path="/unsubscribe" element={<Unsubscribe />} />
                   <Route path="*" element={<NotFound />} />
