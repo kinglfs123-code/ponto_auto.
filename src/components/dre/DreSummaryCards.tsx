@@ -1,6 +1,7 @@
 import { formatBRL } from "@/lib/format";
 import { DRE_HEADLINE_CODES, DRE_INDEX } from "@/lib/dre-categories";
 import { yearValue, pctOfReceita } from "./dre-shared";
+
 import type { DreYearMatrix } from "@/types/dre";
 
 interface Props {
