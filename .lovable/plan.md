@@ -1,61 +1,35 @@
+## Novo fluxo de faturamento
 
-# Limpeza de código: ~100 linhas desnecessárias e correções
+### Fluxo proposto (sequencial)
 
-Varredura completa do projeto. Abaixo, as ações organizadas por tipo.
+1. **Aguardando OC** (badge azul) — estado inicial, esperando ordem de compra do cliente
+2. **Faturado** (badge amarelo) — OC recebida e número preenchido, nota emitida
+3. **Pendente de Pagamento** (badge laranja) — aguardando pagamento do cliente
+4. **Pago** (badge verde) — pagamento recebido
 
----
+O usuário pode avançar/retroceder manualmente entre os status.
 
-## 1. Linhas em branco duplicadas (~40 linhas)
-Arquivos com múltiplas linhas em branco consecutivas ou excesso de espaçamento:
-- `src/pages/FuncionarioDetalhe.tsx` — 73 linhas em branco (reduzir para ~35)
-- `src/pages/Ponto.tsx` — 41 linhas em branco (reduzir para ~20)
-- `src/hooks/use-toast.ts` — 30 linhas em branco (reduzir para ~15)
-- `src/pages/Holerites.tsx` — 28 (reduzir para ~14)
-- `src/components/AnaliseContrato.tsx` — 27 (reduzir para ~13)
-- `src/pages/financeiro/Contas.tsx` — 25 (reduzir para ~12)
-- `src/components/dre/dre-shared.tsx` — 24 (reduzir para ~12)
-- `src/pages/empresas-modulo/Cobrancas.tsx` — 22 (reduzir para ~11)
-- `src/pages/Funcionarios.tsx` — 21 (reduzir para ~10)
-- `src/components/SensitiveText.tsx` — linhas em branco finais
-- `src/components/ui/back-button.tsx` — linhas em branco finais
+### Mudanças
 
-## 2. Comentários desnecessários / óbvios (~30 linhas)
-Remover comentários que apenas descrevem o que o código já diz:
-- `src/pages/FuncionarioDetalhe.tsx` — ~20 comentários tipo `// Holerite upload`, `// Folha`, `// Edit funcionario`, `// Férias form`, `// ==== Documentos ====`, etc.
-- `src/lib/ponto-rules.ts` — ~10 comentários descritivos tipo `// Handle overnight`, `// Check overlap`, `// Detect exceptions from obs`
-- `src/lib/format.ts` — comentários `// Pure date`, `// Datetime ISO`, `// Fallback`
-- `src/lib/ocr-utils.ts` — `// Contrast boost`
+**Banco de dados (migration)**
+- Adicionar coluna `oc_number` (text, nullable) na tabela `client_billings` para guardar o número da OC
+- Atualizar o enum `billing_status` para ter 4 valores: `aguardando_oc`, `faturado`, `pendente_pagamento`, `pago`
+- Remover dependência de `payment_status` (campo computado antigo) — o novo `billing_status` cobre todo o fluxo
 
-## 3. Comentários eslint-disable (~5 linhas)
-- `src/components/AnaliseContrato.tsx` — 4x `// eslint-disable-next-line react-hooks/exhaustive-deps`
-- `src/components/FuncionarioSelector.tsx` — 1x `// eslint-disable-next-line react-hooks/exhaustive-deps`
-Corrigir adicionando as dependências corretas aos arrays ou usar hooks adequadamente.
+**Frontend — tipos (`src/types/empresas-modulo.ts`)**
+- Atualizar `BillingStatus` para os 4 valores
+- Atualizar labels e remover `PaymentStatusBilling` / `computePaymentStatus` (substituídos pelo status único)
+- Definir cores: azul (aguardando_oc), amarelo (faturado), laranja (pendente_pagamento), verde (pago)
 
-## 4. `as any` casts (~2 linhas)
-- `src/pages/FolhaDetalhe.tsx:92` — `as any` no update
-- `src/pages/Ponto.tsx:310` — `as any` no insert
-Substituir por tipagem correta usando os tipos gerados do Supabase.
+**Frontend — Cobranças (`src/pages/empresas-modulo/Cobrancas.tsx`)**
+- Mostrar apenas 1 badge de status (com a cor correta) em vez de 2 badges separados
+- Adicionar campo "Nº OC" no formulário — ao preencher, o status muda automaticamente para "Faturado"
+- Select de status com as 4 opções para ajuste manual
+- Atualizar cards de resumo: Aguardando OC, Faturado, Pendente, Pago
+- Remover campos `received_date` e lógica de `payment_status`
 
-## 5. Trailing whitespace / EOF cleanup (~5 linhas)
-- `src/components/SensitiveText.tsx` — linha 67-68 em branco no final
-- `src/components/ui/back-button.tsx` — linhas 44-45 em branco no final
-- `src/pages/cmv/Home.tsx` — linha 38 em branco extra
-- `src/pages/financeiro/Fornecedores.tsx` — linha 25 em branco extra
+### Detalhes técnicos
 
-## 6. Warnings de `forwardRef` no console (~2 correções)
-O console mostra warnings porque `BackButton` e `SettingsMenu` são usados como children de componentes que tentam passar ref. Não é erro real pois não usam `asChild` diretamente, mas podemos limpar o warning envolvendo com `forwardRef`.
-
----
-
-### Resumo de impacto
-| Tipo | Linhas removidas/corrigidas |
-|------|---------------------------|
-| Linhas em branco | ~40 |
-| Comentários desnecessários | ~30 |
-| eslint-disable | ~5 |
-| as any | ~2 |
-| EOF/trailing | ~5 |
-| forwardRef fixes | ~10 (adicionadas, mas corrigem warnings) |
-| **Total** | **~82 linhas removidas + 2 warnings corrigidos** |
-
-Nenhuma alteração funcional — apenas limpeza de código.
+- Migration SQL: `ALTER TYPE billing_status ADD VALUE 'pendente_pagamento'; ALTER TYPE billing_status ADD VALUE 'pago';` + `ALTER TABLE client_billings ADD COLUMN oc_number text;`
+- Coluna `payment_status` será mantida no banco por segurança mas ignorada no frontend
+- O campo OC number aparece no card da cobrança quando preenchido

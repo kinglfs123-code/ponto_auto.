@@ -1,16 +1,17 @@
-export type BillingStatus = "aguardando_oc" | "faturado";
-export type PaymentStatusBilling = "a_receber" | "recebido" | "recebido_com_atraso" | "atrasado";
+export type BillingStatus = "aguardando_oc" | "faturado" | "pendente_pagamento" | "pago";
 
 export const BILLING_STATUS_LABELS: Record<BillingStatus, string> = {
   aguardando_oc: "Aguardando OC",
   faturado: "Faturado",
+  pendente_pagamento: "Pendente Pagamento",
+  pago: "Pago",
 };
 
-export const PAYMENT_STATUS_LABELS: Record<PaymentStatusBilling, string> = {
-  a_receber: "A receber",
-  recebido: "Recebido",
-  recebido_com_atraso: "Recebido com atraso",
-  atrasado: "Atrasado",
+export const BILLING_STATUS_TONE: Record<BillingStatus, string> = {
+  aguardando_oc: "bg-blue-500/15 text-blue-600 border-blue-500/30",
+  faturado: "bg-yellow-500/15 text-yellow-700 border-yellow-500/30",
+  pendente_pagamento: "bg-orange-500/15 text-orange-600 border-orange-500/30",
+  pago: "bg-success/15 text-success border-success/30",
 };
 
 export interface ClientCompany {
@@ -35,22 +36,8 @@ export interface ClientBilling {
   due_date: string | null;
   received_date: string | null;
   billing_status: BillingStatus;
-  payment_status: PaymentStatusBilling;
+  payment_status: string;
+  oc_number: string | null;
   created_at: string;
   updated_at: string;
-}
-
-/** Computes payment status from due/received dates and current billing status. */
-export function computePaymentStatus(opts: {
-  due_date: string | null;
-  received_date: string | null;
-  today: string;
-}): PaymentStatusBilling {
-  const { due_date, received_date, today } = opts;
-  if (received_date) {
-    if (due_date && received_date > due_date) return "recebido_com_atraso";
-    return "recebido";
-  }
-  if (due_date && due_date < today) return "atrasado";
-  return "a_receber";
 }
