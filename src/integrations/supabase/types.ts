@@ -25,6 +25,7 @@ export type Database = {
           empresa_id: string
           id: string
           measurement_date: string | null
+          oc_number: string | null
           payment_status: Database["public"]["Enums"]["payment_status"]
           received_date: string | null
           reference_month: string
@@ -41,6 +42,7 @@ export type Database = {
           empresa_id: string
           id?: string
           measurement_date?: string | null
+          oc_number?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
           received_date?: string | null
           reference_month: string
@@ -57,6 +59,7 @@ export type Database = {
           empresa_id?: string
           id?: string
           measurement_date?: string | null
+          oc_number?: string | null
           payment_status?: Database["public"]["Enums"]["payment_status"]
           received_date?: string | null
           reference_month?: string
@@ -998,7 +1001,11 @@ export type Database = {
       user_owns_relatorio: { Args: { _relatorio_id: string }; Returns: boolean }
     }
     Enums: {
-      billing_status: "aguardando_oc" | "faturado"
+      billing_status:
+        | "aguardando_oc"
+        | "faturado"
+        | "pendente_pagamento"
+        | "pago"
       folha_status: "rascunho" | "finalizada"
       payment_status:
         | "a_receber"
@@ -1132,7 +1139,12 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      billing_status: ["aguardando_oc", "faturado"],
+      billing_status: [
+        "aguardando_oc",
+        "faturado",
+        "pendente_pagamento",
+        "pago",
+      ],
       folha_status: ["rascunho", "finalizada"],
       payment_status: [
         "a_receber",
