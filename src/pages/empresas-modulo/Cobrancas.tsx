@@ -23,12 +23,10 @@ import { Pencil, Plus, Trash2, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatBRL, maskCurrencyInput, parseBRL, formatDateBR, todayISO } from "@/lib/format";
 import {
   BILLING_STATUS_LABELS,
-  PAYMENT_STATUS_LABELS,
-  computePaymentStatus,
+  BILLING_STATUS_TONE,
   type BillingStatus,
   type ClientBilling,
   type ClientCompany,
-  type PaymentStatusBilling,
 } from "@/types/empresas-modulo";
 
 type BillingRow = ClientBilling & { client: ClientCompany | null };
@@ -40,7 +38,7 @@ const emptyForm = {
   description: "",
   amountMasked: "",
   due_date: "",
-  received_date: "",
+  oc_number: "",
   billing_status: "aguardando_oc" as BillingStatus,
 };
 
@@ -56,13 +54,6 @@ function lastOfMonthISO(year: number, month: number) {
   const d = new Date(year, month + 1, 0);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
-
-const STATUS_TONE: Record<PaymentStatusBilling, string> = {
-  recebido: "bg-success/15 text-success border-success/30",
-  recebido_com_atraso: "bg-warning/15 text-warning border-warning/30",
-  a_receber: "bg-warning/15 text-warning border-warning/30",
-  atrasado: "bg-destructive/15 text-destructive border-destructive/30",
-};
 
 export default function Cobrancas() {
   const { empresa } = useEmpresa();
@@ -107,22 +98,15 @@ export default function Cobrancas() {
     staleTime: 30_000,
   });
 
-  const today = todayISO();
-
   const summary = useMemo(() => {
-    const totalFaturado = rows
-      .filter((r) => r.billing_status === "faturado")
-      .reduce((s, r) => s + Number(r.amount), 0);
-    const totalRecebido = rows
-      .filter((r) => r.payment_status === "recebido" || r.payment_status === "recebido_com_atraso")
-      .reduce((s, r) => s + Number(r.amount), 0);
-    const totalAReceber = rows
-      .filter((r) => r.payment_status === "a_receber")
-      .reduce((s, r) => s + Number(r.amount), 0);
-    const totalAtrasado = rows
-      .filter((r) => r.payment_status === "atrasado")
-      .reduce((s, r) => s + Number(r.amount), 0);
-    return { totalFaturado, totalRecebido, totalAReceber, totalAtrasado };
+    const calc = (status: BillingStatus) =>
+      rows.filter((r) => r.billing_status === status).reduce((s, r) => s + Number(r.amount), 0);
+    return {
+      aguardando_oc: calc("aguardando_oc"),
+      faturado: calc("faturado"),
+      pendente_pagamento: calc("pendente_pagamento"),
+      pago: calc("pago"),
+    };
   }, [rows]);
 
   const startCreate = () => {
@@ -138,7 +122,7 @@ export default function Cobrancas() {
       description: b.description ?? "",
       amountMasked: maskCurrencyInput(String(Math.round(Number(b.amount) * 100))),
       due_date: b.due_date ?? "",
-      received_date: b.received_date ?? "",
+      oc_number: b.oc_number ?? "",
       billing_status: b.billing_status,
     });
     setCreating(false);
@@ -154,11 +138,13 @@ export default function Cobrancas() {
       if (!empresa) throw new Error("Empresa não selecionada");
       if (!form.client_company_id) throw new Error("Selecione um cliente");
       const amount = parseBRL(form.amountMasked);
-      const payment_status = computePaymentStatus({
-        due_date: form.due_date || null,
-        received_date: form.received_date || null,
-        today,
-      });
+
+      // Auto-advance: if OC number filled and still aguardando_oc, move to faturado
+      let billing_status = form.billing_status;
+      if (form.oc_number.trim() && billing_status === "aguardando_oc") {
+        billing_status = "faturado";
+      }
+
       const payload = {
         empresa_id: empresa.id,
         client_company_id: form.client_company_id,
@@ -168,9 +154,8 @@ export default function Cobrancas() {
         description: form.description.trim() || null,
         amount,
         due_date: form.due_date || null,
-        received_date: form.received_date || null,
-        billing_status: form.billing_status,
-        payment_status,
+        billing_status,
+        oc_number: form.oc_number.trim() || null,
       };
       if (editing) {
         const { error } = await supabase.from("client_billings").update(payload).eq("id", editing.id);
@@ -232,12 +217,12 @@ export default function Cobrancas() {
 
       {/* Summary */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {[
-          { label: "Faturado", value: summary.totalFaturado, tone: "text-foreground" },
-          { label: "Recebido", value: summary.totalRecebido, tone: "text-secondary-foreground" },
-          { label: "A receber", value: summary.totalAReceber, tone: "text-warning" },
-          { label: "Atrasado", value: summary.totalAtrasado, tone: "text-destructive" },
-        ].map((c) => (
+        {([
+          { label: "Aguardando OC", value: summary.aguardando_oc, tone: "text-blue-600" },
+          { label: "Faturado", value: summary.faturado, tone: "text-yellow-700" },
+          { label: "Pendente", value: summary.pendente_pagamento, tone: "text-orange-600" },
+          { label: "Pago", value: summary.pago, tone: "text-success" },
+        ] as const).map((c) => (
           <div key={c.label} className="liquid-glass !rounded-2xl p-3">
             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">{c.label}</div>
             <div className={`mt-1 text-base font-semibold tabular-nums ${c.tone}`}>{formatBRL(c.value)}</div>
@@ -271,11 +256,8 @@ export default function Cobrancas() {
                 <div className="flex items-center gap-2 flex-wrap">
                   <div className="font-medium truncate">{b.client?.name ?? "—"}</div>
                   <span
-                    className={`text-[10px] px-2 py-0.5 rounded-full border ${STATUS_TONE[b.payment_status]}`}
+                    className={`text-[10px] px-2 py-0.5 rounded-full border ${BILLING_STATUS_TONE[b.billing_status]}`}
                   >
-                    {PAYMENT_STATUS_LABELS[b.payment_status]}
-                  </span>
-                  <span className="text-[10px] px-2 py-0.5 rounded-full border border-border/60 text-muted-foreground">
                     {BILLING_STATUS_LABELS[b.billing_status]}
                   </span>
                 </div>
@@ -285,7 +267,7 @@ export default function Cobrancas() {
                 <div className="text-xs text-muted-foreground flex flex-wrap gap-x-3">
                   <span>Valor: <span className="font-medium text-foreground">{formatBRL(Number(b.amount))}</span></span>
                   {b.due_date && <span>Venc.: {formatDateBR(b.due_date)}</span>}
-                  {b.received_date && <span>Receb.: {formatDateBR(b.received_date)}</span>}
+                  {b.oc_number && <span>OC: <span className="font-medium text-foreground">{b.oc_number}</span></span>}
                 </div>
               </div>
               <div className="flex flex-col gap-1">
@@ -368,7 +350,16 @@ export default function Cobrancas() {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1.5">
-                <Label>Status faturamento</Label>
+                <Label htmlFor="b-oc">Nº OC</Label>
+                <Input
+                  id="b-oc"
+                  placeholder="Ex: OC-12345"
+                  value={form.oc_number}
+                  onChange={(e) => setForm({ ...form, oc_number: e.target.value })}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Status</Label>
                 <Select
                   value={form.billing_status}
                   onValueChange={(v) => setForm({ ...form, billing_status: v as BillingStatus })}
@@ -379,17 +370,10 @@ export default function Cobrancas() {
                   <SelectContent>
                     <SelectItem value="aguardando_oc">Aguardando OC</SelectItem>
                     <SelectItem value="faturado">Faturado</SelectItem>
+                    <SelectItem value="pendente_pagamento">Pendente Pagamento</SelectItem>
+                    <SelectItem value="pago">Pago</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-              <div className="space-y-1.5">
-                <Label htmlFor="b-recv">Data recebimento</Label>
-                <Input
-                  id="b-recv"
-                  type="date"
-                  value={form.received_date}
-                  onChange={(e) => setForm({ ...form, received_date: e.target.value })}
-                />
               </div>
             </div>
             <div className="space-y-1.5">
