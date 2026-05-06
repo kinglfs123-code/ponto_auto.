@@ -152,7 +152,20 @@ export function matchFuncionario<T extends { nome_completo: string }>(nome: stri
   return match || null;
 }
 
-const TOLERANCE_MINUTES = 5;
+/** Adicional noturno CLT: cada 52min30s reais valem 60min legais. */
+export function calcAdicionalNoturnoCLT(realMinutes: number): number {
+  return realMinutes * (60 / 52.5);
+}
+
+/** Format hours as signed HH:MM (e.g. -01:30). */
+export function formatHHMM(d: number | null | undefined): string {
+  if (d == null || isNaN(d)) return "—";
+  const sign = d < 0 ? "-" : "";
+  const totalMinutes = Math.round(Math.abs(d) * 60);
+  const h = Math.floor(totalMinutes / 60);
+  const m = totalMinutes % 60;
+  return `${sign}${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+}
 
 export interface RegistroPonto {
   dia: number;
