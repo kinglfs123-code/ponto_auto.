@@ -229,13 +229,20 @@ function calcNightMinutes(entrada: number | null, saida: number | null): number 
 export function applyToleranceAndDetect(
   registro: Partial<RegistroPonto>,
   jornadaPadraoStr: string,
-  _horarioEntradaPadrao: string = "08:00",
-  _horarioSaidaPadrao: string = "17:00",
-  _intervaloStr: string = "01:00",
+  horarioEntradaPadrao: string = "08:00",
+  horarioSaidaPadrao: string = "17:00",
+  intervaloStr: string = "01:00",
+  ehDiaUtil: boolean = true,
 ): RegistroPonto {
   const dia = typeof registro.dia === "number" ? registro.dia : parseInt(String(registro.dia)) || 0;
 
-  const jornadaMinutos = parseTimeToMinutes(jornadaPadraoStr) || 480; // 8h default
+  const entradaRef = parseTimeToMinutes(horarioEntradaPadrao) ?? 480;
+  const saidaRef = parseTimeToMinutes(horarioSaidaPadrao) ?? 1020;
+  const almocoRef = parseTimeToMinutes(intervaloStr) ?? 60;
+  let cargaMinutos = saidaRef - entradaRef - almocoRef;
+  if (cargaMinutos < 0) cargaMinutos += 24 * 60;
+  const jornadaFromArg = parseTimeToMinutes(jornadaPadraoStr);
+  const jornadaMinutos = jornadaFromArg ?? cargaMinutos ?? 480;
 
   const me = parseTimeToMinutes(registro.hora_entrada);
   const ms = parseTimeToMinutes(registro.hora_saida);
@@ -290,7 +297,20 @@ export function applyToleranceAndDetect(
     };
   }
 
-  if (me === null && ms === null && te === null && ts === null) {
+  const semBatidas = me === null && ms === null && te === null && ts === null && ee === null && es === null;
+  if (semBatidas) {
+    if (!ehDiaUtil) {
+      return {
+        dia,
+        hora_entrada: null, hora_saida: null,
+        hora_entrada_tarde: null, hora_saida_tarde: null,
+        hora_entrada_extra: null, hora_saida_extra: null,
+        horas_normais: 0, horas_extras: 0, horas_noturnas: 0,
+        atraso_minutos: 0, tipo_excecao: "folga",
+        corrigido_manualmente: registro.corrigido_manualmente || false,
+        obs: registro.obs || null,
+      };
+    }
     return {
       dia,
       hora_entrada: registro.hora_entrada || null,
@@ -309,62 +329,101 @@ export function applyToleranceAndDetect(
     };
   }
 
-  // Calcular duração real trabalhada por período (com suporte a turnos noturnos)
-  let minutosP1 = 0;
-  let minutosP2 = 0;
-  let minutosP3 = 0;
-
-  if (me !== null && ms !== null) {
-    let dur = ms - me;
+  // Durações reais por período (suporta turnos noturnos)
+  const periodMinutes = (a: number | null, b: number | null): number => {
+    if (a === null || b === null) return 0;
+    let dur = b - a;
     if (dur < 0) dur += 24 * 60;
-    minutosP1 = dur;
-  }
-  if (te !== null && ts !== null) {
-    let dur = ts - te;
-    if (dur < 0) dur += 24 * 60;
-    minutosP2 = dur;
-  }
-  if (ee !== null && es !== null) {
-    let dur = es - ee;
-    if (dur < 0) dur += 24 * 60;
-    minutosP3 = dur;
-  }
+    return dur;
+  };
+  const minutosP1 = periodMinutes(me, ms);
+  const minutosP2 = periodMinutes(te, ts);
+  const minutosP3 = periodMinutes(ee, es);
 
-  const totalMinutosTrabalhados = minutosP1 + minutosP2 + minutosP3;
-  const horasTrabalhadas = totalMinutosTrabalhados / 60;
-  const jornadaHoras = jornadaMinutos / 60;
-
-  let horasNormais = 0;
-  let horasExtras = 0;
-  let atrasoMinutos = 0;
-
-  if (horasTrabalhadas >= jornadaHoras) {
-    horasNormais = jornadaHoras;
-    horasExtras = horasTrabalhadas - jornadaHoras;
-  } else {
-    horasNormais = horasTrabalhadas;
-    atrasoMinutos = jornadaMinutos - totalMinutosTrabalhados;
-  }
-
-  // Tolerância nos dois lados
-  if (atrasoMinutos > 0 && atrasoMinutos <= TOLERANCE_MINUTES) {
-    horasNormais = jornadaHoras;
-    atrasoMinutos = 0;
-  } else if (horasExtras > 0 && horasExtras * 60 <= TOLERANCE_MINUTES) {
-    horasExtras = 0;
-    horasNormais = jornadaHoras;
-  }
-
+  // Adicional noturno (mesmo em fim-de-semana)
   let nightMinutes = 0;
   nightMinutes += calcNightMinutes(me, ms);
   nightMinutes += calcNightMinutes(te, ts);
   nightMinutes += calcNightMinutes(ee, es);
 
-  if (atrasoMinutos > TOLERANCE_MINUTES) {
-    tipo_excecao = "atraso";
+  // Fim-de-semana / feriado: tudo vira HE; sem cálculo per-batida
+  if (!ehDiaUtil) {
+    // Para casos com apenas entrada+saidaTarde (sem almoço), calcular janela total
+    const inicios = [me, te, ee].filter((v): v is number => v !== null);
+    const fins = [ms, ts, es].filter((v): v is number => v !== null);
+    let trabalhadoMin = minutosP1 + minutosP2 + minutosP3;
+    if (trabalhadoMin === 0 && inicios.length && fins.length) {
+      const ini = Math.min(...inicios);
+      let fim = Math.max(...fins);
+      if (fim < ini) fim += 24 * 60;
+      trabalhadoMin = fim - ini;
+    }
+    return {
+      dia,
+      hora_entrada: registro.hora_entrada || null,
+      hora_saida: registro.hora_saida || null,
+      hora_entrada_tarde: registro.hora_entrada_tarde || null,
+      hora_saida_tarde: registro.hora_saida_tarde || null,
+      hora_entrada_extra: registro.hora_entrada_extra || null,
+      hora_saida_extra: registro.hora_saida_extra || null,
+      horas_normais: 0,
+      horas_extras: Math.round((trabalhadoMin / 60) * 100) / 100,
+      horas_noturnas: Math.round((nightMinutes / 60) * 100) / 100,
+      atraso_minutos: 0,
+      tipo_excecao: null,
+      corrigido_manualmente: registro.corrigido_manualmente || false,
+      obs: registro.obs || null,
+    };
   }
-  if (atrasoMinutos > TOLERANCE_MINUTES && horasExtras > 0) {
-    tipo_excecao = null;
+
+  // === Cálculo per-batida (dia útil) ===
+  // HE per-batida
+  let heMin = 0;
+  if (me !== null) {
+    let diff = entradaRef - me;
+    if (diff > 12 * 60) diff -= 24 * 60; // entrada na madrugada vs ref de manhã
+    if (diff < -12 * 60) diff += 24 * 60;
+    heMin += Math.max(0, diff);
+  }
+  if (ms !== null && te !== null) {
+    const almocoReal = periodMinutes(ms, te);
+    heMin += Math.max(0, almocoRef - almocoReal);
+  }
+  if (ts !== null) {
+    let diff = ts - saidaRef;
+    if (diff < -12 * 60) diff += 24 * 60;
+    if (diff > 12 * 60) diff -= 24 * 60;
+    heMin += Math.max(0, diff);
+  }
+  // Período extra inteiro entra como HE
+  heMin += minutosP3;
+
+  // Atraso per-batida
+  let atrasoMin = 0;
+  if (me !== null) {
+    let diff = me - entradaRef;
+    if (diff > 12 * 60) diff -= 24 * 60;
+    if (diff < -12 * 60) diff += 24 * 60;
+    atrasoMin += Math.max(0, diff);
+  }
+  if (ms !== null && te !== null) {
+    const almocoReal = periodMinutes(ms, te);
+    atrasoMin += Math.max(0, almocoReal - almocoRef);
+  }
+  if (ts !== null) {
+    let diff = saidaRef - ts;
+    if (diff < -12 * 60) diff += 24 * 60;
+    if (diff > 12 * 60) diff -= 24 * 60;
+    atrasoMin += Math.max(0, diff);
+  }
+
+  // Horas normais = carga - atraso (limitado ao trabalhado real e à carga)
+  const trabalhadoTotalMin = minutosP1 + minutosP2 + minutosP3;
+  let horasNormaisMin = Math.max(0, jornadaMinutos - atrasoMin);
+  horasNormaisMin = Math.min(horasNormaisMin, trabalhadoTotalMin);
+
+  if (atrasoMin > 0 && heMin === 0) {
+    tipo_excecao = "atraso";
   }
 
   return {
@@ -375,10 +434,10 @@ export function applyToleranceAndDetect(
     hora_saida_tarde: registro.hora_saida_tarde || null,
     hora_entrada_extra: registro.hora_entrada_extra || null,
     hora_saida_extra: registro.hora_saida_extra || null,
-    horas_normais: Math.round(horasNormais * 100) / 100,
-    horas_extras: Math.round(horasExtras * 100) / 100,
+    horas_normais: Math.round((horasNormaisMin / 60) * 100) / 100,
+    horas_extras: Math.round((heMin / 60) * 100) / 100,
     horas_noturnas: Math.round((nightMinutes / 60) * 100) / 100,
-    atraso_minutos: Math.round(atrasoMinutos),
+    atraso_minutos: Math.round(atrasoMin),
     tipo_excecao,
     corrigido_manualmente: registro.corrigido_manualmente || false,
     obs: registro.obs || null,
