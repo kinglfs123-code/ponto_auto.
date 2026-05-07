@@ -232,6 +232,22 @@ export default function FolhaDetalhe() {
                       <td className="px-3 py-2 text-center text-foreground border border-foreground/80">
                         {r.hora_saida_tarde || "—"}
                       </td>
+                      <td className="px-3 py-2 text-center border border-foreground/80">
+                        {r.horas_extras > 0 ? (
+                          <span className="font-semibold text-[hsl(var(--success))]">{formatHours(r.horas_extras)}</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-center border border-foreground/80">
+                        {r.jornada_alt_entrada && r.jornada_alt_saida ? (
+                          <span className="text-xs font-medium text-primary">
+                            {r.jornada_alt_entrada}–{r.jornada_alt_saida}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">padrão</span>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
