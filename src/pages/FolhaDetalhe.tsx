@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { formatHours } from "@/lib/ponto-rules";
+import { formatHours, formatMinutes, calcAdicionalNoturnoCLT } from "@/lib/ponto-rules";
 import NavBar from "@/components/NavBar";
 import AppHeader from "@/components/AppHeader";
 import { CheckCircle2 } from "lucide-react";
