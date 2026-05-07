@@ -772,6 +772,14 @@ export default function FuncionarioDetalhe() {
                 <InfoRow icon={Clock} label="Entrada" value={func.horario_entrada} />
                 <InfoRow icon={Clock} label="Saída" value={func.horario_saida} />
                 <InfoRow icon={Clock} label="Intervalo" value={func.intervalo || "01:00"} />
+                <InfoRow icon={Clock} label="Carga diária" value={(() => {
+                  const [eh, em] = (func.horario_entrada || "0:0").split(":").map(Number);
+                  const [sh, sm] = (func.horario_saida || "0:0").split(":").map(Number);
+                  const [ih, im] = (func.intervalo || "1:0").split(":").map(Number);
+                  let mins = (sh * 60 + sm) - (eh * 60 + em) - (ih * 60 + im);
+                  if (mins < 0) mins += 24 * 60;
+                  return `${Math.floor(mins / 60)}h${(mins % 60).toString().padStart(2, "0")}`;
+                })()} />
               </CardContent>
             </Card>
           </TabsContent>

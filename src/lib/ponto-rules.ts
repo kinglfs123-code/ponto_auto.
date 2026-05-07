@@ -182,6 +182,8 @@ export interface RegistroPonto {
   tipo_excecao: string | null;
   corrigido_manualmente: boolean;
   obs: string | null;
+  jornada_alt_entrada?: string | null;
+  jornada_alt_saida?: string | null;
 }
 
 export interface ResumoCalculo {
@@ -190,6 +192,8 @@ export interface ResumoCalculo {
   total_extras: number;
   total_atraso: number;
   total_noturnas: number;
+  total_an_clt: number;
+  total_faltas: number;
   saldo: number;
 }
 
@@ -236,13 +240,16 @@ export function applyToleranceAndDetect(
 ): RegistroPonto {
   const dia = typeof registro.dia === "number" ? registro.dia : parseInt(String(registro.dia)) || 0;
 
-  const entradaRef = parseTimeToMinutes(horarioEntradaPadrao) ?? 480;
-  const saidaRef = parseTimeToMinutes(horarioSaidaPadrao) ?? 1020;
+  const altEntradaRef = parseTimeToMinutes(registro.jornada_alt_entrada);
+  const altSaidaRef = parseTimeToMinutes(registro.jornada_alt_saida);
+  const entradaRef = altEntradaRef ?? parseTimeToMinutes(horarioEntradaPadrao) ?? 480;
+  const saidaRef = altSaidaRef ?? parseTimeToMinutes(horarioSaidaPadrao) ?? 1020;
   const almocoRef = parseTimeToMinutes(intervaloStr) ?? 60;
   let cargaMinutos = saidaRef - entradaRef - almocoRef;
   if (cargaMinutos < 0) cargaMinutos += 24 * 60;
+  const hasAlt = altEntradaRef !== null || altSaidaRef !== null;
   const jornadaFromArg = parseTimeToMinutes(jornadaPadraoStr);
-  const jornadaMinutos = jornadaFromArg ?? cargaMinutos ?? 480;
+  const jornadaMinutos = hasAlt ? cargaMinutos : (jornadaFromArg ?? cargaMinutos ?? 480);
 
   const me = parseTimeToMinutes(registro.hora_entrada);
   const ms = parseTimeToMinutes(registro.hora_saida);
@@ -294,6 +301,8 @@ export function applyToleranceAndDetect(
       tipo_excecao,
       corrigido_manualmente: registro.corrigido_manualmente || false,
       obs: registro.obs || null,
+      jornada_alt_entrada: registro.jornada_alt_entrada || null,
+      jornada_alt_saida: registro.jornada_alt_saida || null,
     };
   }
 
@@ -309,6 +318,8 @@ export function applyToleranceAndDetect(
         atraso_minutos: 0, tipo_excecao: "folga",
         corrigido_manualmente: registro.corrigido_manualmente || false,
         obs: registro.obs || null,
+        jornada_alt_entrada: registro.jornada_alt_entrada || null,
+        jornada_alt_saida: registro.jornada_alt_saida || null,
       };
     }
     return {
@@ -326,6 +337,8 @@ export function applyToleranceAndDetect(
       tipo_excecao: "falta",
       corrigido_manualmente: registro.corrigido_manualmente || false,
       obs: registro.obs || null,
+      jornada_alt_entrada: registro.jornada_alt_entrada || null,
+      jornada_alt_saida: registro.jornada_alt_saida || null,
     };
   }
 
@@ -336,14 +349,25 @@ export function applyToleranceAndDetect(
     if (dur < 0) dur += 24 * 60;
     return dur;
   };
-  const minutosP1 = periodMinutes(me, ms);
-  const minutosP2 = periodMinutes(te, ts);
+  let minutosP1 = periodMinutes(me, ms);
+  let minutosP2 = periodMinutes(te, ts);
   const minutosP3 = periodMinutes(ee, es);
+
+  // Sem batidas de almoço: tratar entrada→saída como bloco único
+  const semAlmoco = ms === null && te === null && me !== null && ts !== null;
+  if (semAlmoco) {
+    minutosP1 = periodMinutes(me, ts);
+    minutosP2 = 0;
+  }
 
   // Adicional noturno (mesmo em fim-de-semana)
   let nightMinutes = 0;
-  nightMinutes += calcNightMinutes(me, ms);
-  nightMinutes += calcNightMinutes(te, ts);
+  if (semAlmoco) {
+    nightMinutes += calcNightMinutes(me, ts);
+  } else {
+    nightMinutes += calcNightMinutes(me, ms);
+    nightMinutes += calcNightMinutes(te, ts);
+  }
   nightMinutes += calcNightMinutes(ee, es);
 
   // Fim-de-semana / feriado: tudo vira HE; sem cálculo per-batida
@@ -373,6 +397,8 @@ export function applyToleranceAndDetect(
       tipo_excecao: null,
       corrigido_manualmente: registro.corrigido_manualmente || false,
       obs: registro.obs || null,
+      jornada_alt_entrada: registro.jornada_alt_entrada || null,
+      jornada_alt_saida: registro.jornada_alt_saida || null,
     };
   }
 
@@ -417,10 +443,10 @@ export function applyToleranceAndDetect(
     atrasoMin += Math.max(0, diff);
   }
 
-  // Horas normais = carga - atraso (limitado ao trabalhado real e à carga)
+  // Horas normais = trabalhado real - HE (capado pela jornada)
   const trabalhadoTotalMin = minutosP1 + minutosP2 + minutosP3;
-  let horasNormaisMin = Math.max(0, jornadaMinutos - atrasoMin);
-  horasNormaisMin = Math.min(horasNormaisMin, trabalhadoTotalMin);
+  let horasNormaisMin = Math.max(0, trabalhadoTotalMin - heMin);
+  horasNormaisMin = Math.min(horasNormaisMin, jornadaMinutos);
 
   if (atrasoMin > 0 && heMin === 0) {
     tipo_excecao = "atraso";
@@ -441,6 +467,8 @@ export function applyToleranceAndDetect(
     tipo_excecao,
     corrigido_manualmente: registro.corrigido_manualmente || false,
     obs: registro.obs || null,
+    jornada_alt_entrada: registro.jornada_alt_entrada || null,
+    jornada_alt_saida: registro.jornada_alt_saida || null,
   };
 }
 
@@ -449,7 +477,8 @@ export function calcularResumo(registros: RegistroPonto[]): ResumoCalculo {
     totalH = 0,
     extras = 0,
     atraso = 0,
-    noturnas = 0;
+    noturnas = 0,
+    faltas = 0;
 
   for (const r of registros) {
     const total = r.horas_normais + r.horas_extras;
@@ -459,11 +488,17 @@ export function calcularResumo(registros: RegistroPonto[]): ResumoCalculo {
       extras += r.horas_extras;
       noturnas += r.horas_noturnas;
     }
-    atraso += r.atraso_minutos || 0;
+    if (r.tipo_excecao !== "falta") {
+      atraso += r.atraso_minutos || 0;
+    } else {
+      faltas += 1;
+    }
   }
 
   const extrasMin = Math.round(extras * 60);
   const saldo = (extrasMin - atraso) / 60;
+  const noturnasMin = noturnas * 60;
+  const anClt = calcAdicionalNoturnoCLT(noturnasMin) / 60;
 
   return {
     dias_trabalhados: dias,
@@ -471,6 +506,8 @@ export function calcularResumo(registros: RegistroPonto[]): ResumoCalculo {
     total_extras: Math.round(extras * 100) / 100,
     total_atraso: atraso,
     total_noturnas: Math.round(noturnas * 100) / 100,
+    total_an_clt: Math.round(anClt * 100) / 100,
+    total_faltas: faltas,
     saldo: Math.round(saldo * 100) / 100,
   };
 }

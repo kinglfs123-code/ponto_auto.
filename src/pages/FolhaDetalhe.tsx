@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
-import { formatHours } from "@/lib/ponto-rules";
+import { formatHours, formatMinutes, calcAdicionalNoturnoCLT } from "@/lib/ponto-rules";
 import NavBar from "@/components/NavBar";
 import AppHeader from "@/components/AppHeader";
 import { CheckCircle2 } from "lucide-react";
@@ -38,8 +38,11 @@ interface Registro {
   horas_normais: number;
   horas_extras: number;
   horas_noturnas: number;
+  atraso_minutos: number;
   tipo_excecao: string | null;
   obs: string | null;
+  jornada_alt_entrada: string | null;
+  jornada_alt_saida: string | null;
 }
 
 const MESES_PT = [
@@ -79,11 +82,11 @@ export default function FolhaDetalhe() {
       });
     supabase
       .from("registros_ponto")
-      .select("id, dia, hora_entrada, hora_saida_tarde, hora_entrada_tarde, hora_saida, hora_entrada_extra, hora_saida_extra, horas_normais, horas_extras, horas_noturnas, atraso_minutos, obs, corrigido_manualmente, tipo_excecao")
+      .select("id, dia, hora_entrada, hora_saida_tarde, hora_entrada_tarde, hora_saida, hora_entrada_extra, hora_saida_extra, horas_normais, horas_extras, horas_noturnas, atraso_minutos, obs, corrigido_manualmente, tipo_excecao, jornada_alt_entrada, jornada_alt_saida")
       .eq("folha_id", folhaId)
       .order("dia")
       .then(({ data }) => {
-        if (data) setRegistros(data);
+        if (data) setRegistros(data as unknown as Registro[]);
       });
   }, [folhaId]);
 
@@ -108,6 +111,12 @@ export default function FolhaDetalhe() {
   const totNormais = registros.reduce((s, r) => s + (r.horas_normais || 0), 0);
   const totExtras = registros.reduce((s, r) => s + (r.horas_extras || 0), 0);
   const totNoturnas = registros.reduce((s, r) => s + (r.horas_noturnas || 0), 0);
+  const totAtraso = registros.reduce(
+    (s, r) => s + (r.tipo_excecao !== "falta" ? r.atraso_minutos || 0 : 0),
+    0,
+  );
+  const totFaltas = registros.filter((r) => r.tipo_excecao === "falta").length;
+  const totAnClt = calcAdicionalNoturnoCLT(totNoturnas * 60) / 60;
 
   const [ano, mes] = folha.mes_referencia.split("-");
   const mesNome = MESES_PT[parseInt(mes, 10) - 1] || mes;
@@ -152,18 +161,30 @@ export default function FolhaDetalhe() {
         </Card>
 
         {/* Totais */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
           <Card><CardContent className="py-3 text-center">
-            <p className="text-[10px] text-muted-foreground uppercase">Normais</p>
-            <p className="text-lg font-bold text-primary">{formatHours(totNormais)}</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Trabalhadas</p>
+            <p className="text-lg font-bold text-primary">{formatHours(totNormais + totExtras)}</p>
           </CardContent></Card>
           <Card><CardContent className="py-3 text-center">
-            <p className="text-[10px] text-muted-foreground uppercase">Extras</p>
+            <p className="text-[10px] text-muted-foreground uppercase">HE</p>
             <p className="text-lg font-bold text-[hsl(var(--success))]">{formatHours(totExtras)}</p>
           </CardContent></Card>
           <Card><CardContent className="py-3 text-center">
-            <p className="text-[10px] text-muted-foreground uppercase">Noturnas</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Atrasos</p>
+            <p className={`text-lg font-bold ${totAtraso > 0 ? "text-destructive" : ""}`}>{formatMinutes(totAtraso)}</p>
+          </CardContent></Card>
+          <Card><CardContent className="py-3 text-center">
+            <p className="text-[10px] text-muted-foreground uppercase">AN real</p>
             <p className="text-lg font-bold text-[hsl(var(--warning))]">{formatHours(totNoturnas)}</p>
+          </CardContent></Card>
+          <Card><CardContent className="py-3 text-center">
+            <p className="text-[10px] text-muted-foreground uppercase">AN CLT</p>
+            <p className="text-lg font-bold text-[hsl(var(--warning))]">{formatHours(totAnClt)}</p>
+          </CardContent></Card>
+          <Card><CardContent className="py-3 text-center">
+            <p className="text-[10px] text-muted-foreground uppercase">Faltas</p>
+            <p className={`text-lg font-bold ${totFaltas > 0 ? "text-destructive" : ""}`}>{totFaltas}</p>
           </CardContent></Card>
         </div>
 
@@ -171,17 +192,19 @@ export default function FolhaDetalhe() {
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full md:table-fixed text-sm border-collapse min-w-[560px]">
+              <table className="w-full md:table-fixed text-sm border-collapse min-w-[680px]">
                 <colgroup>
-                  <col className="md:w-[8%]" />
-                  <col className="md:w-[23%]" />
-                  <col className="md:w-[23%]" />
-                  <col className="md:w-[23%]" />
-                  <col className="md:w-[23%]" />
+                  <col className="md:w-[7%]" />
+                  <col className="md:w-[16%]" />
+                  <col className="md:w-[16%]" />
+                  <col className="md:w-[16%]" />
+                  <col className="md:w-[16%]" />
+                  <col className="md:w-[12%]" />
+                  <col className="md:w-[17%]" />
                 </colgroup>
                 <thead className="sticky top-0 bg-card">
                   <tr>
-                    {["Dia", "Entrada", "Saída p/ intervalo", "Volta do intervalo", "Saída"].map((h) => (
+                    {["Dia", "Entrada", "Saída p/ intervalo", "Volta do intervalo", "Saída", "HE", "Jornada"].map((h) => (
                       <th
                         key={h}
                         className="px-3 py-2.5 text-center font-semibold text-foreground border border-foreground/80"
@@ -208,6 +231,22 @@ export default function FolhaDetalhe() {
                       </td>
                       <td className="px-3 py-2 text-center text-foreground border border-foreground/80">
                         {r.hora_saida_tarde || "—"}
+                      </td>
+                      <td className="px-3 py-2 text-center border border-foreground/80">
+                        {r.horas_extras > 0 ? (
+                          <span className="font-semibold text-[hsl(var(--success))]">{formatHours(r.horas_extras)}</span>
+                        ) : (
+                          <span className="text-muted-foreground">—</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-2 text-center border border-foreground/80">
+                        {r.jornada_alt_entrada && r.jornada_alt_saida ? (
+                          <span className="text-xs font-medium text-primary">
+                            {r.jornada_alt_entrada}–{r.jornada_alt_saida}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">padrão</span>
+                        )}
                       </td>
                     </tr>
                   ))}

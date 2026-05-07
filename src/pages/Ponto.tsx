@@ -324,6 +324,8 @@ export default function Ponto() {
         tipo_excecao: r.tipo_excecao,
         corrigido_manualmente: r.corrigido_manualmente,
         obs: r.obs,
+        jornada_alt_entrada: r.jornada_alt_entrada || null,
+        jornada_alt_saida: r.jornada_alt_saida || null,
       }));
 
       const { error: rErr } = await supabase.from("registros_ponto").insert(regs);
@@ -373,6 +375,21 @@ export default function Ponto() {
     const processed = applyToleranceAndDetect(u[i], jornada, horarioEntrada, horarioSaida, intervalo);
     
     processed.tipo_excecao = tipo;
+    processed.corrigido_manualmente = true;
+    u[i] = processed;
+    setRegistros(u);
+    setResumo(calcularResumo(u));
+  };
+
+  const setJornadaAlt = (i: number, alt: { entrada: string; saida: string } | null) => {
+    const u = [...registros];
+    u[i] = {
+      ...u[i],
+      jornada_alt_entrada: alt?.entrada || null,
+      jornada_alt_saida: alt?.saida || null,
+      corrigido_manualmente: true,
+    };
+    const processed = applyToleranceAndDetect(u[i], jornada, horarioEntrada, horarioSaida, intervalo);
     processed.corrigido_manualmente = true;
     u[i] = processed;
     setRegistros(u);
@@ -456,17 +473,19 @@ export default function Ponto() {
 
         {/* Summary */}
         {resumo && (
-          <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             {[
               { l: "Dias", v: resumo.dias_trabalhados, c: "" },
-              { l: "Total", v: formatHours(resumo.total_horas), c: "text-primary" },
+              { l: "Trabalhadas", v: formatHours(resumo.total_horas), c: "text-primary" },
               { l: "Extras", v: formatHours(resumo.total_extras), c: "text-[hsl(var(--success))]" },
               {
-                l: "Atraso",
+                l: "Atrasos",
                 v: formatMinutes(resumo.total_atraso),
                 c: resumo.total_atraso > 0 ? "text-destructive" : "",
               },
-              { l: "Noturnas", v: formatHours(resumo.total_noturnas), c: "text-[hsl(var(--warning))]" },
+              { l: "AN real", v: formatHours(resumo.total_noturnas), c: "text-[hsl(var(--warning))]" },
+              { l: "AN CLT", v: formatHours(resumo.total_an_clt), c: "text-[hsl(var(--warning))]" },
+              { l: "Faltas", v: resumo.total_faltas, c: resumo.total_faltas > 0 ? "text-destructive" : "" },
               {
                 l: "Saldo",
                 v: formatHours(resumo.saldo),
@@ -499,18 +518,19 @@ export default function Ponto() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full md:table-fixed text-sm border-collapse min-w-[640px]">
+                <table className="w-full md:table-fixed text-sm border-collapse min-w-[760px]">
                   <colgroup>
-                    <col className="md:w-[8%]" />
-                    <col className="md:w-[18%]" />
-                    <col className="md:w-[18%]" />
-                    <col className="md:w-[18%]" />
-                    <col className="md:w-[18%]" />
-                    <col className="md:w-[20%]" />
+                    <col className="md:w-[7%]" />
+                    <col className="md:w-[14%]" />
+                    <col className="md:w-[14%]" />
+                    <col className="md:w-[14%]" />
+                    <col className="md:w-[14%]" />
+                    <col className="md:w-[16%]" />
+                    <col className="md:w-[21%]" />
                   </colgroup>
                   <thead className="sticky top-0 bg-card">
                     <tr>
-                      {["Dia", "Entrada", "Saída p/ intervalo", "Volta do intervalo", "Saída", "Exceção"].map((h) => (
+                      {["Dia", "Entrada", "Saída p/ intervalo", "Volta do intervalo", "Saída", "Jornada do dia", "Exceção"].map((h) => (
                         <th
                           key={h}
                           className="px-2 py-2 text-center font-semibold text-foreground border border-foreground/80"
@@ -550,6 +570,70 @@ export default function Ponto() {
                               </td>
                             ),
                           )}
+                          <td className="px-1 py-1 text-center text-foreground border border-foreground/80">
+                            {editMode ? (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="text-xs hover:bg-muted/50 rounded px-1.5 py-0.5 w-full">
+                                    {r.jornada_alt_entrada && r.jornada_alt_saida ? (
+                                      <span className="text-[10px] font-medium text-primary">
+                                        {r.jornada_alt_entrada}–{r.jornada_alt_saida}
+                                      </span>
+                                    ) : (
+                                      <span className="text-muted-foreground">padrão</span>
+                                    )}
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-52 p-2 space-y-2" align="center">
+                                  <p className="text-[10px] text-muted-foreground">Jornada alternativa neste dia</p>
+                                  <div className="flex gap-1.5 items-center">
+                                    <Input
+                                      defaultValue={r.jornada_alt_entrada || ""}
+                                      placeholder="Entrada"
+                                      className="h-7 text-xs text-center"
+                                      id={`alt-in-${i}`}
+                                    />
+                                    <span className="text-xs">→</span>
+                                    <Input
+                                      defaultValue={r.jornada_alt_saida || ""}
+                                      placeholder="Saída"
+                                      className="h-7 text-xs text-center"
+                                      id={`alt-out-${i}`}
+                                    />
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      className="h-6 text-[10px] flex-1"
+                                      onClick={() => {
+                                        const ein = (document.getElementById(`alt-in-${i}`) as HTMLInputElement)?.value;
+                                        const eout = (document.getElementById(`alt-out-${i}`) as HTMLInputElement)?.value;
+                                        if (ein && eout) setJornadaAlt(i, { entrada: ein, saida: eout });
+                                      }}
+                                    >
+                                      Aplicar
+                                    </Button>
+                                    {(r.jornada_alt_entrada || r.jornada_alt_saida) && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-6 text-[10px]"
+                                        onClick={() => setJornadaAlt(i, null)}
+                                      >
+                                        Limpar
+                                      </Button>
+                                    )}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            ) : r.jornada_alt_entrada && r.jornada_alt_saida ? (
+                              <span className="text-[10px] font-medium text-primary">
+                                {r.jornada_alt_entrada}–{r.jornada_alt_saida}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">padrão</span>
+                            )}
+                          </td>
                           <td className="px-1 py-1 text-center border border-foreground/80">
                             {editMode ? (
                               <Popover>
