@@ -240,13 +240,16 @@ export function applyToleranceAndDetect(
 ): RegistroPonto {
   const dia = typeof registro.dia === "number" ? registro.dia : parseInt(String(registro.dia)) || 0;
 
-  const entradaRef = parseTimeToMinutes(horarioEntradaPadrao) ?? 480;
-  const saidaRef = parseTimeToMinutes(horarioSaidaPadrao) ?? 1020;
+  const altEntradaRef = parseTimeToMinutes(registro.jornada_alt_entrada);
+  const altSaidaRef = parseTimeToMinutes(registro.jornada_alt_saida);
+  const entradaRef = altEntradaRef ?? parseTimeToMinutes(horarioEntradaPadrao) ?? 480;
+  const saidaRef = altSaidaRef ?? parseTimeToMinutes(horarioSaidaPadrao) ?? 1020;
   const almocoRef = parseTimeToMinutes(intervaloStr) ?? 60;
   let cargaMinutos = saidaRef - entradaRef - almocoRef;
   if (cargaMinutos < 0) cargaMinutos += 24 * 60;
+  const hasAlt = altEntradaRef !== null || altSaidaRef !== null;
   const jornadaFromArg = parseTimeToMinutes(jornadaPadraoStr);
-  const jornadaMinutos = jornadaFromArg ?? cargaMinutos ?? 480;
+  const jornadaMinutos = hasAlt ? cargaMinutos : (jornadaFromArg ?? cargaMinutos ?? 480);
 
   const me = parseTimeToMinutes(registro.hora_entrada);
   const ms = parseTimeToMinutes(registro.hora_saida);
