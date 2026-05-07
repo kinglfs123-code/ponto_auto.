@@ -566,6 +566,70 @@ export default function Ponto() {
                               </td>
                             ),
                           )}
+                          <td className="px-1 py-1 text-center text-foreground border border-foreground/80">
+                            {editMode ? (
+                              <Popover>
+                                <PopoverTrigger asChild>
+                                  <button className="text-xs hover:bg-muted/50 rounded px-1.5 py-0.5 w-full">
+                                    {r.jornada_alt_entrada && r.jornada_alt_saida ? (
+                                      <span className="text-[10px] font-medium text-primary">
+                                        {r.jornada_alt_entrada}–{r.jornada_alt_saida}
+                                      </span>
+                                    ) : (
+                                      <span className="text-muted-foreground">padrão</span>
+                                    )}
+                                  </button>
+                                </PopoverTrigger>
+                                <PopoverContent className="w-52 p-2 space-y-2" align="center">
+                                  <p className="text-[10px] text-muted-foreground">Jornada alternativa neste dia</p>
+                                  <div className="flex gap-1.5 items-center">
+                                    <Input
+                                      defaultValue={r.jornada_alt_entrada || ""}
+                                      placeholder="Entrada"
+                                      className="h-7 text-xs text-center"
+                                      id={`alt-in-${i}`}
+                                    />
+                                    <span className="text-xs">→</span>
+                                    <Input
+                                      defaultValue={r.jornada_alt_saida || ""}
+                                      placeholder="Saída"
+                                      className="h-7 text-xs text-center"
+                                      id={`alt-out-${i}`}
+                                    />
+                                  </div>
+                                  <div className="flex gap-1">
+                                    <Button
+                                      size="sm"
+                                      className="h-6 text-[10px] flex-1"
+                                      onClick={() => {
+                                        const ein = (document.getElementById(`alt-in-${i}`) as HTMLInputElement)?.value;
+                                        const eout = (document.getElementById(`alt-out-${i}`) as HTMLInputElement)?.value;
+                                        if (ein && eout) setJornadaAlt(i, { entrada: ein, saida: eout });
+                                      }}
+                                    >
+                                      Aplicar
+                                    </Button>
+                                    {(r.jornada_alt_entrada || r.jornada_alt_saida) && (
+                                      <Button
+                                        size="sm"
+                                        variant="outline"
+                                        className="h-6 text-[10px]"
+                                        onClick={() => setJornadaAlt(i, null)}
+                                      >
+                                        Limpar
+                                      </Button>
+                                    )}
+                                  </div>
+                                </PopoverContent>
+                              </Popover>
+                            ) : r.jornada_alt_entrada && r.jornada_alt_saida ? (
+                              <span className="text-[10px] font-medium text-primary">
+                                {r.jornada_alt_entrada}–{r.jornada_alt_saida}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">padrão</span>
+                            )}
+                          </td>
                           <td className="px-1 py-1 text-center border border-foreground/80">
                             {editMode ? (
                               <Popover>
