@@ -182,6 +182,8 @@ export interface RegistroPonto {
   tipo_excecao: string | null;
   corrigido_manualmente: boolean;
   obs: string | null;
+  jornada_alt_entrada?: string | null;
+  jornada_alt_saida?: string | null;
 }
 
 export interface ResumoCalculo {
@@ -190,6 +192,8 @@ export interface ResumoCalculo {
   total_extras: number;
   total_atraso: number;
   total_noturnas: number;
+  total_an_clt: number;
+  total_faltas: number;
   saldo: number;
 }
 
