@@ -38,8 +38,11 @@ interface Registro {
   horas_normais: number;
   horas_extras: number;
   horas_noturnas: number;
+  atraso_minutos: number;
   tipo_excecao: string | null;
   obs: string | null;
+  jornada_alt_entrada: string | null;
+  jornada_alt_saida: string | null;
 }
 
 const MESES_PT = [
