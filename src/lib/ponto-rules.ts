@@ -318,6 +318,8 @@ export function applyToleranceAndDetect(
         atraso_minutos: 0, tipo_excecao: "folga",
         corrigido_manualmente: registro.corrigido_manualmente || false,
         obs: registro.obs || null,
+        jornada_alt_entrada: registro.jornada_alt_entrada || null,
+        jornada_alt_saida: registro.jornada_alt_saida || null,
       };
     }
     return {
@@ -454,6 +456,8 @@ export function applyToleranceAndDetect(
     tipo_excecao,
     corrigido_manualmente: registro.corrigido_manualmente || false,
     obs: registro.obs || null,
+    jornada_alt_entrada: registro.jornada_alt_entrada || null,
+    jornada_alt_saida: registro.jornada_alt_saida || null,
   };
 }
 
