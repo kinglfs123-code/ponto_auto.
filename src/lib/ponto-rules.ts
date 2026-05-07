@@ -456,7 +456,8 @@ export function calcularResumo(registros: RegistroPonto[]): ResumoCalculo {
     totalH = 0,
     extras = 0,
     atraso = 0,
-    noturnas = 0;
+    noturnas = 0,
+    faltas = 0;
 
   for (const r of registros) {
     const total = r.horas_normais + r.horas_extras;
@@ -466,11 +467,17 @@ export function calcularResumo(registros: RegistroPonto[]): ResumoCalculo {
       extras += r.horas_extras;
       noturnas += r.horas_noturnas;
     }
-    atraso += r.atraso_minutos || 0;
+    if (r.tipo_excecao !== "falta") {
+      atraso += r.atraso_minutos || 0;
+    } else {
+      faltas += 1;
+    }
   }
 
   const extrasMin = Math.round(extras * 60);
   const saldo = (extrasMin - atraso) / 60;
+  const noturnasMin = noturnas * 60;
+  const anClt = calcAdicionalNoturnoCLT(noturnasMin) / 60;
 
   return {
     dias_trabalhados: dias,
@@ -478,6 +485,8 @@ export function calcularResumo(registros: RegistroPonto[]): ResumoCalculo {
     total_extras: Math.round(extras * 100) / 100,
     total_atraso: atraso,
     total_noturnas: Math.round(noturnas * 100) / 100,
+    total_an_clt: Math.round(anClt * 100) / 100,
+    total_faltas: faltas,
     saldo: Math.round(saldo * 100) / 100,
   };
 }
