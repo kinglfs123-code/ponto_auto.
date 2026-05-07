@@ -443,10 +443,10 @@ export function applyToleranceAndDetect(
     atrasoMin += Math.max(0, diff);
   }
 
-  // Horas normais = carga - atraso (limitado ao trabalhado real e à carga)
+  // Horas normais = trabalhado real - HE (capado pela jornada)
   const trabalhadoTotalMin = minutosP1 + minutosP2 + minutosP3;
-  let horasNormaisMin = Math.max(0, jornadaMinutos - atrasoMin);
-  horasNormaisMin = Math.min(horasNormaisMin, trabalhadoTotalMin);
+  let horasNormaisMin = Math.max(0, trabalhadoTotalMin - heMin);
+  horasNormaisMin = Math.min(horasNormaisMin, jornadaMinutos);
 
   if (atrasoMin > 0 && heMin === 0) {
     tipo_excecao = "atraso";
