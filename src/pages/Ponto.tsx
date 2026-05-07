@@ -324,6 +324,8 @@ export default function Ponto() {
         tipo_excecao: r.tipo_excecao,
         corrigido_manualmente: r.corrigido_manualmente,
         obs: r.obs,
+        jornada_alt_entrada: r.jornada_alt_entrada || null,
+        jornada_alt_saida: r.jornada_alt_saida || null,
       }));
 
       const { error: rErr } = await supabase.from("registros_ponto").insert(regs);
