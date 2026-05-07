@@ -349,14 +349,25 @@ export function applyToleranceAndDetect(
     if (dur < 0) dur += 24 * 60;
     return dur;
   };
-  const minutosP1 = periodMinutes(me, ms);
-  const minutosP2 = periodMinutes(te, ts);
+  let minutosP1 = periodMinutes(me, ms);
+  let minutosP2 = periodMinutes(te, ts);
   const minutosP3 = periodMinutes(ee, es);
+
+  // Sem batidas de almoço: tratar entrada→saída como bloco único
+  const semAlmoco = ms === null && te === null && me !== null && ts !== null;
+  if (semAlmoco) {
+    minutosP1 = periodMinutes(me, ts);
+    minutosP2 = 0;
+  }
 
   // Adicional noturno (mesmo em fim-de-semana)
   let nightMinutes = 0;
-  nightMinutes += calcNightMinutes(me, ms);
-  nightMinutes += calcNightMinutes(te, ts);
+  if (semAlmoco) {
+    nightMinutes += calcNightMinutes(me, ts);
+  } else {
+    nightMinutes += calcNightMinutes(me, ms);
+    nightMinutes += calcNightMinutes(te, ts);
+  }
   nightMinutes += calcNightMinutes(ee, es);
 
   // Fim-de-semana / feriado: tudo vira HE; sem cálculo per-batida
