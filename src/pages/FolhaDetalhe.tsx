@@ -161,18 +161,30 @@ export default function FolhaDetalhe() {
         </Card>
 
         {/* Totais */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
           <Card><CardContent className="py-3 text-center">
-            <p className="text-[10px] text-muted-foreground uppercase">Normais</p>
-            <p className="text-lg font-bold text-primary">{formatHours(totNormais)}</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Trabalhadas</p>
+            <p className="text-lg font-bold text-primary">{formatHours(totNormais + totExtras)}</p>
           </CardContent></Card>
           <Card><CardContent className="py-3 text-center">
-            <p className="text-[10px] text-muted-foreground uppercase">Extras</p>
+            <p className="text-[10px] text-muted-foreground uppercase">HE</p>
             <p className="text-lg font-bold text-[hsl(var(--success))]">{formatHours(totExtras)}</p>
           </CardContent></Card>
           <Card><CardContent className="py-3 text-center">
-            <p className="text-[10px] text-muted-foreground uppercase">Noturnas</p>
+            <p className="text-[10px] text-muted-foreground uppercase">Atrasos</p>
+            <p className={`text-lg font-bold ${totAtraso > 0 ? "text-destructive" : ""}`}>{formatMinutes(totAtraso)}</p>
+          </CardContent></Card>
+          <Card><CardContent className="py-3 text-center">
+            <p className="text-[10px] text-muted-foreground uppercase">AN real</p>
             <p className="text-lg font-bold text-[hsl(var(--warning))]">{formatHours(totNoturnas)}</p>
+          </CardContent></Card>
+          <Card><CardContent className="py-3 text-center">
+            <p className="text-[10px] text-muted-foreground uppercase">AN CLT</p>
+            <p className="text-lg font-bold text-[hsl(var(--warning))]">{formatHours(totAnClt)}</p>
+          </CardContent></Card>
+          <Card><CardContent className="py-3 text-center">
+            <p className="text-[10px] text-muted-foreground uppercase">Faltas</p>
+            <p className={`text-lg font-bold ${totFaltas > 0 ? "text-destructive" : ""}`}>{totFaltas}</p>
           </CardContent></Card>
         </div>
 
@@ -180,17 +192,19 @@ export default function FolhaDetalhe() {
         <Card>
           <CardContent className="p-0">
             <div className="overflow-x-auto">
-              <table className="w-full md:table-fixed text-sm border-collapse min-w-[560px]">
+              <table className="w-full md:table-fixed text-sm border-collapse min-w-[680px]">
                 <colgroup>
-                  <col className="md:w-[8%]" />
-                  <col className="md:w-[23%]" />
-                  <col className="md:w-[23%]" />
-                  <col className="md:w-[23%]" />
-                  <col className="md:w-[23%]" />
+                  <col className="md:w-[7%]" />
+                  <col className="md:w-[16%]" />
+                  <col className="md:w-[16%]" />
+                  <col className="md:w-[16%]" />
+                  <col className="md:w-[16%]" />
+                  <col className="md:w-[12%]" />
+                  <col className="md:w-[17%]" />
                 </colgroup>
                 <thead className="sticky top-0 bg-card">
                   <tr>
-                    {["Dia", "Entrada", "Saída p/ intervalo", "Volta do intervalo", "Saída"].map((h) => (
+                    {["Dia", "Entrada", "Saída p/ intervalo", "Volta do intervalo", "Saída", "HE", "Jornada"].map((h) => (
                       <th
                         key={h}
                         className="px-3 py-2.5 text-center font-semibold text-foreground border border-foreground/80"
