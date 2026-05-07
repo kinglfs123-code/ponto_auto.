@@ -823,6 +823,8 @@ export type Database = {
           horas_normais: number | null
           horas_noturnas: number | null
           id: string
+          jornada_alt_entrada: string | null
+          jornada_alt_saida: string | null
           obs: string | null
           tipo_excecao: string | null
         }
@@ -842,6 +844,8 @@ export type Database = {
           horas_normais?: number | null
           horas_noturnas?: number | null
           id?: string
+          jornada_alt_entrada?: string | null
+          jornada_alt_saida?: string | null
           obs?: string | null
           tipo_excecao?: string | null
         }
@@ -861,6 +865,8 @@ export type Database = {
           horas_normais?: number | null
           horas_noturnas?: number | null
           id?: string
+          jornada_alt_entrada?: string | null
+          jornada_alt_saida?: string | null
           obs?: string | null
           tipo_excecao?: string | null
         }
