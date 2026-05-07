@@ -111,6 +111,12 @@ export default function FolhaDetalhe() {
   const totNormais = registros.reduce((s, r) => s + (r.horas_normais || 0), 0);
   const totExtras = registros.reduce((s, r) => s + (r.horas_extras || 0), 0);
   const totNoturnas = registros.reduce((s, r) => s + (r.horas_noturnas || 0), 0);
+  const totAtraso = registros.reduce(
+    (s, r) => s + (r.tipo_excecao !== "falta" ? r.atraso_minutos || 0 : 0),
+    0,
+  );
+  const totFaltas = registros.filter((r) => r.tipo_excecao === "falta").length;
+  const totAnClt = calcAdicionalNoturnoCLT(totNoturnas * 60) / 60;
 
   const [ano, mes] = folha.mes_referencia.split("-");
   const mesNome = MESES_PT[parseInt(mes, 10) - 1] || mes;
