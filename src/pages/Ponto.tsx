@@ -473,17 +473,19 @@ export default function Ponto() {
 
         {/* Summary */}
         {resumo && (
-          <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
             {[
               { l: "Dias", v: resumo.dias_trabalhados, c: "" },
-              { l: "Total", v: formatHours(resumo.total_horas), c: "text-primary" },
+              { l: "Trabalhadas", v: formatHours(resumo.total_horas), c: "text-primary" },
               { l: "Extras", v: formatHours(resumo.total_extras), c: "text-[hsl(var(--success))]" },
               {
-                l: "Atraso",
+                l: "Atrasos",
                 v: formatMinutes(resumo.total_atraso),
                 c: resumo.total_atraso > 0 ? "text-destructive" : "",
               },
-              { l: "Noturnas", v: formatHours(resumo.total_noturnas), c: "text-[hsl(var(--warning))]" },
+              { l: "AN real", v: formatHours(resumo.total_noturnas), c: "text-[hsl(var(--warning))]" },
+              { l: "AN CLT", v: formatHours(resumo.total_an_clt), c: "text-[hsl(var(--warning))]" },
+              { l: "Faltas", v: resumo.total_faltas, c: resumo.total_faltas > 0 ? "text-destructive" : "" },
               {
                 l: "Saldo",
                 v: formatHours(resumo.saldo),
