@@ -83,6 +83,12 @@ serve(async (req) => {
         const totNormais = regs.reduce((s: number, r: any) => s + (r.horas_normais || 0), 0);
         const totExtras = regs.reduce((s: number, r: any) => s + (r.horas_extras || 0), 0);
         const totNoturnas = regs.reduce((s: number, r: any) => s + (r.horas_noturnas || 0), 0);
+        const totAtrasoMin = regs.reduce(
+          (s: number, r: any) => s + (r.tipo_excecao !== "falta" ? r.atraso_minutos || 0 : 0),
+          0,
+        );
+        const totFaltas = regs.filter((r: any) => r.tipo_excecao === "falta").length;
+        const totAnCltMin = (totNoturnas * 60) * (60 / 52.5);
         return {
           nome: f.funcionario,
           status: f.status,
@@ -90,6 +96,9 @@ serve(async (req) => {
           horas_normais: Math.round(totNormais * 100) / 100,
           horas_extras: Math.round(totExtras * 100) / 100,
           horas_noturnas: Math.round(totNoturnas * 100) / 100,
+          atraso_minutos: totAtrasoMin,
+          adicional_noturno_clt_horas: Math.round((totAnCltMin / 60) * 100) / 100,
+          faltas: totFaltas,
           registros: regs.sort((a: any, b: any) => a.dia - b.dia),
         };
       }),
