@@ -499,18 +499,19 @@ export default function Ponto() {
             </CardHeader>
             <CardContent className="p-0">
               <div className="overflow-x-auto">
-                <table className="w-full md:table-fixed text-sm border-collapse min-w-[640px]">
+                <table className="w-full md:table-fixed text-sm border-collapse min-w-[760px]">
                   <colgroup>
-                    <col className="md:w-[8%]" />
-                    <col className="md:w-[18%]" />
-                    <col className="md:w-[18%]" />
-                    <col className="md:w-[18%]" />
-                    <col className="md:w-[18%]" />
-                    <col className="md:w-[20%]" />
+                    <col className="md:w-[7%]" />
+                    <col className="md:w-[14%]" />
+                    <col className="md:w-[14%]" />
+                    <col className="md:w-[14%]" />
+                    <col className="md:w-[14%]" />
+                    <col className="md:w-[16%]" />
+                    <col className="md:w-[21%]" />
                   </colgroup>
                   <thead className="sticky top-0 bg-card">
                     <tr>
-                      {["Dia", "Entrada", "Saída p/ intervalo", "Volta do intervalo", "Saída", "Exceção"].map((h) => (
+                      {["Dia", "Entrada", "Saída p/ intervalo", "Volta do intervalo", "Saída", "Jornada do dia", "Exceção"].map((h) => (
                         <th
                           key={h}
                           className="px-2 py-2 text-center font-semibold text-foreground border border-foreground/80"
