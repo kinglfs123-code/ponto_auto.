@@ -379,6 +379,21 @@ export default function Ponto() {
     setResumo(calcularResumo(u));
   };
 
+  const setJornadaAlt = (i: number, alt: { entrada: string; saida: string } | null) => {
+    const u = [...registros];
+    u[i] = {
+      ...u[i],
+      jornada_alt_entrada: alt?.entrada || null,
+      jornada_alt_saida: alt?.saida || null,
+      corrigido_manualmente: true,
+    };
+    const processed = applyToleranceAndDetect(u[i], jornada, horarioEntrada, horarioSaida, intervalo);
+    processed.corrigido_manualmente = true;
+    u[i] = processed;
+    setRegistros(u);
+    setResumo(calcularResumo(u));
+  };
+
   return (
     <div className="min-h-screen bg-background pb-20 md:pb-4">
       <NavBar />
