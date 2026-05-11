@@ -2,21 +2,22 @@ import { Link, useLocation } from "react-router-dom";
 import { NAV_ITEMS, type NavItem } from "./nav-items";
 import { cn } from "@/lib/utils";
 
+interface Props {
+  items?: NavItem[];
+}
+
 /**
  * Dock estilo iOS no rodapé em mobile (<md).
  * Escondido em desktop — lá quem aparece é a DesktopSidebar.
- *
- * Mantém a identidade liquid-glass + tiles coloridos do app,
- * mas agora com labels visíveis embaixo de cada ícone.
  */
-export function MobileDock() {
+export function MobileDock({ items = NAV_ITEMS }: Props) {
   return (
     <nav
       aria-label="Navegação principal"
       className="md:hidden fixed inset-x-0 bottom-0 z-50 px-3 pt-2 pb-[max(0.75rem,env(safe-area-inset-bottom))]"
     >
       <div className="liquid-glass mx-auto max-w-md flex items-stretch justify-between p-2">
-        {NAV_ITEMS.map((item) => (
+        {items.map((item) => (
           <DockItem key={item.path} item={item} />
         ))}
       </div>

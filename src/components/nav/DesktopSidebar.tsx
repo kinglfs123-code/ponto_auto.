@@ -2,6 +2,11 @@ import { Link, useLocation } from "react-router-dom";
 import { NAV_ITEMS, type NavItem } from "./nav-items";
 import { cn } from "@/lib/utils";
 
+interface Props {
+  items?: NavItem[];
+  title?: string;
+}
+
 /**
  * Sidebar fixa à esquerda em desktop (md+).
  * Escondida em mobile — lá quem aparece é o MobileDock.
@@ -9,12 +14,12 @@ import { cn } from "@/lib/utils";
  * Lembre: o conteúdo principal precisa de `md:pl-60` (240px) pra não
  * ficar atrás dela. Isso é feito no layout pai, não aqui.
  */
-export function DesktopSidebar() {
+export function DesktopSidebar({ items = NAV_ITEMS, title = "RH · Painel" }: Props) {
   return (
     <aside className="hidden md:flex md:flex-col fixed inset-y-0 left-0 z-40 w-60 bg-sidebar border-r border-sidebar-border">
-      <SidebarHeader />
+      <SidebarHeader title={title} />
       <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-        {NAV_ITEMS.map((item) => (
+        {items.map((item) => (
           <SidebarItem key={item.path} item={item} />
         ))}
       </nav>
@@ -23,10 +28,10 @@ export function DesktopSidebar() {
   );
 }
 
-function SidebarHeader() {
+function SidebarHeader({ title }: { title: string }) {
   return (
     <div className="px-6 pt-7 pb-6 border-b border-sidebar-border">
-      <span className="text-eyebrow block">RH · Painel</span>
+      <span className="text-eyebrow block">{title}</span>
       <h1 className="font-display italic text-2xl text-sidebar-foreground mt-1 leading-tight">
         Espaço Família
       </h1>
@@ -51,7 +56,6 @@ function SidebarItem({ item }: { item: NavItem }) {
           : "text-muted-foreground hover:text-sidebar-foreground hover:bg-sidebar-accent/50"
       )}
     >
-      {/* Indicador ativo: barra vertical à esquerda */}
       <span
         aria-hidden
         className={cn(
