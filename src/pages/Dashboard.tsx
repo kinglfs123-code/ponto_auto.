@@ -6,7 +6,7 @@ import { Building2, ClipboardList, FileText, Users, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCNPJ } from "@/lib/format";
-import NavBar from "@/components/NavBar";
+import { ResponsiveNav } from "@/components/nav/ResponsiveNav";
 import AppHeader from "@/components/AppHeader";
 import { useWorkflowStatus, isRouteEnabled, getRouteMessage } from "@/hooks/use-workflow-status";
 import { toast } from "@/hooks/use-toast";
@@ -45,8 +45,8 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <NavBar />
+    <div className="min-h-screen bg-background pb-24 md:pl-60">
+      <ResponsiveNav />
       <div className="max-w-4xl mx-auto p-4 space-y-6">
         <AppHeader module="rh" showBack={false} />
 

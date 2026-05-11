@@ -8,7 +8,7 @@ import { SpinnerButton } from "@/components/ui/spinner-button";
 import { toast } from "@/hooks/use-toast";
 import { useConfirm } from "@/hooks/use-confirm";
 import { friendlyError } from "@/lib/error-messages";
-import NavBar from "@/components/NavBar";
+import { ResponsiveNav } from "@/components/nav/ResponsiveNav";
 import AppHeader from "@/components/AppHeader";
 import EmpresaSelector from "@/components/EmpresaSelector";
 import { formatDateBR } from "@/lib/format";
@@ -172,7 +172,7 @@ export default function Relatorios() {
 
   return (
     <div className="min-h-screen bg-background pb-44">
-      <NavBar />
+      <ResponsiveNav />
       <div className="max-w-4xl mx-auto p-4 space-y-4">
         <AppHeader module="rh" backFallback="/" />
         <h1 className="text-2xl font-bold text-foreground tracking-tight animate-fade-in">Relatórios</h1>

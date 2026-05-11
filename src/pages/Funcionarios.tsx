@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import NavBar from "@/components/NavBar";
+import { ResponsiveNav } from "@/components/nav/ResponsiveNav";
 import AppHeader from "@/components/AppHeader";
 import EmpresaSelector from "@/components/EmpresaSelector";
 import { Button } from "@/components/ui/button";
@@ -180,7 +180,7 @@ export default function Funcionarios() {
 
   return (
     <div className="min-h-screen bg-background pb-44">
-      <NavBar />
+      <ResponsiveNav />
       <div className="max-w-4xl mx-auto p-4 space-y-4">
         <AppHeader module="rh" backFallback="/" />
         <h1 className="text-2xl font-bold text-foreground tracking-tight animate-fade-in">Colaboradores</h1>

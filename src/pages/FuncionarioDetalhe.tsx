@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { useConfirm } from "@/hooks/use-confirm";
 import { friendlyError } from "@/lib/error-messages";
-import NavBar from "@/components/NavBar";
+import { ResponsiveNav } from "@/components/nav/ResponsiveNav";
 import AppHeader from "@/components/AppHeader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -693,7 +693,7 @@ export default function FuncionarioDetalhe() {
   if (loading) {
     return (
       <div className="min-h-screen bg-background">
-        <NavBar />
+        <ResponsiveNav />
         <div className="max-w-4xl mx-auto p-8 flex items-center justify-center">
           <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
         </div>
@@ -704,7 +704,7 @@ export default function FuncionarioDetalhe() {
   if (!func) {
     return (
       <div className="min-h-screen bg-background">
-        <NavBar />
+        <ResponsiveNav />
         <div className="max-w-4xl mx-auto p-4">
           <AppHeader module="rh" backFallback="/funcionarios" backLabel="Colaboradores" />
           <p className="text-center text-muted-foreground mt-8">Colaborador não encontrado.</p>
@@ -717,7 +717,7 @@ export default function FuncionarioDetalhe() {
 
   return (
     <div className="min-h-screen bg-background pb-44">
-      <NavBar />
+      <ResponsiveNav />
       <div className="max-w-4xl mx-auto p-4 space-y-4 animate-fade-in">
         {/* Header */}
         <AppHeader module="rh" backFallback="/funcionarios" backLabel="Colaboradores" />

@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { SpinnerButton } from "@/components/ui/spinner-button";
 import { ToastAction } from "@/components/ui/toast";
-import NavBar from "@/components/NavBar";
+import { ResponsiveNav } from "@/components/nav/ResponsiveNav";
 import AppHeader from "@/components/AppHeader";
 import EmpresaSelector from "@/components/EmpresaSelector";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -238,7 +238,7 @@ export default function Holerites() {
 
   return (
     <div className="min-h-screen bg-background pb-44">
-      <NavBar />
+      <ResponsiveNav />
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6 animate-fade-in">
         <AppHeader module="rh" backFallback="/" />
         <h1 className="text-2xl font-bold text-foreground tracking-tight">Holerites</h1>

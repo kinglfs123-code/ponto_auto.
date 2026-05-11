@@ -37,7 +37,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   {
     label: "Documentos",
-    path: "/documentos",
+    path: "/holerites",
     icon: FileText,
     tileColor: "260 55% 72%", // violeta pastel
   },
