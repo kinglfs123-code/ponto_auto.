@@ -1,7 +1,8 @@
 import { memo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEmpresa } from "@/contexts/EmpresaContext";
-import NavBarMarketing from "./NavBarMarketing";
+import { ResponsiveNav } from "@/components/nav/ResponsiveNav";
+import { MARKETING_NAV_ITEMS } from "./nav-items";
 import AppHeader from "@/components/AppHeader";
 import { formatCNPJ } from "@/lib/format";
 
@@ -21,8 +22,8 @@ function MarketingLayoutBase({ children, title }: Props) {
   if (!empresa) return null;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <NavBarMarketing />
+    <div className="min-h-screen bg-background pb-24 md:pl-60">
+      <ResponsiveNav items={MARKETING_NAV_ITEMS} title="Marketing · Painel" />
       <div className="max-w-4xl mx-auto p-4 space-y-5">
         <AppHeader module="marketing" showBack={false} backFallback="/selecionar-modulo" />
         <header className="animate-fade-in">
