@@ -1,59 +1,70 @@
 ## Objetivo
 
-Fechar as lacunas do cálculo de folha de ponto contra a spec atualizada (11 cenários, A–K) e corrigir os bugs apontados nos agregados/relatório. O cálculo per-batida principal (`src/lib/ponto-rules.ts`) já passa em A–J — falta jornada alternativa (K), corrigir o agregado de atraso, expor AN CLT e Faltas no relatório.
+Aplicar o mesmo padrão "sidebar em desktop + dock em mobile" que já existe no módulo RH a TODOS os outros módulos do app: Financeiro, CMV, DRE, Empresas-Módulo (cobranças/clientes) e Marketing.
 
-## Mudanças
+## Estado atual
 
-### 1. Schema — jornada alternativa por dia (cenário K)
+- Módulo RH já usa `<ResponsiveNav />` (de `src/components/nav/ResponsiveNav.tsx`) com a lista `NAV_ITEMS` de `nav-items.ts`.
+- Cada outro módulo tem seu próprio dock no rodapé:
+  - `src/components/financeiro/NavBarFinanceiro.tsx` → Lançar / Contas / Códigos / Fornecedores
+  - `src/components/cmv/NavBarCmv.tsx` → Visão geral / Tabela mensal
+  - `src/components/dre/NavBarDre.tsx` → Visão geral / Tabela mensal / Anual
+  - `src/components/empresas-modulo/NavBarEmpresasModulo.tsx` → Cobranças / Clientes
+  - `src/components/marketing/NavBarMarketing.tsx` → Marketing
+- Cada um é renderizado dentro do `*Layout.tsx` correspondente, dentro de um wrapper `min-h-screen bg-background pb-24`.
 
-Migration adicionando à tabela `registros_ponto`:
+## Mudanças propostas
 
-- `jornada_alt_entrada TEXT NULL`
-- `jornada_alt_saida TEXT NULL`
+### 1. Tornar a navegação genérica (1 alteração só, beneficia todos os módulos)
 
-Ambos opcionais. Quando preenchidos, sobrescrevem `horarioEntrada/Saida` do funcionário **só naquele dia**. `types.ts` é regenerado automaticamente.
+Refatorar os 3 componentes em `src/components/nav/` para aceitar a lista de itens via prop, em vez de importarem `NAV_ITEMS` direto:
 
-### 2. `src/lib/ponto-rules.ts`
+- `DesktopSidebar.tsx`: aceitar `items: NavItem[]` e `title?: string` (para o cabeçalho — "RH · Painel" / "Financeiro · Painel" etc.).
+- `MobileDock.tsx`: aceitar `items: NavItem[]`.
+- `ResponsiveNav.tsx`: aceitar `items: NavItem[]` e `title?: string` e repassar.
+- O uso atual no RH continua igual mudando para `<ResponsiveNav items={NAV_ITEMS} title="RH · Painel" />`.
 
-- `RegistroPonto` ganha `jornada_alt_entrada?: string | null` e `jornada_alt_saida?: string | null`.
-- Em `applyToleranceAndDetect`, antes de derivar `entradaRef`/`saidaRef`/`carga`, checar se o registro traz jornada alternativa. Se sim, usar ela no lugar dos defaults do funcionário (mantendo almoço de 1h).
-- Bug do agregado de atraso: hoje `calcularResumo` só soma `atraso_minutos` quando o dia tem total > 0; mas o atraso já é somado fora desse `if`. Vou re-validar e blindar — se `tipo_excecao === "falta"` o atraso é a jornada inteira (já é) e não deve ser somado de novo se também houver faltas separadas. Confirmar leitura: o problema reportado ("atrasos vinham zerados") é mais provável do agregado mensal no relatório (item 4) e da seleção SQL no `Resumo` da `FolhaDetalhe.tsx` que **não busca `atraso_minutos` para o card**. Acrescentar `atraso_minutos` nos cards de FolhaDetalhe.
-- Adicionar helper `calcResumoCompleto(registros)` que devolve também `total_an_clt` (via `calcAdicionalNoturnoCLT`) e `total_faltas` (contagem de `tipo_excecao === "falta"`).
+### 2. Criar uma lista `nav-items` por módulo
 
-### 3. UI — Cadastro de funcionário
+Novos arquivos com a mesma estrutura de `nav-items.ts`:
 
-- Em `FuncionarioDetalhe.tsx`, mostrar **Carga calculada ao vivo** (`saida − entrada − 1h`) ao lado dos inputs de horário. Sem mudar inputs.
+- `src/components/financeiro/nav-items.ts` — Lançar / Contas / Códigos / Fornecedores (mantendo as cores/ícones atuais).
+- `src/components/cmv/nav-items.ts` — Visão geral / Tabela mensal.
+- `src/components/dre/nav-items.ts` — Visão geral / Tabela mensal / Anual.
+- `src/components/empresas-modulo/nav-items.ts` — Cobranças / Clientes.
+- `src/components/marketing/nav-items.ts` — Marketing (1 item só por enquanto).
 
-### 4. UI — Lançamento (`Ponto.tsx`)
+As rotas vão exatamente bater com as já existentes no `App.tsx` — nenhuma rota nova é criada.
 
-- Na tabela de registros, adicionar coluna "Jornada do dia" como botão popover por linha. Permite definir/limpar `jornada_alt_entrada`/`jornada_alt_saida`. Quando setado, badge discreta mostra "Alt: 15:00–23:20".
-- Recalcular a linha ao salvar a alteração.
+### 3. Substituir cada NavBar antiga pelo `ResponsiveNav`
 
-### 5. UI — Detalhe da folha (`FolhaDetalhe.tsx`)
+Em cada `*Layout.tsx`:
 
-- Adicionar 3 cards: **Atrasos** (`formatMinutes(total_atraso)`), **AN CLT** (`formatHours(total_an_clt)`), **Faltas** (contagem). Total de Atrasos é o bug visível principal.
-- Coluna "HE" por dia (já preparado em discussão anterior do usuário) com `formatHours(r.horas_extras)`.
+- Remover o import e o `<NavBar* />`.
+- Importar `ResponsiveNav` e a lista de items do módulo, e renderizar `<ResponsiveNav items={ITEMS} title="<Módulo> · Painel" />`.
+- Adicionar `md:pl-60` no wrapper `min-h-screen bg-background pb-24`.
 
-### 6. Edge function `generate-report`
+Layouts afetados:
+- `src/components/financeiro/FinanceiroLayout.tsx`
+- `src/components/cmv/CmvLayout.tsx`
+- `src/components/dre/DreLayout.tsx`
+- `src/components/empresas-modulo/EmpresasModuloLayout.tsx`
+- `src/components/marketing/MarketingLayout.tsx`
 
-- Somar `atraso_minutos`, `tipo_excecao === "falta"` (count) e calcular `AN_CLT = AN_real * (60/52.5)`.
-- Estender o JSON do relatório com `total_atraso`, `total_an_real`, `total_an_clt`, `total_faltas`.
+Os arquivos antigos `NavBar<Modulo>.tsx` ficam no projeto sem uso (mesmo tratamento que demos ao `NavBar.tsx` do RH) — você deleta depois de validar.
 
-### 7. Validação (script `bun run /tmp/validate-ponto.ts`)
+### 4. Validação
 
-Roda os 11 cenários (A–K) contra `applyToleranceAndDetect` com cadastro 07:00–16:20 e imprime PASS/FAIL com diff de minutos para `trab/HE/atraso/AN`. Cenário K usa `jornada_alt_*`. Encerro só após todos PASS.
-
-Validação de aceitação dos totais reais (Ludimila 30 dias 08:00–16:20: 195h34/24h20/4h46/0h19/0h22/0 faltas) será feita manualmente após import — fora do escopo automatizado por requerer dados reais.
-
-## Detalhes técnicos
-
-- Coluna `jornada_alt_*` em `registros_ponto` é nullable; rows existentes não são afetadas.
-- `applyToleranceAndDetect`: a única mudança de lógica é sobrescrever refs quando `jornada_alt_*` presente; cálculo per-batida atual já cobre todos os outros cenários.
-- `calcAdicionalNoturnoCLT` já existe — reutilizar.
-- Sem alterações em OCR, autenticação, RLS ou outros módulos.
+- O harness compila automaticamente — confirma sem erros TS.
+- Conferir visualmente em cada módulo (Financeiro, CMV, DRE, Empresas-Módulo, Marketing) que:
+  - A sidebar aparece em desktop (md+).
+  - O dock no rodapé aparece em mobile.
+  - O conteúdo não fica atrás da sidebar (graças ao `md:pl-60`).
+  - As rotas ativas ficam destacadas.
 
 ## O que NÃO muda
 
-- OCR, importação por foto, rotas, navegação.
-- Cadastro do funcionário continua usando `horario_entrada`/`horario_saida`/`intervalo` existentes.
-- `formatHours` permanece com sufixo `h`/`min` para não quebrar telas atuais; HH:MM puro fica em `formatHHMM` quando precisar.
+- `App.tsx`, `index.css`, `tailwind.config.ts`, `index.html`.
+- Nenhuma rota nova; nenhum pacote novo.
+- Páginas individuais dos módulos — só os Layouts mudam.
+- Lógica do módulo RH (já está pronta).
