@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { toast } from "@/hooks/use-toast";
 import { formatHours, formatMinutes, calcAdicionalNoturnoCLT } from "@/lib/ponto-rules";
-import NavBar from "@/components/NavBar";
+import { ResponsiveNav } from "@/components/nav/ResponsiveNav";
 import AppHeader from "@/components/AppHeader";
 import { CheckCircle2 } from "lucide-react";
 
@@ -102,8 +102,8 @@ export default function FolhaDetalhe() {
   };
 
   if (!folha) return (
-    <div className="min-h-screen bg-background">
-      <NavBar />
+    <div className="min-h-screen bg-background md:pl-60">
+      <ResponsiveNav />
       <p className="text-center text-muted-foreground mt-10">Carregando...</p>
     </div>
   );
@@ -122,8 +122,8 @@ export default function FolhaDetalhe() {
   const mesNome = MESES_PT[parseInt(mes, 10) - 1] || mes;
 
   return (
-    <div className="min-h-screen bg-background">
-      <NavBar />
+    <div className="min-h-screen bg-background md:pl-60">
+      <ResponsiveNav />
       <div className="max-w-6xl mx-auto p-4 space-y-4">
         <AppHeader module="rh" backFallback="/ponto" />
 
