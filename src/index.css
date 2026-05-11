@@ -4,141 +4,153 @@
 
 @layer base {
   :root {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
+    /* ============================================================
+       DARK THEME (default) — Navy editorial inspirado em G4
+       Background: #0A1A2E (navy profundo)
+       Text:       #F2EDE0 (cream quente)
+       ============================================================ */
+    --background: 214 64% 11%;
+    --foreground: 43 43% 91%;
 
-    --card: 0 0% 6%;
-    --card-foreground: 0 0% 100%;
+    --card: 214 56% 14%;
+    --card-foreground: 43 43% 91%;
 
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 100%;
+    --popover: 214 53% 17%;
+    --popover-foreground: 43 43% 91%;
 
-    --primary: 211 100% 50%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 200 95% 65%;
+    --primary-foreground: 214 64% 11%;
 
-    --secondary: 0 0% 12%;
-    --secondary-foreground: 0 0% 85%;
+    --secondary: 214 40% 20%;
+    --secondary-foreground: 43 30% 85%;
 
-    --muted: 0 0% 14%;
-    --muted-foreground: 0 0% 55%;
+    --muted: 214 35% 17%;
+    --muted-foreground: 214 21% 63%;
 
-    --accent: 211 100% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 140 79% 73%;
+    --accent-foreground: 214 64% 11%;
 
-    --destructive: 4 100% 59%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 91% 71%;
+    --destructive-foreground: 214 64% 11%;
 
-    --success: 142 71% 45%;
-    --success-foreground: 0 0% 100%;
+    --success: 140 79% 73%;
+    --success-foreground: 214 64% 11%;
 
-    --warning: 32 100% 50%;
-    --warning-foreground: 0 0% 0%;
+    --warning: 43 96% 56%;
+    --warning-foreground: 214 64% 11%;
 
-    --info: 211 100% 50%;
-    --info-foreground: 0 0% 100%;
+    --info: 200 95% 65%;
+    --info-foreground: 214 64% 11%;
 
-    --falta: 4 100% 59%;
-    --folga: 197 92% 67%;
-    --atestado: 32 100% 50%;
-    --feriado: 142 71% 45%;
+    /* Domain status — recalibrados pra ler bem em cima do navy */
+    --falta:    0 91% 71%;
+    --folga:    200 95% 70%;
+    --atestado: 43 96% 56%;
+    --feriado:  140 79% 73%;
 
-    --border: 0 0% 16%;
-    --input: 0 0% 16%;
-    --ring: 211 100% 50%;
+    --border: 214 35% 22%;
+    --input:  214 35% 22%;
+    --ring:   200 95% 65%;
 
     --radius: 1rem;
 
-    --glass-bg: rgba(255, 255, 255, 0.05);
-    --glass-border: rgba(255, 255, 255, 0.08);
-    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    /* Glass — usa cream em vez de branco puro pra harmonizar com o cream do texto */
+    --glass-bg:     rgba(242, 237, 224, 0.06);
+    --glass-border: rgba(242, 237, 224, 0.10);
+    --glass-shadow: 0 8px 32px rgba(0, 0, 0, 0.40);
 
-    --sidebar-background: 0 0% 4%;
-    --sidebar-foreground: 0 0% 100%;
-    --sidebar-primary: 211 100% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 14%;
-    --sidebar-accent-foreground: 0 0% 85%;
-    --sidebar-border: 0 0% 16%;
-    --sidebar-ring: 211 100% 50%;
+    --sidebar-background: 214 70% 9%;
+    --sidebar-foreground: 43 43% 91%;
+    --sidebar-primary: 200 95% 65%;
+    --sidebar-primary-foreground: 214 64% 11%;
+    --sidebar-accent: 214 40% 17%;
+    --sidebar-accent-foreground: 43 30% 85%;
+    --sidebar-border: 214 35% 20%;
+    --sidebar-ring: 200 95% 65%;
 
-    /* DRE band colors — dark theme (low luminosity tints) */
-    --dre-band-receita:     145 30% 14%;
-    --dre-band-deducoes:    220 18% 16%;
-    --dre-band-impostos:     30 35% 16%;
-    --dre-band-cmv:           0 30% 16%;
-    --dre-band-despesas:    220 12% 15%;
-    --dre-band-ebit:        210 45% 18%;
-    --dre-band-financeiras: 260 25% 18%;
-    --dre-band-lucro:        45 55% 18%;
-    --dre-band-caixa:       180 30% 14%;
+    /* DRE band colors — dark theme, recalibrados pro novo navy base */
+    --dre-band-receita:     145 35% 16%;
+    --dre-band-deducoes:    214 25% 18%;
+    --dre-band-impostos:     32 35% 18%;
+    --dre-band-cmv:           0 35% 18%;
+    --dre-band-despesas:    214 18% 17%;
+    --dre-band-ebit:        200 45% 20%;
+    --dre-band-financeiras: 260 30% 22%;
+    --dre-band-lucro:        45 55% 22%;
+    --dre-band-caixa:       180 35% 18%;
   }
 
   .light {
-    --background: 220 25% 98%;
-    --foreground: 222 25% 12%;
+    /* ============================================================
+       LIGHT THEME — Cream editorial (espelha o print mode do checklist)
+       Background: #F4EFE6 (cream)
+       Text:       #1A1814 (deep ink)
+       ============================================================ */
+    --background: 40 35% 93%;
+    --foreground: 30 13% 9%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 222 25% 12%;
+    --card: 40 30% 97%;
+    --card-foreground: 30 13% 9%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 222 25% 12%;
+    --popover: 40 40% 98%;
+    --popover-foreground: 30 13% 9%;
 
-    --primary: 211 100% 50%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 214 64% 25%;
+    --primary-foreground: 40 35% 93%;
 
-    --secondary: 220 14% 95%;
-    --secondary-foreground: 222 16% 24%;
+    --secondary: 40 22% 88%;
+    --secondary-foreground: 30 13% 20%;
 
-    --muted: 220 14% 96%;
-    --muted-foreground: 220 9% 46%;
+    --muted: 40 22% 90%;
+    --muted-foreground: 30 8% 38%;
 
-    --accent: 211 100% 50%;
-    --accent-foreground: 0 0% 100%;
+    --accent: 140 50% 32%;
+    --accent-foreground: 40 35% 93%;
 
-    --destructive: 4 100% 59%;
-    --destructive-foreground: 0 0% 100%;
+    --destructive: 0 70% 45%;
+    --destructive-foreground: 40 35% 93%;
 
-    --success: 142 71% 35%;
-    --success-foreground: 0 0% 100%;
+    --success: 140 50% 32%;
+    --success-foreground: 40 35% 93%;
 
-    --warning: 32 100% 46%;
-    --warning-foreground: 0 0% 0%;
+    --warning: 36 85% 42%;
+    --warning-foreground: 40 35% 93%;
 
-    --info: 211 100% 50%;
-    --info-foreground: 0 0% 100%;
+    --info: 214 64% 35%;
+    --info-foreground: 40 35% 93%;
 
-    --falta: 4 100% 59%;
-    --folga: 197 92% 67%;
-    --atestado: 32 100% 50%;
-    --feriado: 142 71% 35%;
+    --falta:    0 70% 45%;
+    --folga:    200 70% 42%;
+    --atestado: 36 85% 42%;
+    --feriado:  140 50% 32%;
 
-    --border: 220 13% 90%;
-    --input: 220 13% 90%;
-    --ring: 211 100% 50%;
+    --border: 30 13% 82%;
+    --input:  30 13% 82%;
+    --ring:   214 64% 25%;
 
-    --glass-bg: rgba(255, 255, 255, 0.55);
-    --glass-border: rgba(15, 23, 42, 0.08);
-    --glass-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
+    --glass-bg:     rgba(244, 239, 230, 0.65);
+    --glass-border: rgba(26, 24, 20, 0.10);
+    --glass-shadow: 0 10px 30px rgba(26, 24, 20, 0.10);
 
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 222 25% 12%;
-    --sidebar-primary: 211 100% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 220 14% 95%;
-    --sidebar-accent-foreground: 222 16% 24%;
-    --sidebar-border: 220 13% 90%;
-    --sidebar-ring: 211 100% 50%;
+    --sidebar-background: 40 30% 96%;
+    --sidebar-foreground: 30 13% 9%;
+    --sidebar-primary: 214 64% 25%;
+    --sidebar-primary-foreground: 40 35% 93%;
+    --sidebar-accent: 40 22% 90%;
+    --sidebar-accent-foreground: 30 13% 20%;
+    --sidebar-border: 30 13% 82%;
+    --sidebar-ring: 214 64% 25%;
 
-    /* DRE band colors — light theme (soft tints) */
-    --dre-band-receita:     145 25% 92%;
-    --dre-band-deducoes:    220 15% 90%;
-    --dre-band-impostos:     30 35% 92%;
-    --dre-band-cmv:           0 30% 94%;
-    --dre-band-despesas:    220 10% 92%;
-    --dre-band-ebit:        210 45% 90%;
-    --dre-band-financeiras: 260 25% 92%;
-    --dre-band-lucro:        45 65% 88%;
-    --dre-band-caixa:       180 30% 90%;
+    /* DRE band colors — light theme (cream-tinted) */
+    --dre-band-receita:     145 30% 90%;
+    --dre-band-deducoes:    214 18% 90%;
+    --dre-band-impostos:     32 40% 90%;
+    --dre-band-cmv:           0 35% 92%;
+    --dre-band-despesas:    214 12% 91%;
+    --dre-band-ebit:        200 50% 88%;
+    --dre-band-financeiras: 260 30% 91%;
+    --dre-band-lucro:        45 65% 87%;
+    --dre-band-caixa:       180 35% 89%;
   }
 }
 
@@ -149,25 +161,43 @@
 
   html {
     scroll-behavior: smooth;
+    /* Body: Manrope. Cai pra system sans se Google Fonts falhar. */
     font-family:
-      "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      "Manrope", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
   }
 
   body {
     @apply bg-background text-foreground;
     font-family: inherit;
+    font-weight: 400;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    letter-spacing: -0.01em;
+    letter-spacing: -0.005em;
   }
 
   button, input, optgroup, select, textarea {
     font-family: inherit;
   }
 
-  h1, h2, h3, h4, h5, h6 {
-    font-family: inherit;
+  /* Display headlines em Instrument Serif italic — voz editorial */
+  h1, h2 {
+    font-family: "Instrument Serif", Georgia, Cambria, serif;
+    font-weight: 400;
+    font-style: italic;
     letter-spacing: -0.02em;
+    line-height: 1.05;
+  }
+
+  /* h3-h6 continuam em sans pra hierarquia funcional */
+  h3, h4, h5, h6 {
+    font-family: inherit;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+  }
+
+  /* Números, labels técnicos, tags de status: usar font-mono no markup */
+  code, kbd, samp, pre {
+    font-family: "JetBrains Mono", "SF Mono", Monaco, Consolas, monospace;
   }
 }
 
@@ -178,6 +208,32 @@
 
   .animate-fade-in {
     animation: fade-in 0.4s cubic-bezier(0.2, 0.6, 0.35, 1) both;
+  }
+
+  /* ============================================================
+     Display utilities — pra você usar nos pontos editoriais
+     (números grandes em dashboards, hero text, etc.)
+     ============================================================ */
+  .font-display {
+    font-family: "Instrument Serif", Georgia, Cambria, serif;
+    font-style: italic;
+    letter-spacing: -0.02em;
+  }
+
+  .font-display-roman {
+    font-family: "Instrument Serif", Georgia, Cambria, serif;
+    font-style: normal;
+    letter-spacing: -0.02em;
+  }
+
+  /* Eyebrow / label técnico em mono — pra rótulos pequenos sobre seções */
+  .text-eyebrow {
+    font-family: "JetBrains Mono", "SF Mono", Monaco, Consolas, monospace;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: hsl(var(--muted-foreground));
   }
 
   .glass {
@@ -203,9 +259,9 @@
         var(--glass-bg) 100%);
     border: 1px solid var(--glass-border);
     box-shadow:
-      0 12px 36px rgba(0, 0, 0, 0.28),
-      0 1px 0 rgba(255, 255, 255, 0.20) inset,
-      0 -1px 0 rgba(0, 0, 0, 0.18) inset;
+      0 12px 36px rgba(0, 0, 0, 0.32),
+      0 1px 0 rgba(242, 237, 224, 0.16) inset,
+      0 -1px 0 rgba(0, 0, 0, 0.20) inset;
     backdrop-filter: blur(28px) saturate(1.9);
     -webkit-backdrop-filter: blur(28px) saturate(1.9);
     border-radius: 22px;
@@ -213,19 +269,19 @@
 
   .liquid-pill-active {
     background: linear-gradient(180deg,
-      rgba(255, 255, 255, 0.22),
-      rgba(255, 255, 255, 0.06));
+      rgba(242, 237, 224, 0.22),
+      rgba(242, 237, 224, 0.06));
     box-shadow:
-      0 4px 14px rgba(0, 0, 0, 0.22),
-      0 1px 0 rgba(255, 255, 255, 0.38) inset;
+      0 4px 14px rgba(0, 0, 0, 0.25),
+      0 1px 0 rgba(242, 237, 224, 0.38) inset;
   }
 
   .light .liquid-pill-active {
     background: linear-gradient(180deg,
-      rgba(255, 255, 255, 0.95),
-      rgba(255, 255, 255, 0.75));
+      rgba(255, 255, 255, 0.92),
+      rgba(255, 255, 255, 0.70));
     box-shadow:
-      0 4px 14px rgba(0, 0, 0, 0.10),
+      0 4px 14px rgba(26, 24, 20, 0.10),
       0 1px 0 rgba(255, 255, 255, 0.95) inset;
   }
 
@@ -233,23 +289,14 @@
   .light .liquid-glass {
     background: linear-gradient(180deg,
       rgba(255, 255, 255, 0.85) 0%,
-      rgba(255, 255, 255, 0.55) 100%);
-    border: 1px solid rgba(15, 23, 42, 0.08);
+      rgba(244, 239, 230, 0.55) 100%);
+    border: 1px solid rgba(26, 24, 20, 0.10);
     box-shadow:
-      0 10px 30px rgba(15, 23, 42, 0.10),
+      0 10px 30px rgba(26, 24, 20, 0.12),
       0 1px 0 rgba(255, 255, 255, 0.95) inset,
-      0 -1px 0 rgba(15, 23, 42, 0.04) inset;
+      0 -1px 0 rgba(26, 24, 20, 0.04) inset;
     backdrop-filter: blur(32px) saturate(1.6);
     -webkit-backdrop-filter: blur(32px) saturate(1.6);
-  }
-
-  .light .liquid-pill-active {
-    background: linear-gradient(180deg,
-      hsl(var(--primary) / 0.14),
-      hsl(var(--primary) / 0.06));
-    box-shadow:
-      0 2px 10px hsl(var(--primary) / 0.18),
-      0 1px 0 rgba(255, 255, 255, 0.9) inset;
   }
 
   .liquid-hover {
@@ -271,9 +318,9 @@
       hsl(var(--tile-color)) 0%,
       hsl(var(--tile-color) / 0.82) 100%);
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.35) inset,
-      0 -1px 0 rgba(0, 0, 0, 0.18) inset,
-      0 6px 14px hsl(var(--tile-color) / 0.35);
+      0 1px 0 rgba(242, 237, 224, 0.30) inset,
+      0 -1px 0 rgba(0, 0, 0, 0.20) inset,
+      0 6px 14px hsl(var(--tile-color) / 0.40);
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -288,8 +335,8 @@
   }
   .dock-tile-active {
     box-shadow:
-      0 1px 0 rgba(255, 255, 255, 0.5) inset,
-      0 -1px 0 rgba(0, 0, 0, 0.18) inset,
+      0 1px 0 rgba(242, 237, 224, 0.5) inset,
+      0 -1px 0 rgba(0, 0, 0, 0.20) inset,
       0 0 0 2px hsl(var(--background)),
       0 0 0 4px hsl(var(--tile-color) / 0.85),
       0 8px 22px hsl(var(--tile-color) / 0.55);
@@ -305,7 +352,7 @@
   }
 
   .light .liquid-hover:hover {
-    background-color: rgba(15, 23, 42, 0.04);
+    background-color: rgba(26, 24, 20, 0.04);
   }
 
   /* Press / attach animations */

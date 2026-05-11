@@ -14,8 +14,12 @@ export default {
     },
     extend: {
       fontFamily: {
-        sans: ["Inter", "-apple-system", "BlinkMacSystemFont", "'Segoe UI'", "Roboto", "'Helvetica Neue'", "Arial", "sans-serif"],
-        mono: ["'SF Mono'", "Monaco", "Consolas", "'Courier New'", "monospace"],
+        // sans (corpo, UI) — Manrope
+        sans: ["Manrope", "-apple-system", "BlinkMacSystemFont", "'Segoe UI'", "system-ui", "sans-serif"],
+        // display (títulos editoriais) — Instrument Serif italic
+        display: ["'Instrument Serif'", "Georgia", "Cambria", "serif"],
+        // mono (números, labels técnicos, eyebrow) — JetBrains Mono
+        mono: ["'JetBrains Mono'", "'SF Mono'", "Monaco", "Consolas", "monospace"],
       },
       colors: {
         border: "hsl(var(--border))",
