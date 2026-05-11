@@ -237,7 +237,7 @@ export default function Holerites() {
   const totalSent = funcionarios.filter((f) => getHolerite(f.id)?.enviado).length;
 
   return (
-    <div className="min-h-screen bg-background pb-44">
+    <div className="min-h-screen bg-background pb-44 md:pl-60">
       <ResponsiveNav />
       <main className="max-w-5xl mx-auto px-4 py-6 space-y-6 animate-fade-in">
         <AppHeader module="rh" backFallback="/" />

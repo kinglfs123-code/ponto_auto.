@@ -159,7 +159,7 @@ export default function Empresas() {
   };
 
   return (
-    <div className="min-h-screen bg-background pb-44">
+    <div className="min-h-screen bg-background pb-44 md:pl-60">
       <ResponsiveNav />
       <div className="max-w-2xl mx-auto p-4 space-y-4">
         <AppHeader module="rh" backFallback="/" />
