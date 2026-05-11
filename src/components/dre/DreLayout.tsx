@@ -1,7 +1,8 @@
 import { memo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEmpresa } from "@/contexts/EmpresaContext";
-import NavBarDre from "./NavBarDre";
+import { ResponsiveNav } from "@/components/nav/ResponsiveNav";
+import { DRE_NAV_ITEMS } from "./nav-items";
 import AppHeader from "@/components/AppHeader";
 import { formatCNPJ } from "@/lib/format";
 
@@ -23,8 +24,8 @@ function DreLayoutBase({ children, title, showBack = true, wide = false }: Props
   if (!empresa) return null;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <NavBarDre />
+    <div className="min-h-screen bg-background pb-24 md:pl-60">
+      <ResponsiveNav items={DRE_NAV_ITEMS} title="DRE · Painel" />
       <div className={`${wide ? "max-w-[1400px]" : "max-w-5xl"} mx-auto p-4 space-y-5`}>
         <AppHeader module="dre" showBack={showBack} backFallback="/dre" />
         <header className="animate-fade-in">

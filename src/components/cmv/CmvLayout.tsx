@@ -1,7 +1,8 @@
 import { memo, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useEmpresa } from "@/contexts/EmpresaContext";
-import NavBarCmv from "./NavBarCmv";
+import { ResponsiveNav } from "@/components/nav/ResponsiveNav";
+import { CMV_NAV_ITEMS } from "./nav-items";
 import AppHeader from "@/components/AppHeader";
 import { formatCNPJ } from "@/lib/format";
 
@@ -22,8 +23,8 @@ function CmvLayoutBase({ children, title, showBack = true }: Props) {
   if (!empresa) return null;
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <NavBarCmv />
+    <div className="min-h-screen bg-background pb-24 md:pl-60">
+      <ResponsiveNav items={CMV_NAV_ITEMS} title="CMV · Painel" />
       <div className="max-w-5xl mx-auto p-4 space-y-5">
         <AppHeader module="cmv" showBack={showBack} backFallback="/cmv" />
         <header className="animate-fade-in">
