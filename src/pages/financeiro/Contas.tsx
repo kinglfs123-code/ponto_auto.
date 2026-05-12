@@ -112,7 +112,7 @@ export default function Contas() {
       else if (filter === "proximas") q = q.eq("status", "pendente").gte("due_date", tomorrow).lte("due_date", next7);
       else if (filter === "pendentes") q = q.eq("status", "pendente");
       else if (filter === "pagas") q = q.eq("status", "pago");
-      const { data } = await q.order("due_date", { ascending: true });
+      const { data } = await q.order("due_date", { ascending: true }).limit(500);
       return (data ?? []) as Payable[];
     },
     staleTime: 15_000,

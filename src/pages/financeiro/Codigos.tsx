@@ -39,7 +39,8 @@ export default function Codigos() {
         .from("item_codes")
         .select("*")
         .eq("empresa_id", empresa!.id)
-        .order("code");
+        .order("code")
+        .limit(500);
       return (data ?? []) as ItemCode[];
     },
     staleTime: 30_000,

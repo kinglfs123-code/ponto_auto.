@@ -40,8 +40,8 @@ export default function Holerites() {
     setLoading(true);
     try {
       const [funcRes, holRes] = await Promise.all([
-        supabase.from("funcionarios").select("id, nome_completo, email, cargo").eq("empresa_id", empresaId).order("nome_completo"),
-        supabase.from("holerites").select("id, funcionario_id, mes_referencia, pdf_path, enviado, enviado_em").eq("empresa_id", empresaId).eq("mes_referencia", mesRef),
+        supabase.from("funcionarios").select("id, nome_completo, email, cargo").eq("empresa_id", empresaId).order("nome_completo").limit(500),
+        supabase.from("holerites").select("id, funcionario_id, mes_referencia, pdf_path, enviado, enviado_em").eq("empresa_id", empresaId).eq("mes_referencia", mesRef).limit(500),
       ]);
       setFuncionarios(funcRes.data || []);
       setHolerites(holRes.data || []);
