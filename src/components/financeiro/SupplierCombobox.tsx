@@ -37,7 +37,7 @@ export default function SupplierCombobox({ value, onChange }: Props) {
     queryFn: async () => {
       const { data } = await supabase
         .from("suppliers")
-        .select("*")
+        .select("id, name, cnpj, default_payment_method, default_item_code, default_due_days")
         .eq("empresa_id", empresa!.id)
         .order("name");
       return (data ?? []) as Supplier[];
