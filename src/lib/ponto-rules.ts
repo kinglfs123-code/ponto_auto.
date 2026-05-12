@@ -405,11 +405,11 @@ export function calcularResumo(registros: RegistroPonto[]): ResumoCalculo {
 
   return {
     dias_trabalhados: dias,
-    total_horas: 0, // não calculado (cliente pediu só HE e atraso)
+    total_horas: 0,
     total_extras: Math.round(extras * 100) / 100,
     total_atraso: atraso,
-    total_noturnas: 0, // não calculado
-    total_an_clt: 0, // não calculado
+    total_noturnas: 0,
+    total_an_clt: 0,
     total_faltas: faltas,
     saldo: Math.round(saldo * 100) / 100,
   };
