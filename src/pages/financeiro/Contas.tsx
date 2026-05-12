@@ -106,7 +106,7 @@ export default function Contas() {
     enabled: !!empresa,
     queryKey: ["payables", empresa?.id, filter, today],
     queryFn: async () => {
-      let q = supabase.from("payables").select("*").eq("empresa_id", empresa!.id);
+      let q = supabase.from("payables").select("id, status, due_date, supplier_id, item_code, amount, payment_method, arrival_date").eq("empresa_id", empresa!.id);
       if (filter === "hoje") q = q.eq("status", "pendente").eq("due_date", today);
       else if (filter === "atrasadas") q = q.eq("status", "pendente").lt("due_date", today);
       else if (filter === "proximas") q = q.eq("status", "pendente").gte("due_date", tomorrow).lte("due_date", next7);
