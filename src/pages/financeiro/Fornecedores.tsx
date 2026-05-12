@@ -49,7 +49,8 @@ export default function Fornecedores() {
         .from("suppliers")
         .select("*")
         .eq("empresa_id", empresa!.id)
-        .order("name");
+        .order("name")
+        .limit(500);
       return (data ?? []) as Supplier[];
     },
     staleTime: 30_000,
