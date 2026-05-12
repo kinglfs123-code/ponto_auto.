@@ -90,6 +90,7 @@ export default function Funcionarios() {
       .select("id, empresa_id, nome_completo, cpf, email, data_nascimento, cargo, horario_entrada, horario_saida, intervalo")
       .eq("empresa_id", empresa.id)
       .order("nome_completo")
+      .limit(500)
       .then(({ data, error }) => {
         if (error) toast({ title: "Erro ao carregar", description: friendlyError(error), variant: "destructive" });
         else setFuncionarios(sortAlfabetico((data as Funcionario[]) || []));
