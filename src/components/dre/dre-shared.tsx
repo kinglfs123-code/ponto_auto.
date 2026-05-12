@@ -83,7 +83,7 @@ export function useDreYear(year: number) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("dre_manual_entries")
-        .select("*")
+        .select("id, category_code, entry_month, amount")
         .eq("empresa_id", empresa!.id)
         .gte("entry_month", start)
         .lte("entry_month", end);

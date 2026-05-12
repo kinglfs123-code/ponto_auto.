@@ -68,7 +68,7 @@ export function useCmvMonth(cursor: MonthCursor) {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("cmv_daily_sales")
-        .select("*")
+        .select("id, entry_date, vendas_almoco, convenio_almoco, vendas_jantar, convenio_jantar")
         .eq("empresa_id", empresa!.id)
         .gte("entry_date", start)
         .lte("entry_date", end);
