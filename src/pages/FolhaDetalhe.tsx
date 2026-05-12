@@ -85,6 +85,7 @@ export default function FolhaDetalhe() {
       .select("id, dia, hora_entrada, hora_saida_tarde, hora_entrada_tarde, hora_saida, hora_entrada_extra, hora_saida_extra, horas_normais, horas_extras, horas_noturnas, atraso_minutos, obs, corrigido_manualmente, tipo_excecao, jornada_alt_entrada, jornada_alt_saida")
       .eq("folha_id", folhaId)
       .order("dia")
+      .limit(500)
       .then(({ data }) => {
         if (data) setRegistros(data as unknown as Registro[]);
       });
