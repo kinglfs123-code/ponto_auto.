@@ -28,7 +28,7 @@ export default function ClientCompanyCombobox({ value, onChange, placeholder = "
     queryFn: async () => {
       const { data } = await supabase
         .from("client_companies")
-        .select("*")
+        .select("id, name, cnpj")
         .eq("empresa_id", empresa!.id)
         .order("name");
       return (data ?? []) as ClientCompany[];
