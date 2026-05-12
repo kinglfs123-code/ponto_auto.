@@ -82,7 +82,8 @@ export default function Cobrancas() {
         .eq("empresa_id", empresa!.id)
         .gte("reference_month", refMonth)
         .lte("reference_month", refMonthEnd)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true })
+        .limit(500);
       const billings = (bills ?? []) as ClientBilling[];
       const ids = Array.from(new Set(billings.map((b) => b.client_company_id)));
       let clientsMap = new Map<string, ClientCompany>();
