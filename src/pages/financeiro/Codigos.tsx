@@ -37,7 +37,7 @@ export default function Codigos() {
     queryFn: async () => {
       const { data } = await supabase
         .from("item_codes")
-        .select("*")
+        .select("id, code, description")
         .eq("empresa_id", empresa!.id)
         .order("code")
         .limit(500);

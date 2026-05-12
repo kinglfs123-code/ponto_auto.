@@ -34,7 +34,7 @@ export default function LancamentoRapido() {
     queryFn: async () => {
       const { data } = await supabase
         .from("item_codes")
-        .select("*")
+        .select("id, code, description")
         .eq("empresa_id", empresa!.id)
         .order("code");
       return (data ?? []) as ItemCode[];
