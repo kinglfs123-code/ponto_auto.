@@ -28,7 +28,7 @@ export default function ItemCodeCombobox({ value, onChange, placeholder = "Selec
     queryFn: async () => {
       const { data } = await supabase
         .from("item_codes")
-        .select("*")
+        .select("id, code, description")
         .eq("empresa_id", empresa!.id)
         .order("code");
       return (data ?? []) as ItemCode[];
