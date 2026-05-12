@@ -90,7 +90,7 @@ export default function Cobrancas() {
       if (ids.length) {
         const { data: cs } = await supabase
           .from("client_companies")
-          .select("*")
+          .select("id, name")
           .in("id", ids);
         for (const c of (cs ?? []) as ClientCompany[]) clientsMap.set(c.id, c);
       }
