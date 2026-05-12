@@ -40,7 +40,7 @@ export default function Clientes() {
     queryFn: async () => {
       const { data } = await supabase
         .from("client_companies")
-        .select("*")
+        .select("id, name, cnpj, notes")
         .eq("empresa_id", empresa!.id)
         .order("name");
       return (data ?? []) as ClientCompany[];

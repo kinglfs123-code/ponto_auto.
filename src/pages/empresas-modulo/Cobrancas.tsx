@@ -78,7 +78,7 @@ export default function Cobrancas() {
     queryFn: async () => {
       const { data: bills } = await supabase
         .from("client_billings")
-        .select("*")
+        .select("id, client_company_id, billing_status, amount, description, due_date, oc_number, measurement_date, send_date")
         .eq("empresa_id", empresa!.id)
         .gte("reference_month", refMonth)
         .lte("reference_month", refMonthEnd)
@@ -90,7 +90,7 @@ export default function Cobrancas() {
       if (ids.length) {
         const { data: cs } = await supabase
           .from("client_companies")
-          .select("*")
+          .select("id, name")
           .in("id", ids);
         for (const c of (cs ?? []) as ClientCompany[]) clientsMap.set(c.id, c);
       }
