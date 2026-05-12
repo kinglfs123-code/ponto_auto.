@@ -75,7 +75,7 @@ export default function Contas() {
     queryFn: async () => {
       const { data } = await supabase
         .from("suppliers")
-        .select("*")
+        .select("id, name")
         .eq("empresa_id", empresa!.id);
       return (data ?? []) as Supplier[];
     },
